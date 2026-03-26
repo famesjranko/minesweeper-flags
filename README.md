@@ -10,6 +10,16 @@ The game flow is simple:
 - first to 26 claimed mines wins
 - each player gets one bomb comeback move
 
+## Screenshots
+
+### Lobby
+
+![Lobby screen](docs/screenshots/lobby.png)
+
+### Match
+
+![Game screen](docs/screenshots/game.png)
+
 ## Stack
 
 - React + Vite client in `apps/client`
