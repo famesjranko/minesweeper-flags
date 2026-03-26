@@ -90,6 +90,47 @@ export const appendChatMessage = (
   return [...messages, message];
 };
 
+export const hasDeliveredChatText = (
+  messages: ChatMessageDto[],
+  playerId: string,
+  text: string
+): boolean =>
+  messages.some((message) => message.playerId === playerId && message.text === text);
+
+export const reconcileRecoveredChatDraft = ({
+  currentDraft,
+  recoveredDraftText,
+  playerId,
+  messages
+}: {
+  currentDraft: string;
+  recoveredDraftText: string | null;
+  playerId: string | null;
+  messages: ChatMessageDto[];
+}): {
+  nextDraft: string;
+  shouldClearRecoveredDraft: boolean;
+} => {
+  if (!recoveredDraftText || !playerId) {
+    return {
+      nextDraft: currentDraft,
+      shouldClearRecoveredDraft: false
+    };
+  }
+
+  if (!hasDeliveredChatText(messages, playerId, recoveredDraftText)) {
+    return {
+      nextDraft: currentDraft,
+      shouldClearRecoveredDraft: false
+    };
+  }
+
+  return {
+    nextDraft: currentDraft === recoveredDraftText ? "" : currentDraft,
+    shouldClearRecoveredDraft: true
+  };
+};
+
 export const getServerEventRoomCode = (event: ServerEvent): string | null => {
   switch (event.type) {
     case SERVER_EVENT_NAMES.roomState:

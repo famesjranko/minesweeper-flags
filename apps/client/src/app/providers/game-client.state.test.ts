@@ -8,6 +8,7 @@ import {
   buildReconnectEvent,
   appendChatMessage,
   buildSessionFromRoomEvent,
+  reconcileRecoveredChatDraft,
   replaceChatHistory,
   shouldApplyServerEvent,
   shouldQueueWhileOffline
@@ -113,6 +114,50 @@ describe("game client state helpers", () => {
         sentAt: 1
       })
     ).toBe(messages);
+  });
+
+  it("clears a recovered draft once reconnect history confirms delivery", () => {
+    expect(
+      reconcileRecoveredChatDraft({
+        currentDraft: "Hello",
+        recoveredDraftText: "Hello",
+        playerId: "player-1",
+        messages: [
+          {
+            messageId: "message-1",
+            playerId: "player-1",
+            displayName: "Host",
+            text: "Hello",
+            sentAt: 1
+          }
+        ]
+      })
+    ).toEqual({
+      nextDraft: "",
+      shouldClearRecoveredDraft: true
+    });
+  });
+
+  it("preserves edited text while clearing recovered-send tracking", () => {
+    expect(
+      reconcileRecoveredChatDraft({
+        currentDraft: "Different draft",
+        recoveredDraftText: "Hello",
+        playerId: "player-1",
+        messages: [
+          {
+            messageId: "message-1",
+            playerId: "player-1",
+            displayName: "Host",
+            text: "Hello",
+            sentAt: 1
+          }
+        ]
+      })
+    ).toEqual({
+      nextDraft: "Different draft",
+      shouldClearRecoveredDraft: true
+    });
   });
 
   it("queues only lobby bootstrap events while offline", () => {

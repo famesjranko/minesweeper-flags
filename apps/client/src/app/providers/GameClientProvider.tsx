@@ -11,7 +11,8 @@ import {
   useEffect,
   useRef,
   useState,
-  type PropsWithChildren
+  type PropsWithChildren,
+  type SetStateAction
 } from "react";
 import { SERVER_URL } from "../../lib/config/env.js";
 import {
@@ -26,6 +27,8 @@ import {
   buildSessionFromRoomEvent,
   appendChatMessage,
   createLobbyRuntimeState,
+  hasDeliveredChatText,
+  reconcileRecoveredChatDraft,
   replaceChatHistory,
   shouldApplyServerEvent,
   shouldQueueWhileOffline,
@@ -90,15 +93,27 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const reconnectAttemptRef = useRef<StoredSession | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const shouldReconnectRef = useRef(true);
+  const chatDraftRef = useRef(initialState.chatDraft);
   const chatPendingTextRef = useRef<string | null>(initialState.chatPendingText);
+  const chatRecoveredDraftTextRef = useRef<string | null>(null);
 
   const setPendingChatText = (nextPendingText: string | null) => {
     chatPendingTextRef.current = nextPendingText;
     setChatPendingTextState(nextPendingText);
   };
 
+  const setChatDraftValue = (value: SetStateAction<string>) => {
+    setChatDraftState((current) => {
+      const nextValue = typeof value === "function" ? value(current) : value;
+
+      chatDraftRef.current = nextValue;
+      return nextValue;
+    });
+  };
+
   const setChatDraft = (value: string) => {
-    setChatDraftState(value);
+    chatRecoveredDraftTextRef.current = null;
+    setChatDraftValue(value);
     setChatError(null);
   };
 
@@ -122,13 +137,22 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     reconnectAttemptRef.current = null;
   };
 
-  const clearChatState = ({ preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
+  const clearChatState = ({
+    preserveDraft = false,
+    preserveRecoveredDraft = false
+  }: {
+    preserveDraft?: boolean;
+    preserveRecoveredDraft?: boolean;
+  } = {}) => {
     const pendingText = chatPendingTextRef.current;
 
     setChatMessages([]);
     setChatError(null);
     setPendingChatText(null);
-    setChatDraftState((current) => {
+    chatRecoveredDraftTextRef.current = preserveRecoveredDraft
+      ? chatRecoveredDraftTextRef.current
+      : null;
+    setChatDraftValue((current) => {
       if (preserveDraft) {
         return current || pendingText || "";
       }
@@ -138,11 +162,18 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   };
 
   const clearTransientRoomState = ({
-    preserveChatDraft = false
-  }: { preserveChatDraft?: boolean } = {}) => {
+    preserveChatDraft = false,
+    preserveRecoveredChatDraft = false
+  }: {
+    preserveChatDraft?: boolean;
+    preserveRecoveredChatDraft?: boolean;
+  } = {}) => {
     setMatch(null);
     setBombArmed(false);
-    clearChatState({ preserveDraft: preserveChatDraft });
+    clearChatState({
+      preserveDraft: preserveChatDraft,
+      preserveRecoveredDraft: preserveRecoveredChatDraft
+    });
     pendingEventsRef.current = [];
   };
 
@@ -255,18 +286,32 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         case SERVER_EVENT_NAMES.chatHistory: {
           const activeSession = sessionRef.current;
           const pendingText = chatPendingTextRef.current;
+          const nextMessages = replaceChatHistory(event.payload.messages);
 
-          setChatMessages(replaceChatHistory(event.payload.messages));
+          setChatMessages(nextMessages);
 
           if (
             pendingText &&
             activeSession &&
-            event.payload.messages.some(
-              (message) =>
-                message.playerId === activeSession.playerId && message.text === pendingText
-            )
+            hasDeliveredChatText(nextMessages, activeSession.playerId, pendingText)
           ) {
             setPendingChatText(null);
+            setChatError(null);
+          }
+
+          const recoveredDraft = reconcileRecoveredChatDraft({
+            currentDraft: chatDraftRef.current,
+            recoveredDraftText: chatRecoveredDraftTextRef.current,
+            playerId: activeSession?.playerId ?? null,
+            messages: nextMessages
+          });
+
+          if (recoveredDraft.shouldClearRecoveredDraft) {
+            chatRecoveredDraftTextRef.current = null;
+
+            if (recoveredDraft.nextDraft !== chatDraftRef.current) {
+              setChatDraftValue(recoveredDraft.nextDraft);
+            }
           }
           break;
         }
@@ -276,13 +321,23 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
           if (sessionRef.current?.playerId === event.payload.message.playerId) {
             setPendingChatText(null);
             setChatError(null);
+
+            if (chatRecoveredDraftTextRef.current === event.payload.message.text) {
+              chatRecoveredDraftTextRef.current = null;
+
+              if (chatDraftRef.current === event.payload.message.text) {
+                setChatDraftValue("");
+              }
+            }
           }
           break;
         case SERVER_EVENT_NAMES.chatMessageRejected: {
           const pendingText = chatPendingTextRef.current;
 
+          chatRecoveredDraftTextRef.current = null;
+
           if (pendingText) {
-            setChatDraftState(pendingText);
+            setChatDraftValue(pendingText);
             setPendingChatText(null);
           }
 
@@ -330,8 +385,11 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         return;
       }
 
-      if (chatPendingTextRef.current) {
-        setChatDraftState((current) => current || chatPendingTextRef.current || "");
+      const pendingText = chatPendingTextRef.current;
+
+      if (pendingText) {
+        chatRecoveredDraftTextRef.current = pendingText;
+        setChatDraftValue((current) => current || pendingText);
         setPendingChatText(null);
       }
 
@@ -450,7 +508,8 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     }
 
     clearTransientRoomState({
-      preserveChatDraft: previousRoomCode === storedSession.roomCode
+      preserveChatDraft: previousRoomCode === storedSession.roomCode,
+      preserveRecoveredChatDraft: previousRoomCode === storedSession.roomCode
     });
     setError(null);
 
@@ -518,7 +577,9 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       return;
     }
 
-    if (!chatDraft.trim()) {
+    const nextDraft = chatDraftRef.current;
+
+    if (!nextDraft.trim()) {
       setChatError("Type a message before sending.");
       return;
     }
@@ -531,10 +592,9 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       return;
     }
 
-    const nextDraft = chatDraft;
-
+    chatRecoveredDraftTextRef.current = null;
     setPendingChatText(nextDraft);
-    setChatDraftState("");
+    setChatDraftValue("");
     setChatError(null);
 
     try {
@@ -549,7 +609,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         })
       );
     } catch {
-      setChatDraftState(nextDraft);
+      setChatDraftValue(nextDraft);
       setPendingChatText(null);
       setChatError("Chat could not be sent. Try again.");
     }
