@@ -77,6 +77,7 @@ make check
 The main configuration reference is:
 
 - [docs/config-reference.md](docs/config-reference.md)
+- [docs/two-player-chat-plan.md](docs/two-player-chat-plan.md)
 
 Example env templates:
 
