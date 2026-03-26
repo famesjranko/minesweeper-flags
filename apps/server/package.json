@@ -1,0 +1,20 @@
+{
+  "name": "@minesweeper-flags/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run --passWithNoTests src"
+  },
+  "dependencies": {
+    "@minesweeper-flags/game-engine": "*",
+    "@minesweeper-flags/shared": "*",
+    "redis": "^5.11.0",
+    "ws": "^8.18.3"
+  }
+}

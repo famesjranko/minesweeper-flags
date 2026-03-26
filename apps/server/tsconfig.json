@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "paths": {
+      "@minesweeper-flags/game-engine": [
+        "../../packages/game-engine/dist/index.d.ts"
+      ],
+      "@minesweeper-flags/shared": [
+        "../../packages/shared/dist/index.d.ts"
+      ]
+    }
+  },
+  "references": [
+    {
+      "path": "../../packages/game-engine"
+    },
+    {
+      "path": "../../packages/shared"
+    }
+  ],
+  "include": [
+    "src"
+  ]
+}

@@ -1,0 +1,11 @@
+node_modules
+dist
+.DS_Store
+coverage
+.vite
+*.tsbuildinfo
+*:Zone.Identifier
+apps/server/.env
+apps/client/.env
+apps/client/.env.local
+apps/client/.env.*.local
