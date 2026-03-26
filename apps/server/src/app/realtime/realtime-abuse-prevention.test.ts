@@ -12,6 +12,10 @@ const createAbusePrevention = () =>
       maxEvents: 3,
       windowMs: 1_000
     },
+    chatMessageLimit: {
+      maxEvents: 2,
+      windowMs: 750
+    },
     invalidMessageLimit: {
       maxEvents: 2,
       windowMs: 500
@@ -75,6 +79,20 @@ describe("realtime abuse prevention", () => {
       remaining: 0,
       retryAfterMs: 300
     });
+  });
+
+  it("rate limits chat messages per player id", () => {
+    const abusePrevention = createAbusePrevention();
+
+    expect(abusePrevention.consumeChatMessage("player-1", 0).allowed).toBe(true);
+    expect(abusePrevention.consumeChatMessage("player-1", 100).allowed).toBe(true);
+    expect(abusePrevention.consumeChatMessage("player-1", 200)).toEqual({
+      allowed: false,
+      limit: 2,
+      remaining: 0,
+      retryAfterMs: 550
+    });
+    expect(abusePrevention.consumeChatMessage("player-2", 200).allowed).toBe(true);
   });
 
   it("isolates counters per ip address", () => {

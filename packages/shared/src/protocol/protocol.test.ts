@@ -38,6 +38,19 @@ describe("protocol schemas", () => {
     expect(parsed.type).toBe(CLIENT_EVENT_NAMES.matchResign);
   });
 
+  it("accepts a valid chat send event", () => {
+    const parsed = clientEventSchema.parse({
+      type: CLIENT_EVENT_NAMES.chatSend,
+      payload: {
+        roomCode: "ABCDE",
+        sessionToken: "session-1",
+        text: "Hello there :)"
+      }
+    });
+
+    expect(parsed.type).toBe(CLIENT_EVENT_NAMES.chatSend);
+  });
+
   it("accepts a valid match state event", () => {
     const parsed = serverEventSchema.parse({
       type: SERVER_EVENT_NAMES.matchState,
@@ -88,5 +101,25 @@ describe("protocol schemas", () => {
     });
 
     expect(parsed.type).toBe(SERVER_EVENT_NAMES.matchState);
+  });
+
+  it("accepts a valid chat history event", () => {
+    const parsed = serverEventSchema.parse({
+      type: SERVER_EVENT_NAMES.chatHistory,
+      payload: {
+        roomCode: "ABCDE",
+        messages: [
+          {
+            messageId: "msg-1",
+            playerId: "player-1",
+            displayName: "Host",
+            text: "Ready?",
+            sentAt: 123
+          }
+        ]
+      }
+    });
+
+    expect(parsed.type).toBe(SERVER_EVENT_NAMES.chatHistory);
   });
 });

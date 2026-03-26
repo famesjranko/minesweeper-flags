@@ -1,6 +1,7 @@
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  type ChatMessageDto,
   type ClientEvent,
   type MatchStateDto
 } from "@minesweeper-flags/shared";
@@ -23,7 +24,9 @@ import { decodeServerEvent } from "./game-client.protocol.js";
 import {
   buildReconnectEvent,
   buildSessionFromRoomEvent,
+  appendChatMessage,
   createLobbyRuntimeState,
+  replaceChatHistory,
   shouldApplyServerEvent,
   shouldQueueWhileOffline,
   type ClientSession
@@ -37,11 +40,17 @@ interface GameClientContextValue {
   session: ClientSession | null;
   match: MatchStateDto | null;
   bombArmed: boolean;
+  chatMessages: ChatMessageDto[];
+  chatError: string | null;
+  chatDraft: string;
+  chatPending: boolean;
   openLobby: () => void;
   createRoom: (displayName: string) => void;
   joinRoom: (displayName: string, roomCode: string) => void;
   reconnect: (roomCode: string) => void;
   submitCellAction: (row: number, column: number) => void;
+  setChatDraft: (value: string) => void;
+  sendChatMessage: () => void;
   toggleBombMode: () => void;
   resignMatch: () => void;
   requestRematch: () => void;
@@ -68,6 +77,12 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const [session, setSession] = useState<ClientSession | null>(initialState.session);
   const [match, setMatch] = useState<MatchStateDto | null>(initialState.match);
   const [bombArmed, setBombArmed] = useState(initialState.bombArmed);
+  const [chatMessages, setChatMessages] = useState<ChatMessageDto[]>(initialState.chatMessages);
+  const [chatError, setChatError] = useState<string | null>(initialState.chatError);
+  const [chatDraft, setChatDraftState] = useState(initialState.chatDraft);
+  const [chatPendingText, setChatPendingTextState] = useState<string | null>(
+    initialState.chatPendingText
+  );
 
   const socketRef = useRef<WebSocket | null>(null);
   const sessionRef = useRef<ClientSession | null>(initialState.session);
@@ -75,6 +90,17 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const reconnectAttemptRef = useRef<StoredSession | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const shouldReconnectRef = useRef(true);
+  const chatPendingTextRef = useRef<string | null>(initialState.chatPendingText);
+
+  const setPendingChatText = (nextPendingText: string | null) => {
+    chatPendingTextRef.current = nextPendingText;
+    setChatPendingTextState(nextPendingText);
+  };
+
+  const setChatDraft = (value: string) => {
+    setChatDraftState(value);
+    setChatError(null);
+  };
 
   const clearReconnectTimer = () => {
     if (reconnectTimeoutRef.current) {
@@ -96,9 +122,27 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     reconnectAttemptRef.current = null;
   };
 
-  const clearTransientRoomState = () => {
+  const clearChatState = ({ preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
+    const pendingText = chatPendingTextRef.current;
+
+    setChatMessages([]);
+    setChatError(null);
+    setPendingChatText(null);
+    setChatDraftState((current) => {
+      if (preserveDraft) {
+        return current || pendingText || "";
+      }
+
+      return "";
+    });
+  };
+
+  const clearTransientRoomState = ({
+    preserveChatDraft = false
+  }: { preserveChatDraft?: boolean } = {}) => {
     setMatch(null);
     setBombArmed(false);
+    clearChatState({ preserveDraft: preserveChatDraft });
     pendingEventsRef.current = [];
   };
 
@@ -173,8 +217,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
           clearReconnectAttempt();
           const nextSession = buildSessionFromRoomEvent(event);
           setClientSession(nextSession);
-          setMatch(null);
-          setBombArmed(false);
+          clearTransientRoomState();
           setError(null);
           break;
         }
@@ -207,6 +250,43 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
             storeSession(nextSession);
             return nextSession;
           });
+          break;
+        }
+        case SERVER_EVENT_NAMES.chatHistory: {
+          const activeSession = sessionRef.current;
+          const pendingText = chatPendingTextRef.current;
+
+          setChatMessages(replaceChatHistory(event.payload.messages));
+
+          if (
+            pendingText &&
+            activeSession &&
+            event.payload.messages.some(
+              (message) =>
+                message.playerId === activeSession.playerId && message.text === pendingText
+            )
+          ) {
+            setPendingChatText(null);
+          }
+          break;
+        }
+        case SERVER_EVENT_NAMES.chatMessage:
+          setChatMessages((current) => appendChatMessage(current, event.payload.message));
+
+          if (sessionRef.current?.playerId === event.payload.message.playerId) {
+            setPendingChatText(null);
+            setChatError(null);
+          }
+          break;
+        case SERVER_EVENT_NAMES.chatMessageRejected: {
+          const pendingText = chatPendingTextRef.current;
+
+          if (pendingText) {
+            setChatDraftState(pendingText);
+            setPendingChatText(null);
+          }
+
+          setChatError(event.payload.message);
           break;
         }
         case SERVER_EVENT_NAMES.matchStarted:
@@ -248,6 +328,11 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     nextSocket.addEventListener("close", () => {
       if (socketRef.current !== nextSocket) {
         return;
+      }
+
+      if (chatPendingTextRef.current) {
+        setChatDraftState((current) => current || chatPendingTextRef.current || "");
+        setPendingChatText(null);
       }
 
       socketRef.current = null;
@@ -364,7 +449,9 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       setClientSession(null);
     }
 
-    clearTransientRoomState();
+    clearTransientRoomState({
+      preserveChatDraft: previousRoomCode === storedSession.roomCode
+    });
     setError(null);
 
     const reconnectEvent = buildReconnectEvent(storedSession);
@@ -419,6 +506,55 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     }
   };
 
+  const sendChatMessage = () => {
+    const activeSession = sessionRef.current;
+
+    if (!activeSession) {
+      setChatError("Join a room before chatting.");
+      return;
+    }
+
+    if (chatPendingTextRef.current) {
+      return;
+    }
+
+    if (!chatDraft.trim()) {
+      setChatError("Type a message before sending.");
+      return;
+    }
+
+    const socket = socketRef.current;
+
+    if (!socket || socket.readyState !== WebSocket.OPEN || connectionStatus !== "connected") {
+      setChatError("Chat is reconnecting. Try again once the room reconnects.");
+      connectSocket();
+      return;
+    }
+
+    const nextDraft = chatDraft;
+
+    setPendingChatText(nextDraft);
+    setChatDraftState("");
+    setChatError(null);
+
+    try {
+      socket.send(
+        JSON.stringify({
+          type: CLIENT_EVENT_NAMES.chatSend,
+          payload: {
+            roomCode: activeSession.roomCode,
+            sessionToken: activeSession.sessionToken,
+            text: nextDraft
+          }
+        })
+      );
+    } catch {
+      setChatDraftState(nextDraft);
+      setPendingChatText(null);
+      setChatError("Chat could not be sent. Try again.");
+    }
+  };
+
   const requestRematch = () => {
     withSession((activeSession) =>
       sendEvent({
@@ -470,11 +606,17 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         session,
         match,
         bombArmed,
+        chatMessages,
+        chatError,
+        chatDraft,
+        chatPending: chatPendingText !== null,
         openLobby,
         createRoom,
         joinRoom,
         reconnect,
         submitCellAction,
+        setChatDraft,
+        sendChatMessage,
         toggleBombMode: () => setBombArmed((current) => !current),
         resignMatch,
         requestRematch,

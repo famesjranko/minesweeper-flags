@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { chatMessageDtoSchema } from "../schemas/chat.schema.js";
 import { matchStateDtoSchema, playerMatchDtoSchema } from "../schemas/match.schema.js";
 import {
   displayNameSchema,
@@ -43,6 +44,30 @@ export const roomStateEventSchema = z.object({
     roomId: z.string().min(1),
     roomCode: roomCodeSchema,
     players: z.array(playerIdentitySchema)
+  })
+});
+
+export const chatHistoryEventSchema = z.object({
+  type: z.literal(SERVER_EVENT_NAMES.chatHistory),
+  payload: z.object({
+    roomCode: roomCodeSchema,
+    messages: z.array(chatMessageDtoSchema)
+  })
+});
+
+export const chatMessageEventSchema = z.object({
+  type: z.literal(SERVER_EVENT_NAMES.chatMessage),
+  payload: z.object({
+    roomCode: roomCodeSchema,
+    message: chatMessageDtoSchema
+  })
+});
+
+export const chatMessageRejectedEventSchema = z.object({
+  type: z.literal(SERVER_EVENT_NAMES.chatMessageRejected),
+  payload: z.object({
+    roomCode: roomCodeSchema,
+    message: z.string().min(1)
   })
 });
 
@@ -119,6 +144,9 @@ export const serverEventSchema = z.discriminatedUnion("type", [
   roomCreatedEventSchema,
   roomJoinedEventSchema,
   roomStateEventSchema,
+  chatHistoryEventSchema,
+  chatMessageEventSchema,
+  chatMessageRejectedEventSchema,
   matchStartedEventSchema,
   matchStateEventSchema,
   matchActionRejectedEventSchema,

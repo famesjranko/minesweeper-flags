@@ -6,7 +6,9 @@ import {
 } from "@minesweeper-flags/shared";
 import {
   buildReconnectEvent,
+  appendChatMessage,
   buildSessionFromRoomEvent,
+  replaceChatHistory,
   shouldApplyServerEvent,
   shouldQueueWhileOffline
 } from "./game-client.state.js";
@@ -42,6 +44,75 @@ describe("game client state helpers", () => {
 
     expect(shouldApplyServerEvent(roomStateEvent, "ABCDE")).toBe(true);
     expect(shouldApplyServerEvent(roomStateEvent, "ZZZZZ")).toBe(false);
+  });
+
+  it("deduplicates chat history by message id", () => {
+    expect(
+      replaceChatHistory([
+        {
+          messageId: "message-1",
+          playerId: "player-1",
+          displayName: "Host",
+          text: "Hello",
+          sentAt: 1
+        },
+        {
+          messageId: "message-1",
+          playerId: "player-1",
+          displayName: "Host",
+          text: "Hello",
+          sentAt: 1
+        }
+      ])
+    ).toEqual([
+      {
+        messageId: "message-1",
+        playerId: "player-1",
+        displayName: "Host",
+        text: "Hello",
+        sentAt: 1
+      }
+    ]);
+  });
+
+  it("appends only new chat messages", () => {
+    const messages = [
+      {
+        messageId: "message-1",
+        playerId: "player-1",
+        displayName: "Host",
+        text: "Hello",
+        sentAt: 1
+      }
+    ];
+
+    expect(
+      appendChatMessage(messages, {
+        messageId: "message-2",
+        playerId: "player-2",
+        displayName: "Guest",
+        text: "Hi",
+        sentAt: 2
+      })
+    ).toEqual([
+      ...messages,
+      {
+        messageId: "message-2",
+        playerId: "player-2",
+        displayName: "Guest",
+        text: "Hi",
+        sentAt: 2
+      }
+    ]);
+    expect(
+      appendChatMessage(messages, {
+        messageId: "message-1",
+        playerId: "player-1",
+        displayName: "Host",
+        text: "Hello",
+        sentAt: 1
+      })
+    ).toBe(messages);
   });
 
   it("queues only lobby bootstrap events while offline", () => {

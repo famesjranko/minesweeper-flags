@@ -14,8 +14,14 @@ export const RoomPage = () => {
     session,
     match,
     bombArmed,
+    chatMessages,
+    chatError,
+    chatDraft,
+    chatPending,
     reconnect,
     submitCellAction,
+    setChatDraft,
+    sendChatMessage,
     toggleBombMode,
     resignMatch,
     requestRematch,
@@ -187,8 +193,15 @@ export const RoomPage = () => {
         currentPlayerId={session.playerId}
         match={match}
         bombArmed={bombArmed}
+        connectionStatus={connectionStatus}
+        chatMessages={chatMessages}
+        chatError={chatError}
+        chatDraft={chatDraft}
+        chatPending={chatPending}
         onToggleBomb={toggleBombMode}
         onCellSelect={submitCellAction}
+        onChatDraftChange={setChatDraft}
+        onSendChatMessage={sendChatMessage}
         onResign={resignMatch}
         onRequestRematch={requestRematch}
         onCancelRematch={cancelRematch}

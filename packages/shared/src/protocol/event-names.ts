@@ -1,6 +1,7 @@
 export const CLIENT_EVENT_NAMES = {
   roomCreate: "room:create",
   roomJoin: "room:join",
+  chatSend: "chat:send",
   matchAction: "match:action",
   matchResign: "match:resign",
   matchRematchRequest: "match:rematch-request",
@@ -12,6 +13,9 @@ export const SERVER_EVENT_NAMES = {
   roomCreated: "room:created",
   roomJoined: "room:joined",
   roomState: "room:state",
+  chatHistory: "chat:history",
+  chatMessage: "chat:message",
+  chatMessageRejected: "chat:message-rejected",
   matchStarted: "match:started",
   matchState: "match:state",
   matchActionRejected: "match:action-rejected",

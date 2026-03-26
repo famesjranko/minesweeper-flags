@@ -18,6 +18,7 @@ interface MatchHandlerDependencies {
   attachSessionSocket: (session: PlayerSession, socket: WebSocket) => Promise<void>;
   sendEvent: (socket: WebSocket, event: ServerEvent) => void;
   sendRoomState: (socket: WebSocket, roomCode: string) => Promise<void>;
+  sendChatHistory: (socket: WebSocket, roomCode: string) => Promise<void>;
   broadcastToRoom: (roomCode: string, event: ServerEvent) => Promise<void>;
 }
 
@@ -112,6 +113,7 @@ export const handleReconnect = async (
     true
   );
   await dependencies.sendRoomState(socket, session.roomCode);
+  await dependencies.sendChatHistory(socket, session.roomCode);
 
   await dependencies.broadcastToRoom(session.roomCode, {
     type: SERVER_EVENT_NAMES.playerReconnected,
