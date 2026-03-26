@@ -1,15 +1,25 @@
-import type { MatchStateDto } from "@minesweeper-flags/shared";
+import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
+import { ChatPanel } from "../chat/ChatPanel.js";
 import { RematchPanel } from "../rematch/RematchPanel.js";
+
+type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
 interface MatchViewProps {
   roomCode: string;
   currentPlayerId: string;
   match: MatchStateDto;
   bombArmed: boolean;
+  connectionStatus: ConnectionStatus;
+  chatMessages: ChatMessageDto[];
+  chatError: string | null;
+  chatDraft: string;
+  chatPending: boolean;
   onToggleBomb: () => void;
   onCellSelect: (row: number, column: number) => void;
+  onChatDraftChange: (value: string) => void;
+  onSendChatMessage: () => void;
   onResign: () => void;
   onRequestRematch: () => void;
   onCancelRematch: () => void;
@@ -20,8 +30,15 @@ export const MatchView = ({
   currentPlayerId,
   match,
   bombArmed,
+  connectionStatus,
+  chatMessages,
+  chatError,
+  chatDraft,
+  chatPending,
   onToggleBomb,
   onCellSelect,
+  onChatDraftChange,
+  onSendChatMessage,
   onResign,
   onRequestRematch,
   onCancelRematch
@@ -151,30 +168,32 @@ export const MatchView = ({
             </div>
           </div>
 
-        {renderPlayerSlot(playerSlots[1])}
+          {renderPlayerSlot(playerSlots[1])}
 
-        <button
-          className="sidebar-resign-button"
-          disabled={match.phase !== "live"}
-          onClick={() => {
-            if (window.confirm("Resign this match?")) {
-              onResign();
-            }
-          }}
-        >
-          RESIGN
-        </button>
-      </aside>
+          <button
+            className="sidebar-resign-button"
+            disabled={match.phase !== "live"}
+            onClick={() => {
+              if (window.confirm("Resign this match?")) {
+                onResign();
+              }
+            }}
+          >
+            RESIGN
+          </button>
+        </aside>
 
-        <section className="classic-board-shell">
-          <div className="classic-board-frame">
-            <BoardGrid
-              match={match}
-              canAct={canAct}
-              bombArmed={bombArmed}
-              playerTones={playerTones}
-              onSelectCell={onCellSelect}
-            />
+        <section className="classic-main-shell">
+          <div className="classic-board-shell">
+            <div className="classic-board-frame">
+              <BoardGrid
+                match={match}
+                canAct={canAct}
+                bombArmed={bombArmed}
+                playerTones={playerTones}
+                onSelectCell={onCellSelect}
+              />
+            </div>
           </div>
 
           {match.phase === "finished" ? (
@@ -186,6 +205,25 @@ export const MatchView = ({
             />
           ) : null}
         </section>
+
+        <ChatPanel
+          roomCode={roomCode}
+          currentPlayerId={currentPlayerId}
+          playerTones={playerTones}
+          connectionStatus={connectionStatus}
+          messages={chatMessages}
+          draft={chatDraft}
+          pending={chatPending}
+          error={chatError}
+          helperText={
+            opponent
+              ? `${opponent.displayName} is ${opponent.connected ? "online" : "reconnecting"}.`
+              : "Waiting for the second player to join chat."
+          }
+          className="classic-match-chat"
+          onDraftChange={onChatDraftChange}
+          onSend={onSendChatMessage}
+        />
       </div>
     </div>
   );

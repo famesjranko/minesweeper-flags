@@ -14,6 +14,7 @@ interface RoomHandlerDependencies {
   ) => Promise<PlayerSession>;
   attachSessionSocket: (session: PlayerSession, socket: WebSocket) => Promise<void>;
   sendEvent: (socket: WebSocket, event: ServerEvent) => void;
+  sendChatHistory: (socket: WebSocket, roomCode: string) => Promise<void>;
   broadcastToRoom: (roomCode: string, event: ServerEvent) => Promise<void>;
 }
 
@@ -45,6 +46,7 @@ export const handleRoomCreate = async (
       players: room.players
     }
   });
+  await dependencies.sendChatHistory(socket, room.roomCode);
 };
 
 export const handleRoomJoin = async (
@@ -79,6 +81,7 @@ export const handleRoomJoin = async (
   };
 
   dependencies.sendEvent(socket, joinedEvent);
+  await dependencies.sendChatHistory(socket, room.roomCode);
   await dependencies.broadcastToRoom(room.roomCode, {
     type: SERVER_EVENT_NAMES.roomState,
     payload: {

@@ -24,12 +24,22 @@ import {
   handleReconnect,
   handleSocketClosed
 } from "../../modules/matches/match.handlers.js";
+import {
+  handleChatSend,
+  sendChatHistory,
+  sendChatRejected
+} from "../../modules/chat/chat.handlers.js";
+import { ChatService } from "../../modules/chat/chat.service.js";
 import { MatchService } from "../../modules/matches/match.service.js";
 import { handleRematchCancel, handleRematchRequest } from "../../modules/rematch/rematch.handlers.js";
 import { RematchService } from "../../modules/rematch/rematch.service.js";
 import { handleRoomCreate, handleRoomJoin } from "../../modules/rooms/room.handlers.js";
 import { RoomService } from "../../modules/rooms/room.service.js";
 import {
+  CHAT_HISTORY_LIMIT,
+  CHAT_MESSAGE_MAX_LENGTH,
+  CHAT_MESSAGE_RATE_LIMIT_MAX,
+  CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS,
   INVALID_MESSAGE_RATE_LIMIT_MAX,
   INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
   MAX_CONNECTIONS_PER_IP,
@@ -110,9 +120,13 @@ export const createRealtimeServer = async ({
 }: RealtimeServerOptions): Promise<RealtimeServerController> => {
   const ownsStateStores = !stateStores;
   const activeStateStores = stateStores ?? (await createStateStores(STATE_BACKEND));
-  const { roomRepository, matchRepository, playerSessionStore } = activeStateStores;
+  const { roomRepository, matchRepository, chatRepository, playerSessionStore } = activeStateStores;
   const roomService = new RoomService(roomRepository);
   const matchService = new MatchService(roomService, matchRepository);
+  const chatService = new ChatService(roomService, chatRepository, {
+    historyLimit: CHAT_HISTORY_LIMIT,
+    messageMaxLength: CHAT_MESSAGE_MAX_LENGTH
+  });
   const rematchService = new RematchService(roomService, matchService);
   const playerSessionService = new PlayerSessionService(playerSessionStore);
   const connectionRegistry = new ConnectionRegistry();
@@ -125,6 +139,10 @@ export const createRealtimeServer = async ({
     roomJoinLimit: {
       maxEvents: ROOM_JOIN_RATE_LIMIT_MAX,
       windowMs: ROOM_JOIN_RATE_LIMIT_WINDOW_MS
+    },
+    chatMessageLimit: {
+      maxEvents: CHAT_MESSAGE_RATE_LIMIT_MAX,
+      windowMs: CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS
     },
     invalidMessageLimit: {
       maxEvents: INVALID_MESSAGE_RATE_LIMIT_MAX,
@@ -183,12 +201,21 @@ export const createRealtimeServer = async ({
       }
     }
   };
+  const sendRoomChatHistory = async (socket: WebSocket, roomCode: string) => {
+    await sendChatHistory(socket, roomCode, {
+      chatService,
+      roomService,
+      sendEvent,
+      broadcastToRoom
+    });
+  };
 
   const matchHandlerDependencies = {
     roomService,
     matchService,
     sendEvent,
     sendRoomState,
+    sendChatHistory: sendRoomChatHistory,
     broadcastToRoom
   };
 
@@ -244,6 +271,7 @@ export const createRealtimeServer = async ({
       const removedRooms = await cleanupInactiveRooms({
         roomRepository,
         matchRepository,
+        chatRepository,
         playerSessionService,
         connectionRegistry,
         now: Date.now(),
@@ -529,6 +557,7 @@ export const createRealtimeServer = async ({
               createSession,
               attachSessionSocket,
               sendEvent,
+              sendChatHistory: sendRoomChatHistory,
               broadcastToRoom
             });
             break;
@@ -552,6 +581,45 @@ export const createRealtimeServer = async ({
               matchService,
               createSession,
               attachSessionSocket,
+              sendEvent,
+              sendChatHistory: sendRoomChatHistory,
+              broadcastToRoom
+            });
+            break;
+          }
+          case CLIENT_EVENT_NAMES.chatSend: {
+            const session = await requireAttachedSession(
+              {
+                connectionRegistry,
+                playerSessionService
+              },
+              event.payload.roomCode,
+              event.payload.sessionToken,
+              socket
+            );
+            const chatRateLimitResult = abusePrevention.consumeChatMessage(session.playerId);
+
+            if (!chatRateLimitResult.allowed) {
+              logger.warn("realtime.chat_message_rate_limited", {
+                connectionId: socketContext.connectionId,
+                remoteAddress,
+                roomCode: session.roomCode,
+                playerId: session.playerId,
+                retryAfterMs: chatRateLimitResult.retryAfterMs,
+                limit: chatRateLimitResult.limit
+              });
+              sendChatRejected(
+                socket,
+                session.roomCode,
+                "You're sending messages too quickly. Try again in a moment.",
+                { sendEvent }
+              );
+              return;
+            }
+
+            await handleChatSend(socket, session, event.payload.text, {
+              chatService,
+              roomService,
               sendEvent,
               broadcastToRoom
             });

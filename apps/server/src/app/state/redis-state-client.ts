@@ -10,6 +10,9 @@ export interface RedisStateClient {
   set(key: string, value: string, options?: RedisSetOptions): Promise<void>;
   del(keys: string | string[]): Promise<number>;
   exists(key: string): Promise<number>;
+  lRange(key: string, start: number, stop: number): Promise<string[]>;
+  lTrim(key: string, start: number, stop: number): Promise<void>;
+  rPush(key: string, values: string[]): Promise<number>;
   hGet(key: string, field: string): Promise<string | null>;
   hSet(key: string, values: Record<string, string>): Promise<number>;
   hDel(key: string, fields: string[]): Promise<number>;
@@ -53,6 +56,13 @@ export const createRedisStateClient = async ({
       return await client.del(keys);
     },
     exists: async (key) => await client.exists(key),
+    lRange: async (key, start, stop) => await client.lRange(key, start, stop),
+    lTrim: async (key, start, stop) => {
+      await client.lTrim(key, start, stop);
+    },
+    rPush: async (key, values) => {
+      return values.length === 0 ? 0 : await client.rPush(key, values);
+    },
     hGet: async (key, field) => await client.hGet(key, field),
     hSet: async (key, values) => {
       return Object.keys(values).length === 0 ? 0 : await client.hSet(key, values);

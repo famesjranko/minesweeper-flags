@@ -7,6 +7,7 @@ interface RealtimeAbusePreventionOptions {
   maxConnectionsPerIp: number;
   roomCreateLimit: FixedWindowLimit;
   roomJoinLimit: FixedWindowLimit;
+  chatMessageLimit: FixedWindowLimit;
   invalidMessageLimit: FixedWindowLimit;
 }
 
@@ -68,6 +69,12 @@ export class RealtimeAbusePrevention {
 
   consumeRoomJoin(ipAddress: string, now = Date.now()): RateLimitResult {
     return this.consume(`room-join:${this.normalizeIpAddress(ipAddress)}`, this.options.roomJoinLimit, now);
+  }
+
+  consumeChatMessage(playerId: string, now = Date.now()): RateLimitResult {
+    const normalizedPlayerId = playerId.trim() || "unknown";
+
+    return this.consume(`chat-message:${normalizedPlayerId}`, this.options.chatMessageLimit, now);
   }
 
   recordInvalidMessage(ipAddress: string, now = Date.now()): RateLimitResult {

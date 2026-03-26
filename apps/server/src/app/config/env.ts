@@ -56,6 +56,19 @@ export const INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
   process.env.INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
   30_000
 );
+export const CHAT_MESSAGE_MAX_LENGTH = parsePositiveInteger(
+  process.env.CHAT_MESSAGE_MAX_LENGTH,
+  200
+);
+export const CHAT_HISTORY_LIMIT = parsePositiveInteger(process.env.CHAT_HISTORY_LIMIT, 25);
+export const CHAT_MESSAGE_RATE_LIMIT_MAX = parsePositiveInteger(
+  process.env.CHAT_MESSAGE_RATE_LIMIT_MAX,
+  8
+);
+export const CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
+  process.env.CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS,
+  10_000
+);
 export const SOCKET_HEARTBEAT_INTERVAL_MS = parsePositiveInteger(
   process.env.SOCKET_HEARTBEAT_INTERVAL_MS,
   30_000

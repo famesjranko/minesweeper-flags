@@ -3,7 +3,7 @@ export * from "./protocol/client-to-server.schema.js";
 export * from "./protocol/dto.js";
 export * from "./protocol/event-names.js";
 export * from "./protocol/server-to-client.schema.js";
+export * from "./schemas/chat.schema.js";
 export * from "./schemas/match.schema.js";
 export * from "./schemas/primitives.js";
 export * from "./schemas/room.schema.js";
-

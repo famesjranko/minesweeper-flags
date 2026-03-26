@@ -1,3 +1,4 @@
+import type { ChatMessageRecord } from "../../modules/chat/chat.types.js";
 import type { MatchState } from "@minesweeper-flags/game-engine";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
 import type { PlayerSession } from "../realtime/player-session.service.js";
@@ -11,6 +12,12 @@ export const deserializeRoomRecord = (value: string): RoomRecord => parseJson<Ro
 export const serializeMatchState = (matchState: MatchState): string => JSON.stringify(matchState);
 
 export const deserializeMatchState = (value: string): MatchState => parseJson<MatchState>(value);
+
+export const serializeChatMessageRecord = (message: ChatMessageRecord): string =>
+  JSON.stringify(message);
+
+export const deserializeChatMessageRecord = (value: string): ChatMessageRecord =>
+  parseJson<ChatMessageRecord>(value);
 
 export const serializePlayerSession = (session: PlayerSession): string => JSON.stringify(session);
 

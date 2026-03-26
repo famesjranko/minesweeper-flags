@@ -1,4 +1,5 @@
 import {
+  CHAT_HISTORY_LIMIT,
   REDIS_KEY_PREFIX,
   REDIS_URL,
   RECONNECT_SESSION_TTL_SECONDS
@@ -14,6 +15,11 @@ import {
   InMemoryMatchRepository,
   RedisMatchRepository
 } from "../../modules/matches/match.repository.js";
+import type { ChatRepository } from "../../modules/chat/chat.repository.js";
+import {
+  InMemoryChatRepository,
+  RedisChatRepository
+} from "../../modules/chat/chat.repository.js";
 import type { RoomRepository } from "../../modules/rooms/room.repository.js";
 import { InMemoryRoomRepository, RedisRoomRepository } from "../../modules/rooms/room.repository.js";
 import type { StateBackend } from "./state-backend.js";
@@ -22,6 +28,7 @@ export interface StateStores {
   backend: StateBackend;
   roomRepository: RoomRepository;
   matchRepository: MatchRepository;
+  chatRepository: ChatRepository;
   playerSessionStore: PlayerSessionStore;
   dispose(): Promise<void>;
 }
@@ -45,6 +52,7 @@ export const createStateStores = async (
         backend,
         roomRepository: new InMemoryRoomRepository(),
         matchRepository: new InMemoryMatchRepository(),
+        chatRepository: new InMemoryChatRepository(CHAT_HISTORY_LIMIT),
         playerSessionStore: new InMemoryPlayerSessionStore(),
         dispose: async () => {}
       };
@@ -68,6 +76,7 @@ export const createStateStores = async (
     backend,
     roomRepository: new RedisRoomRepository(connectedRedisClient, keyPrefix),
     matchRepository: new RedisMatchRepository(connectedRedisClient, keyPrefix),
+    chatRepository: new RedisChatRepository(connectedRedisClient, keyPrefix, CHAT_HISTORY_LIMIT),
     playerSessionStore: new RedisPlayerSessionStore(
       connectedRedisClient,
       keyPrefix,

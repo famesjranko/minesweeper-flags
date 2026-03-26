@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MatchState } from "@minesweeper-flags/game-engine";
 import type WebSocket from "ws";
+import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
@@ -29,6 +30,7 @@ describe("inactive room cleanup", () => {
   it("removes expired room state and revokes its reconnect sessions", async () => {
     const roomRepository = new InMemoryRoomRepository();
     const matchRepository = new InMemoryMatchRepository();
+    const chatRepository = new InMemoryChatRepository(25);
     const playerSessionService = new PlayerSessionService();
     const connectionRegistry = new ConnectionRegistry();
     const room = createRoom(0);
@@ -40,12 +42,20 @@ describe("inactive room cleanup", () => {
 
     await roomRepository.save(room);
     await matchRepository.save({ roomId: room.roomId } as MatchState);
+    await chatRepository.append(room.roomCode, {
+      messageId: "message-1",
+      playerId: host.playerId,
+      displayName: host.displayName,
+      text: "Hello",
+      sentAt: 10
+    });
     const session = await playerSessionService.createSession(room.roomCode, host);
 
     await expect(
       cleanupInactiveRooms({
         roomRepository,
         matchRepository,
+        chatRepository,
         playerSessionService,
         connectionRegistry,
         now: 5_000,
@@ -61,6 +71,7 @@ describe("inactive room cleanup", () => {
 
     await expect(roomRepository.getByCode(room.roomCode)).resolves.toBeUndefined();
     await expect(matchRepository.getByRoomId(room.roomId)).resolves.toBeUndefined();
+    await expect(chatRepository.listRecent(room.roomCode, 25)).resolves.toEqual([]);
     await expect(
       playerSessionService.requireSession(room.roomCode, session.sessionToken)
     ).rejects.toThrow("That session is not valid for this room.");
@@ -69,6 +80,7 @@ describe("inactive room cleanup", () => {
   it("keeps expired rooms that still have an active socket", async () => {
     const roomRepository = new InMemoryRoomRepository();
     const matchRepository = new InMemoryMatchRepository();
+    const chatRepository = new InMemoryChatRepository(25);
     const playerSessionService = new PlayerSessionService();
     const connectionRegistry = new ConnectionRegistry();
     const room = createRoom(0);
@@ -87,6 +99,7 @@ describe("inactive room cleanup", () => {
       cleanupInactiveRooms({
         roomRepository,
         matchRepository,
+        chatRepository,
         playerSessionService,
         connectionRegistry,
         now: 5_000,

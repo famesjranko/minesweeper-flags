@@ -1,3 +1,4 @@
+import type { ChatRepository } from "../../modules/chat/chat.repository.js";
 import { WebSocket } from "ws";
 import type { MatchRepository } from "../../modules/matches/match.repository.js";
 import type { RoomRepository } from "../../modules/rooms/room.repository.js";
@@ -7,6 +8,7 @@ import type { PlayerSessionService } from "./player-session.service.js";
 interface CleanupInactiveRoomsOptions {
   roomRepository: RoomRepository;
   matchRepository: MatchRepository;
+  chatRepository: ChatRepository;
   playerSessionService: PlayerSessionService;
   connectionRegistry: ConnectionRegistry;
   now: number;
@@ -22,6 +24,7 @@ export interface RemovedRoomRecord {
 export const cleanupInactiveRooms = async ({
   roomRepository,
   matchRepository,
+  chatRepository,
   playerSessionService,
   connectionRegistry,
   now,
@@ -50,6 +53,7 @@ export const cleanupInactiveRooms = async ({
 
     await roomRepository.delete(room.roomCode);
     await matchRepository.deleteByRoomId(room.roomId);
+    await chatRepository.deleteByRoomCode(room.roomCode);
     await playerSessionService.revokeRoomSessions(room.roomCode);
     removedRooms.push({
       roomId: room.roomId,

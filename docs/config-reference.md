@@ -70,7 +70,11 @@ Example template:
 | `INVALID_MESSAGE_RATE_LIMIT_MAX` | `5` | positive integer | no | Number of invalid client messages allowed per window per client IP before the socket is closed. |
 | `INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS` | `30000` | positive integer | no | Window size in milliseconds for invalid-message throttling. |
 | `SOCKET_HEARTBEAT_INTERVAL_MS` | `30000` | positive integer | no | Ping interval used to detect stale WebSocket connections. |
-| `STATE_BACKEND` | `memory` | `memory`, `redis` | no | Selects the backing store for rooms, matches, and reconnect sessions. |
+| `CHAT_MESSAGE_MAX_LENGTH` | `200` | positive integer | no | Maximum accepted chat message length after trimming. |
+| `CHAT_HISTORY_LIMIT` | `25` | positive integer | no | Number of recent room-chat messages retained per room. |
+| `CHAT_MESSAGE_RATE_LIMIT_MAX` | `8` | positive integer | no | Number of chat messages allowed per player within the configured chat window. |
+| `CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS` | `10000` | positive integer | no | Window size in milliseconds for per-player chat throttling. |
+| `STATE_BACKEND` | `memory` | `memory`, `redis` | no | Selects the backing store for rooms, matches, room chat history, and reconnect sessions. |
 | `REDIS_URL` | unset | Redis URL | yes when `STATE_BACKEND=redis` | Redis connection string used by the shared-state adapters. |
 | `REDIS_KEY_PREFIX` | `minesweeper-flags` | string | no | Prefix for all Redis keys written by the app. |
 | `RECONNECT_SESSION_TTL_SECONDS` | `1800` | positive integer | no | TTL for reconnect-session records and their room index entries. |
@@ -83,6 +87,8 @@ Example template:
   Any value other than `memory` or `redis` throws at startup.
 - `PORT` currently uses `Number(...)` directly.
   Give it a numeric string.
+- Chat remains single-instance safe today.
+  Redis preserves recent history across restarts, but live cross-instance fanout still needs future pub/sub work.
 
 ## Client Build-Time Variables
 
@@ -181,7 +187,7 @@ VITE_SOCKET_URL=wss://api.example.com/ws
 
 ### Redis-Backed Single-Instance Backend
 
-Use this when you want room, match, and reconnect-session persistence across restarts:
+Use this when you want room, match, chat, and reconnect-session persistence across restarts:
 
 ```bash
 STATE_BACKEND=redis
@@ -201,6 +207,8 @@ ROOM_CREATE_RATE_LIMIT_MAX=2
 ROOM_CREATE_RATE_LIMIT_WINDOW_MS=60000
 ROOM_JOIN_RATE_LIMIT_MAX=6
 ROOM_JOIN_RATE_LIMIT_WINDOW_MS=60000
+CHAT_MESSAGE_RATE_LIMIT_MAX=6
+CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS=10000
 INVALID_MESSAGE_RATE_LIMIT_MAX=3
 INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS=30000
 ```
@@ -226,6 +234,7 @@ If you use nginx or another reverse proxy, update that route as well.
 - Change `VITE_SOCKET_URL` when the frontend must talk to a different backend origin.
 - Change `VITE_SOCKET_PATH` and `WS_PATH` together when you move the upgrade path.
 - Change `STATE_BACKEND` to `redis` when you need restart-safe shared state.
+- Change the chat variables when you want a longer backlog, tighter message caps, or a stricter anti-spam posture.
 - Change `REDIS_KEY_PREFIX` when multiple environments share one Redis instance.
 - Change `TRUST_PROXY` only when a trusted ingress or managed proxy sits in front of the app.
 - Change the rate-limit variables when you need a stricter or looser public-traffic posture.

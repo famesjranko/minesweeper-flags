@@ -6,8 +6,23 @@ import type { RedisSetOptions, RedisStateClient } from "./redis-state-client.js"
 class FakeRedisStateClient implements RedisStateClient {
   readonly expiryByKey = new Map<string, number>();
   private readonly strings = new Map<string, string>();
+  private readonly lists = new Map<string, string[]>();
   private readonly hashes = new Map<string, Map<string, string>>();
   private readonly sets = new Map<string, Set<string>>();
+
+  private sliceList(key: string, start: number, stop: number): string[] {
+    const list = this.lists.get(key) ?? [];
+    const normalizedStart = start < 0 ? list.length + start : start;
+    const normalizedStop = stop < 0 ? list.length + stop : stop;
+    const boundedStart = Math.max(0, normalizedStart);
+    const boundedStop = Math.min(list.length - 1, normalizedStop);
+
+    if (boundedStart >= list.length || boundedStart > boundedStop) {
+      return [];
+    }
+
+    return list.slice(boundedStart, boundedStop + 1);
+  }
 
   async get(key: string): Promise<string | null> {
     return this.strings.get(key) ?? null;
@@ -30,6 +45,7 @@ class FakeRedisStateClient implements RedisStateClient {
 
     for (const key of keyList) {
       removed += Number(this.strings.delete(key));
+      removed += Number(this.lists.delete(key));
       removed += Number(this.hashes.delete(key));
       removed += Number(this.sets.delete(key));
       this.expiryByKey.delete(key);
@@ -39,7 +55,29 @@ class FakeRedisStateClient implements RedisStateClient {
   }
 
   async exists(key: string): Promise<number> {
-    return Number(this.strings.has(key));
+    return Number(
+      this.strings.has(key) ||
+        this.lists.has(key) ||
+        this.hashes.has(key) ||
+        this.sets.has(key)
+    );
+  }
+
+  async lRange(key: string, start: number, stop: number): Promise<string[]> {
+    return this.sliceList(key, start, stop);
+  }
+
+  async lTrim(key: string, start: number, stop: number): Promise<void> {
+    this.lists.set(key, this.sliceList(key, start, stop));
+  }
+
+  async rPush(key: string, values: string[]): Promise<number> {
+    const list = this.lists.get(key) ?? [];
+    const nextList = [...list, ...values];
+
+    this.lists.set(key, nextList);
+
+    return nextList.length;
   }
 
   async hGet(key: string, field: string): Promise<string | null> {
@@ -125,7 +163,12 @@ class FakeRedisStateClient implements RedisStateClient {
   }
 
   async expire(key: string, seconds: number): Promise<number> {
-    if (!this.strings.has(key) && !this.hashes.has(key) && !this.sets.has(key)) {
+    if (
+      !this.strings.has(key) &&
+      !this.lists.has(key) &&
+      !this.hashes.has(key) &&
+      !this.sets.has(key)
+    ) {
       return 0;
     }
 
@@ -161,6 +204,22 @@ describe("state stores", () => {
     expect(await stateStores.matchRepository.getByRoomId(room.roomId)).toEqual({
       roomId: room.roomId
     });
+    await stateStores.chatRepository.append(room.roomCode, {
+      messageId: "message-1",
+      playerId: room.players[0]!.playerId,
+      displayName: room.players[0]!.displayName,
+      text: "Hello",
+      sentAt: 200
+    });
+    expect(await stateStores.chatRepository.listRecent(room.roomCode, 25)).toEqual([
+      {
+        messageId: "message-1",
+        playerId: room.players[0]!.playerId,
+        displayName: room.players[0]!.displayName,
+        text: "Hello",
+        sentAt: 200
+      }
+    ]);
 
     const session = await playerSessionService.createSession(room.roomCode, room.players[0]!);
     await expect(
@@ -202,6 +261,22 @@ describe("state stores", () => {
     expect(await stateStores.matchRepository.getByRoomId(room.roomId)).toEqual({
       roomId: room.roomId
     });
+    await stateStores.chatRepository.append(room.roomCode, {
+      messageId: "message-1",
+      playerId: room.players[0]!.playerId,
+      displayName: room.players[0]!.displayName,
+      text: "Hello",
+      sentAt: 200
+    });
+    expect(await stateStores.chatRepository.listRecent(room.roomCode, 25)).toEqual([
+      {
+        messageId: "message-1",
+        playerId: room.players[0]!.playerId,
+        displayName: room.players[0]!.displayName,
+        text: "Hello",
+        sentAt: 200
+      }
+    ]);
 
     const session = await playerSessionService.createSession(room.roomCode, room.players[0]!);
     await expect(
@@ -226,6 +301,8 @@ describe("state stores", () => {
     expect(await stateStores.roomRepository.delete(room.roomCode)).toEqual(room);
     expect(await stateStores.roomRepository.getByPlayerId(room.players[0]!.playerId)).toBeUndefined();
     expect(await stateStores.roomRepository.listAll()).toEqual([]);
+    await stateStores.chatRepository.deleteByRoomCode(room.roomCode);
+    expect(await stateStores.chatRepository.listRecent(room.roomCode, 25)).toEqual([]);
   });
 
   it("fails fast when the redis backend is selected without connection details", async () => {

@@ -1,6 +1,7 @@
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  type ChatMessageDto,
   type ClientEvent,
   type MatchStateDto,
   type ServerEvent
@@ -21,6 +22,10 @@ export interface LobbyRuntimeState {
   match: MatchStateDto | null;
   bombArmed: boolean;
   error: string | null;
+  chatMessages: ChatMessageDto[];
+  chatDraft: string;
+  chatError: string | null;
+  chatPendingText: string | null;
   pendingEvents: ClientEvent[];
 }
 
@@ -29,6 +34,10 @@ export const createLobbyRuntimeState = (): LobbyRuntimeState => ({
   match: null,
   bombArmed: false,
   error: null,
+  chatMessages: [],
+  chatDraft: "",
+  chatError: null,
+  chatPendingText: null,
   pendingEvents: []
 });
 
@@ -54,9 +63,80 @@ export const buildSessionFromRoomEvent = (
 export const shouldQueueWhileOffline = (event: ClientEvent): boolean =>
   event.type === CLIENT_EVENT_NAMES.roomCreate || event.type === CLIENT_EVENT_NAMES.roomJoin;
 
+export const replaceChatHistory = (messages: ChatMessageDto[]): ChatMessageDto[] => {
+  const seenMessageIds = new Set<string>();
+  const nextMessages: ChatMessageDto[] = [];
+
+  for (const message of messages) {
+    if (seenMessageIds.has(message.messageId)) {
+      continue;
+    }
+
+    seenMessageIds.add(message.messageId);
+    nextMessages.push(message);
+  }
+
+  return nextMessages;
+};
+
+export const appendChatMessage = (
+  messages: ChatMessageDto[],
+  message: ChatMessageDto
+): ChatMessageDto[] => {
+  if (messages.some((entry) => entry.messageId === message.messageId)) {
+    return messages;
+  }
+
+  return [...messages, message];
+};
+
+export const hasDeliveredChatText = (
+  messages: ChatMessageDto[],
+  playerId: string,
+  text: string
+): boolean =>
+  messages.some((message) => message.playerId === playerId && message.text === text);
+
+export const reconcileRecoveredChatDraft = ({
+  currentDraft,
+  recoveredDraftText,
+  playerId,
+  messages
+}: {
+  currentDraft: string;
+  recoveredDraftText: string | null;
+  playerId: string | null;
+  messages: ChatMessageDto[];
+}): {
+  nextDraft: string;
+  shouldClearRecoveredDraft: boolean;
+} => {
+  if (!recoveredDraftText || !playerId) {
+    return {
+      nextDraft: currentDraft,
+      shouldClearRecoveredDraft: false
+    };
+  }
+
+  if (!hasDeliveredChatText(messages, playerId, recoveredDraftText)) {
+    return {
+      nextDraft: currentDraft,
+      shouldClearRecoveredDraft: false
+    };
+  }
+
+  return {
+    nextDraft: currentDraft === recoveredDraftText ? "" : currentDraft,
+    shouldClearRecoveredDraft: true
+  };
+};
+
 export const getServerEventRoomCode = (event: ServerEvent): string | null => {
   switch (event.type) {
     case SERVER_EVENT_NAMES.roomState:
+    case SERVER_EVENT_NAMES.chatHistory:
+    case SERVER_EVENT_NAMES.chatMessage:
+    case SERVER_EVENT_NAMES.chatMessageRejected:
     case SERVER_EVENT_NAMES.matchStarted:
     case SERVER_EVENT_NAMES.matchState:
     case SERVER_EVENT_NAMES.matchEnded:

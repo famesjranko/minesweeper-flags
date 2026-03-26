@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { CLIENT_EVENT_NAMES, SERVER_EVENT_NAMES } from "@minesweeper-flags/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, type RawData } from "ws";
+import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
 import type { PlayerSession, PlayerSessionStore } from "./player-session.service.js";
@@ -13,6 +14,11 @@ type TestRealtimeServer = Awaited<ReturnType<typeof createRealtimeServer>>;
 interface MockResponseResult {
   statusCode: number;
   payload: Record<string, unknown>;
+}
+
+interface SentEvent {
+  type: string;
+  payload: any;
 }
 
 class FakeSocket extends EventEmitter {
@@ -79,6 +85,29 @@ const sendRequest = async (
 const flushAsyncWork = async (): Promise<void> => {
   await new Promise((resolve) => setImmediate(resolve));
 };
+
+const connectSocket = (server: TestRealtimeServer) => {
+  const socket = new FakeSocket();
+
+  server.webSocketServer.emit(
+    "connection",
+    socket as unknown as WebSocket,
+    {
+      headers: {},
+      socket: { remoteAddress: "127.0.0.1" }
+    } as IncomingMessage
+  );
+
+  return socket;
+};
+
+const emitClientEvent = async (socket: FakeSocket, event: Record<string, unknown>) => {
+  socket.emit("message", Buffer.from(JSON.stringify(event)));
+  await flushAsyncWork();
+};
+
+const readSentEvents = (socket: FakeSocket): SentEvent[] =>
+  socket.sentMessages.map((message) => JSON.parse(message) as SentEvent);
 
 describe("realtime server", () => {
   let activeServer: TestRealtimeServer | undefined;
@@ -151,34 +180,20 @@ describe("realtime server", () => {
         backend: "memory",
         roomRepository,
         matchRepository: new InMemoryMatchRepository(),
+        chatRepository: new InMemoryChatRepository(25),
         playerSessionStore,
         dispose: async () => {}
       }
     });
     activeServer.markReady();
 
-    const socket = new FakeSocket();
-    activeServer.webSocketServer.emit(
-      "connection",
-      socket as unknown as WebSocket,
-      {
-        headers: {},
-        socket: { remoteAddress: "127.0.0.1" }
-      } as IncomingMessage
-    );
-
-    socket.emit(
-      "message",
-      Buffer.from(
-        JSON.stringify({
-          type: CLIENT_EVENT_NAMES.roomCreate,
-          payload: {
-            displayName: "Host"
-          }
-        })
-      )
-    );
-    await flushAsyncWork();
+    const socket = connectSocket(activeServer);
+    await emitClientEvent(socket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: {
+        displayName: "Host"
+      }
+    });
 
     const roomCreatedEvent = JSON.parse(socket.sentMessages[0] ?? "null") as {
       type: string;
@@ -205,5 +220,184 @@ describe("realtime server", () => {
       roomCreatedEvent.payload.self.sessionToken
     );
     expect(roomAfterPong?.updatedAt).toBeGreaterThan(roomBeforePong.updatedAt);
+  });
+
+  it("returns chat history on room create, join, and reconnect", async () => {
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+
+    const hostSocket = connectSocket(activeServer);
+    await emitClientEvent(hostSocket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: {
+        displayName: "Host"
+      }
+    });
+
+    const hostEventsAfterCreate = readSentEvents(hostSocket);
+    const roomCreatedEvent = hostEventsAfterCreate[0];
+    const initialChatHistoryEvent = hostEventsAfterCreate[1];
+
+    expect(roomCreatedEvent?.type).toBe(SERVER_EVENT_NAMES.roomCreated);
+    expect(initialChatHistoryEvent).toEqual({
+      type: SERVER_EVENT_NAMES.chatHistory,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        messages: []
+      }
+    });
+
+    await emitClientEvent(hostSocket, {
+      type: CLIENT_EVENT_NAMES.chatSend,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        sessionToken: roomCreatedEvent?.payload.self.sessionToken,
+        text: "Hello from the lobby :)"
+      }
+    });
+
+    const hostChatMessageEvent = readSentEvents(hostSocket).at(-1);
+
+    expect(hostChatMessageEvent?.type).toBe(SERVER_EVENT_NAMES.chatMessage);
+    expect(hostChatMessageEvent?.payload).toMatchObject({
+      roomCode: roomCreatedEvent?.payload.roomCode,
+      message: {
+        displayName: "Host",
+        text: "Hello from the lobby :)"
+      }
+    });
+
+    const guestSocket = connectSocket(activeServer);
+    await emitClientEvent(guestSocket, {
+      type: CLIENT_EVENT_NAMES.roomJoin,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        displayName: "Guest"
+      }
+    });
+
+    const guestEvents = readSentEvents(guestSocket);
+
+    expect(guestEvents[0]?.type).toBe(SERVER_EVENT_NAMES.roomJoined);
+    expect(guestEvents[1]).toMatchObject({
+      type: SERVER_EVENT_NAMES.chatHistory,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        messages: [
+          {
+            displayName: "Host",
+            text: "Hello from the lobby :)"
+          }
+        ]
+      }
+    });
+
+    const reconnectSocket = connectSocket(activeServer);
+    await emitClientEvent(reconnectSocket, {
+      type: CLIENT_EVENT_NAMES.playerReconnect,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        sessionToken: roomCreatedEvent?.payload.self.sessionToken
+      }
+    });
+
+    const reconnectEvents = readSentEvents(reconnectSocket);
+
+    expect(reconnectEvents[0]?.type).toBe(SERVER_EVENT_NAMES.roomState);
+    expect(reconnectEvents[1]).toMatchObject({
+      type: SERVER_EVENT_NAMES.chatHistory,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        messages: [
+          {
+            displayName: "Host",
+            text: "Hello from the lobby :)"
+          }
+        ]
+      }
+    });
+  });
+
+  it("rejects blank and oversized chat messages without using server:error", async () => {
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+
+    const socket = connectSocket(activeServer);
+    await emitClientEvent(socket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: {
+        displayName: "Host"
+      }
+    });
+
+    const roomCreatedEvent = readSentEvents(socket)[0];
+
+    await emitClientEvent(socket, {
+      type: CLIENT_EVENT_NAMES.chatSend,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        sessionToken: roomCreatedEvent?.payload.self.sessionToken,
+        text: "   "
+      }
+    });
+
+    await emitClientEvent(socket, {
+      type: CLIENT_EVENT_NAMES.chatSend,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        sessionToken: roomCreatedEvent?.payload.self.sessionToken,
+        text: "x".repeat(201)
+      }
+    });
+
+    const chatRejections = readSentEvents(socket).filter(
+      (event) => event.type === SERVER_EVENT_NAMES.chatMessageRejected
+    );
+
+    expect(chatRejections).toHaveLength(2);
+    expect(chatRejections[0]?.payload.message).toBe("Type a message before sending.");
+    expect(chatRejections[1]?.payload.message).toBe(
+      "Chat messages can be at most 200 characters."
+    );
+    expect(
+      readSentEvents(socket).some((event) => event.type === SERVER_EVENT_NAMES.serverError)
+    ).toBe(false);
+  });
+
+  it("rate limits chat spam per player", async () => {
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+
+    const socket = connectSocket(activeServer);
+    await emitClientEvent(socket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: {
+        displayName: "Host"
+      }
+    });
+
+    const roomCreatedEvent = readSentEvents(socket)[0];
+
+    for (let index = 0; index < 9; index += 1) {
+      await emitClientEvent(socket, {
+        type: CLIENT_EVENT_NAMES.chatSend,
+        payload: {
+          roomCode: roomCreatedEvent?.payload.roomCode,
+          sessionToken: roomCreatedEvent?.payload.self.sessionToken,
+          text: `message-${index}`
+        }
+      });
+    }
+
+    const events = readSentEvents(socket);
+    const chatMessages = events.filter((event) => event.type === SERVER_EVENT_NAMES.chatMessage);
+    const chatRejections = events.filter(
+      (event) => event.type === SERVER_EVENT_NAMES.chatMessageRejected
+    );
+
+    expect(chatMessages).toHaveLength(8);
+    expect(chatRejections.at(-1)?.payload.message).toBe(
+      "You're sending messages too quickly. Try again in a moment."
+    );
   });
 });
