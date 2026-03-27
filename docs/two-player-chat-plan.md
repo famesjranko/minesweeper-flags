@@ -6,7 +6,7 @@ The intent is to ship a polished feature that fits the current lobby and match U
 ## Summary
 
 Add a lightweight text chat tied to a room session.
-The host can start chatting as soon as the room exists, the guest receives recent history on join, and the conversation continues through the live match and rematch flow.
+The shipped UI surfaces chat in the match view, recent history is restored on join or reconnect, and the conversation continues through the live match and rematch flow.
 
 The chat feature should:
 
@@ -18,7 +18,7 @@ The chat feature should:
 
 ## Goals
 
-- Let the two room participants exchange short text messages before, during, and after a match.
+- Let the two room participants exchange short text messages during and after a match.
 - Show recent room chat history to players when they join or reconnect.
 - Persist recent chat history in both memory and Redis-backed environments.
 - Fit the current visual language in [styles.css](/home/andy/minesweeper-flags/apps/client/src/styles.css), [RoomPage.tsx](/home/andy/minesweeper-flags/apps/client/src/pages/RoomPage.tsx), and [MatchView.tsx](/home/andy/minesweeper-flags/apps/client/src/features/match/MatchView.tsx).
@@ -39,7 +39,7 @@ The chat feature should:
 ### Room Scope
 
 - Chat is attached to a room, not to a specific match round.
-- Messages sent while waiting for the second player stay with the room and appear when the guest joins.
+- The current UI keeps the waiting room focused on invite flow rather than exposing chat before the match starts.
 - Messages remain visible during the live match and in the finished-match rematch state.
 - Leaving the room clears local chat state for that browser session.
 - Server-side chat history is removed when the room is cleaned up or explicitly deleted.
@@ -63,32 +63,28 @@ The chat feature should:
 
 ### Waiting Room
 
-The waiting view in [RoomPage.tsx](/home/andy/minesweeper-flags/apps/client/src/pages/RoomPage.tsx) should gain a "Room Chat" card inside the existing control area.
+The waiting view in [RoomPage.tsx](/home/andy/minesweeper-flags/apps/client/src/pages/RoomPage.tsx) intentionally stays focused on invite and room-sharing actions.
 
 Behavior:
 
-- The host can type immediately after creating a room.
-- If no opponent is connected yet, show helper copy such as "Messages sent now will appear when your opponent joins."
-- The card uses the same rounded panel treatment as the current lobby action cards.
-- The input stays available while the socket is connected.
-- If the socket is reconnecting, disable send and show a compact inline status.
+- no dedicated chat panel is shown before the live match view
+- the waiting room remains optimized for copy-link and copy-code actions
+- chat-specific status and errors stay inside the match UI rather than spilling into the invite flow
 
 ### Live Match
 
-The live match view in [MatchView.tsx](/home/andy/minesweeper-flags/apps/client/src/features/match/MatchView.tsx) should gain a dedicated chat rail.
+The live match view in [MatchView.tsx](/home/andy/minesweeper-flags/apps/client/src/features/match/MatchView.tsx) should own the dedicated chat surface.
 
 Desktop layout:
 
-- Expand `.classic-match-shell` from a two-column layout to a three-column layout.
-- Keep the existing left player sidebar and center board unchanged in hierarchy.
-- Add a right-side chat frame sized roughly `240px` to `280px` wide.
+- Keep the existing sidebar and board hierarchy intact.
+- Render chat as a full-width panel beneath the main play area instead of as a right-side rail.
 - Style the chat frame with the same beveled, glossy, arcade-like treatment used by the board frame and sidebar.
 
 Mobile layout:
 
-- On narrow screens, move chat below the board instead of squeezing the board width.
 - Keep the board as the priority surface.
-- The chat panel becomes a full-width block below the board and above the rematch panel.
+- Keep chat as a full-width block within the same stacked match layout, with a shorter panel height on narrow screens.
 
 ### Visual Direction
 
@@ -107,7 +103,7 @@ Design requirements:
 
 The chat panel should contain:
 
-- a header with `Room Chat` and a small room-code or connection badge
+- a header with a small room-code or connection badge
 - a scrollable message list
 - an empty state when no messages exist yet
 - a composer row with text input and send button
@@ -341,22 +337,22 @@ Recommended files:
 
 ### RoomPage Integration
 
-Update [RoomPage.tsx](/home/andy/minesweeper-flags/apps/client/src/pages/RoomPage.tsx) so the waiting-room branch includes the chat panel within the right-side control stack.
+Keep the waiting-room branch in [RoomPage.tsx](/home/andy/minesweeper-flags/apps/client/src/pages/RoomPage.tsx) focused on invite and room-sharing controls.
 
 Expected effect:
 
-- the host can start the conversation before the guest arrives
-- the waiting room feels more alive without needing a separate route or modal
+- pre-match flow stays simple and uncluttered
+- chat UI appears only once the user is in the live match view
 
 ### MatchView Integration
 
-Update [MatchView.tsx](/home/andy/minesweeper-flags/apps/client/src/features/match/MatchView.tsx) so the live-match layout includes the chat rail.
+Update [MatchView.tsx](/home/andy/minesweeper-flags/apps/client/src/features/match/MatchView.tsx) so the live-match layout includes the chat panel beneath the main play area.
 
 Important layout rule:
 
-- the board size and playability take priority over chat width
+- the board size and playability take priority over chat presentation
 
-If the viewport cannot comfortably fit the extra rail, stack chat below the board instead of shrinking the board into an awkward size.
+Avoid shrinking the board into an awkward size just to make room for chat.
 
 ### Styling Work
 
@@ -417,6 +413,7 @@ Add coverage for:
 - provider handling of `chat:history`
 - provider append and dedupe behavior for `chat:message`
 - chat-specific error handling for `chat:message-rejected`
+- reconnect recovery when history confirms a previously interrupted send
 - send behavior when connected vs reconnecting
 - room exit clearing chat state
 
@@ -442,7 +439,7 @@ At minimum this should land in the existing provider-oriented test setup.
 
 - extend provider state and actions
 - add chat components
-- integrate waiting-room and match layouts
+- integrate the match layout
 - add responsive styles
 - add client tests
 
@@ -467,7 +464,7 @@ That means the feature is compatible with the current repo posture, but not with
 
 ## Acceptance Criteria
 
-- A host can send chat messages immediately after creating a room.
+- The waiting room remains focused on invite and room-sharing actions.
 - A guest joining the room receives the latest chat history.
 - Both players can exchange messages during a live match without affecting board input or rematch controls.
 - Recent chat history survives reconnects.

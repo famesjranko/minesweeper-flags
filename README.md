@@ -1,6 +1,6 @@
 # Minesweeper Flags
 
-Realtime two-player competitive Minesweeper built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
+Realtime two-player competitive Minesweeper with room-scoped match chat, built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
 
 The game flow is simple:
 
@@ -9,6 +9,7 @@ The game flow is simple:
 - both players share a 16x16 board with 51 mines
 - first to 26 claimed mines wins
 - each player gets one bomb comeback move
+- room chat stays with the room through reconnects and rematches
 
 ## Screenshots
 
@@ -26,7 +27,7 @@ The game flow is simple:
 - Node + `ws` realtime server in `apps/server`
 - shared protocol/types in `packages/shared`
 - pure game logic in `packages/game-engine`
-- optional Redis-backed state persistence for rooms, matches, and reconnect sessions
+- optional Redis-backed state persistence for rooms, matches, chat history, and reconnect sessions
 
 ## Quick Start
 
@@ -153,6 +154,7 @@ The backend exposes:
 The realtime server includes:
 
 - room create/join flows over WebSockets
+- room-scoped live chat with reconnect-safe recent history
 - reconnect support with stored session tokens
 - per-IP connection caps and event throttling
 - heartbeat-based stale socket cleanup
