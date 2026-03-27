@@ -206,6 +206,21 @@ export const revealBombArea = (
   return { board: nextBoard, revealedCount, claimedMineCoordinates };
 };
 
+const getBombAxisBounds = (
+  axisLength: number,
+  position: number,
+  radius = BOMB_RADIUS
+): { min: number; max: number } => {
+  const span = Math.min(axisLength, (radius * 2) + 1);
+  const maxStart = Math.max(0, axisLength - span);
+  const start = Math.min(Math.max(0, position - radius), maxStart);
+
+  return {
+    min: start,
+    max: start + span - 1
+  };
+};
+
 export const getBombCoordinates = (
   board: BoardState,
   row: number,
@@ -213,12 +228,12 @@ export const getBombCoordinates = (
   radius = BOMB_RADIUS
 ): Coordinate[] => {
   const coordinates: Coordinate[] = [];
+  const rowBounds = getBombAxisBounds(board.rows, row, radius);
+  const columnBounds = getBombAxisBounds(board.columns, column, radius);
 
-  for (let nextRow = row - radius; nextRow <= row + radius; nextRow += 1) {
-    for (let nextColumn = column - radius; nextColumn <= column + radius; nextColumn += 1) {
-      if (isWithinBoard(board, nextRow, nextColumn)) {
-        coordinates.push({ row: nextRow, column: nextColumn });
-      }
+  for (let nextRow = rowBounds.min; nextRow <= rowBounds.max; nextRow += 1) {
+    for (let nextColumn = columnBounds.min; nextColumn <= columnBounds.max; nextColumn += 1) {
+      coordinates.push({ row: nextRow, column: nextColumn });
     }
   }
 
@@ -231,4 +246,3 @@ export const countClaimedMines = (board: BoardState): number =>
 export const countRemainingMines = (board: BoardState): number => board.mineCount - countClaimedMines(board);
 
 export { BOARD_COLUMNS, BOARD_ROWS, BOMB_RADIUS, TOTAL_MINES };
-

@@ -924,9 +924,10 @@ button {
 
 .classic-main-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-self: start;
-  width: fit-content;
+  width: var(--game-window-height);
   max-width: 100%;
   min-width: 0;
 }
@@ -1054,14 +1055,34 @@ button {
 .sidebar-bomb-pill {
   display: grid;
   place-items: center;
-  font-size: 1rem;
-  font-weight: 700;
   color: #363636;
+  padding: 0;
+}
+
+.sidebar-bomb-icon {
+  display: block;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28));
+}
+
+.sidebar-bomb-pill.is-ready {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 245, 204, 0.92)),
+    linear-gradient(180deg, #fff3a6 0%, #ffc84d 100%);
+  color: #6f3600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -2px 0 rgba(153, 97, 0, 0.2),
+    0 0 0 1px rgba(255, 214, 105, 0.28),
+    0 0 14px rgba(255, 211, 84, 0.24);
 }
 
 .sidebar-bomb-pill:disabled {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.sidebar-bomb-pill:disabled .sidebar-bomb-icon {
+  opacity: 0.92;
 }
 
 .sidebar-bomb-pill.is-armed {
@@ -1183,7 +1204,7 @@ button {
   display: grid;
   gap: 8px;
   align-self: start;
-  width: fit-content;
+  width: 100%;
 }
 
 .classic-chat-frame {
@@ -1397,22 +1418,22 @@ button {
 .chat-composer input {
   min-height: 36px;
   border-radius: 8px;
-  border: 1px solid rgba(88, 99, 124, 0.52);
+  border: 1px solid rgba(129, 144, 173, 0.58);
   padding: 8px 10px;
-  background: rgba(9, 12, 18, 0.9);
-  color: #edf2ff;
+  background: linear-gradient(180deg, #fafcff 0%, #f1f5fb 100%);
+  color: #24314f;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 0 0 3px rgba(230, 236, 245, 0.82);
 }
 
 .chat-composer input::placeholder {
-  color: rgba(220, 228, 247, 0.5);
+  color: #7f8ca7;
 }
 
 .chat-composer input:disabled {
   cursor: wait;
-  opacity: 0.75;
+  opacity: 0.82;
 }
 
 .chat-composer button {
@@ -1462,6 +1483,7 @@ button {
 
 .board-grid {
   display: grid;
+  position: relative;
   gap: 2px;
   background: #050607;
   padding: 8px;
@@ -1469,6 +1491,20 @@ button {
   box-shadow:
     inset 0 0 0 3px #2f2f2f,
     inset 0 0 0 6px #0f1013;
+}
+
+.board-bomb-preview {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(206, 235, 255, 0.22), rgba(112, 187, 255, 0.12));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.26),
+    inset 0 0 0 5px rgba(18, 28, 46, 0.28);
+  outline: 3px dashed rgba(12, 25, 45, 0.78);
+  outline-offset: -6px;
 }
 
 .board-cell {
@@ -1479,6 +1515,8 @@ button {
   padding: 0;
   font-weight: 700;
   color: #2a3653;
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
@@ -1491,6 +1529,10 @@ button {
 
 .board-cell.status-hidden:hover:enabled {
   filter: brightness(1.07);
+}
+
+.board-grid.is-bomb-preview-active .board-cell.status-hidden:hover:enabled {
+  filter: none;
 }
 
 .board-cell.status-hidden {
@@ -1526,10 +1568,21 @@ button {
   color: white;
 }
 
-.board-cell.bomb-armed {
+.board-cell.bomb-targetable {
+  cursor: crosshair;
+}
+
+.board-cell.bomb-preview-cell {
   box-shadow:
-    inset 0 0 0 2px #ff6b2c,
-    inset 0 0 0 4px rgba(255, 235, 123, 0.76);
+    inset 0 0 0 2px rgba(255, 245, 176, 0.48),
+    inset 0 0 18px rgba(255, 255, 255, 0.22);
+}
+
+.board-cell.bomb-preview-center {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 221, 116, 0.88),
+    inset 0 0 0 5px rgba(255, 252, 210, 0.38),
+    inset 0 0 22px rgba(255, 255, 255, 0.32);
 }
 
 .cell-number {
@@ -1581,11 +1634,23 @@ button {
 }
 
 .rematch-panel {
+  width: 100%;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 28%),
     linear-gradient(180deg, #1c202d 0%, #090c13 100%);
   color: #edf2ff;
   border-color: rgba(125, 148, 204, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 32px rgba(0, 0, 0, 0.28);
+}
+
+.rematch-panel p {
+  margin: 0;
+}
+
+.rematch-panel .action-row {
+  justify-content: center;
 }
 
 @media (max-width: 920px) {
@@ -1603,6 +1668,10 @@ button {
 }
 
 @media (max-width: 720px) {
+  :root {
+    --board-cell-size: min(5.3vw, 28px);
+  }
+
   .page-shell {
     padding: 14px;
   }
@@ -1661,11 +1730,6 @@ button {
     height: auto;
   }
 
-  .board-cell {
-    width: min(5.3vw, 28px);
-    height: min(5.3vw, 28px);
-  }
-
   .chat-panel-header {
     align-items: start;
     flex-direction: column;
@@ -1682,5 +1746,9 @@ button {
   .classic-match-chat {
     height: 276px;
     min-height: 276px;
+  }
+
+  .classic-main-shell {
+    width: 100%;
   }
 }

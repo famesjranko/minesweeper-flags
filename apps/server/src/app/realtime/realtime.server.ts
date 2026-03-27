@@ -22,23 +22,12 @@ import { createStateStores, type StateStores } from "../state/state-store.js";
 import { RealtimeAbusePrevention } from "./realtime-abuse-prevention.js";
 import { requireAttachedSession } from "./session-auth.js";
 import { SocketHeartbeatMonitor } from "./socket-heartbeat.js";
-import {
-  handleMatchAction,
-  handleMatchResign,
-  handleReconnect,
-  handleSocketClosed
-} from "../../modules/matches/match.handlers.js";
-import {
-  handleChatSend,
-  sendChatHistory,
-  sendChatRejected
-} from "../../modules/chat/chat.handlers.js";
 import { ChatService } from "../../modules/chat/chat.service.js";
 import { MatchService } from "../../modules/matches/match.service.js";
-import { handleRematchCancel, handleRematchRequest } from "../../modules/rematch/rematch.handlers.js";
 import { RematchService } from "../../modules/rematch/rematch.service.js";
-import { handleRoomCreate, handleRoomJoin } from "../../modules/rooms/room.handlers.js";
 import { RoomService } from "../../modules/rooms/room.service.js";
+import { GameCommandService } from "../commands/game-command.service.js";
+import type { CommandExecution } from "../commands/game-command.types.js";
 import {
   CHAT_HISTORY_LIMIT,
   CHAT_MESSAGE_MAX_LENGTH,
@@ -185,6 +174,13 @@ export const createRealtimeServer = async ({
   });
   const rematchService = new RematchService(roomService, matchService, roomTaskRunner);
   const playerSessionService = new PlayerSessionService(playerSessionStore);
+  const commandService = new GameCommandService({
+    roomService,
+    matchService,
+    chatService,
+    rematchService,
+    playerSessionService
+  });
   const connectionRegistry = new ConnectionRegistry();
   const abusePrevention = new RealtimeAbusePrevention({
     maxConnectionsPerIp: MAX_CONNECTIONS_PER_IP,
@@ -228,24 +224,6 @@ export const createRealtimeServer = async ({
     }
   });
 
-  const createSession = async (
-    roomCode: string,
-    player: { playerId: string; displayName: string }
-  ) => await playerSessionService.createSession(roomCode, player);
-
-  const sendRoomState = async (socket: WebSocket, roomCode: string) => {
-    const room = await roomService.getRoomByCode(roomCode);
-
-    sendEvent(socket, {
-      type: SERVER_EVENT_NAMES.roomState,
-      payload: {
-        roomId: room.roomId,
-        roomCode: room.roomCode,
-        players: room.players
-      }
-    });
-  };
-
   const broadcastToRoom = async (roomCode: string, event: ServerEvent) => {
     const room = await roomService.getRoomByCode(roomCode);
 
@@ -257,32 +235,38 @@ export const createRealtimeServer = async ({
       }
     }
   };
-  const sendRoomChatHistory = async (socket: WebSocket, roomCode: string) => {
-    await sendChatHistory(socket, roomCode, {
-      chatService,
-      roomService,
-      sendEvent,
-      broadcastToRoom
-    });
-  };
 
-  const matchHandlerDependencies = {
-    roomService,
-    matchService,
-    sendEvent,
-    sendRoomState,
-    sendChatHistory: sendRoomChatHistory,
-    broadcastToRoom
-  };
+  async function dispatchExecution(
+    socket: WebSocket | null,
+    execution: CommandExecution
+  ): Promise<void> {
+    if (execution.sessionToBind) {
+      if (!socket) {
+        throw new Error("A caller socket is required to bind a session.");
+      }
 
-  const attachSessionSocket = async (session: PlayerSession, socket: WebSocket) => {
+      await attachSessionSocket(execution.sessionToBind, socket);
+    }
+
+    for (const step of execution.steps) {
+      if (step.kind === "direct") {
+        if (!socket) {
+          throw new Error("A caller socket is required to send direct events.");
+        }
+
+        sendEvent(socket, step.event);
+        continue;
+      }
+
+      await broadcastToRoom(step.roomCode, step.event);
+    }
+  }
+
+  async function attachSessionSocket(session: PlayerSession, socket: WebSocket) {
     const { displacedSession, replacedSocket } = connectionRegistry.attach(session, socket);
 
     if (displacedSession) {
-      await handleSocketClosed(displacedSession, {
-        ...matchHandlerDependencies,
-        attachSessionSocket
-      });
+      await dispatchExecution(null, await commandService.disconnectPlayer(displacedSession));
     }
 
     if (replacedSocket && replacedSocket.readyState !== WebSocket.CLOSED) {
@@ -291,7 +275,7 @@ export const createRealtimeServer = async ({
         WEBSOCKET_CLOSE_REASONS.sessionReplaced
       );
     }
-  };
+  }
 
   const sendServerError = (socket: WebSocket, message: string) => {
     sendEvent(socket, {
@@ -553,10 +537,9 @@ export const createRealtimeServer = async ({
         return;
       }
 
-      void handleSocketClosed(session, {
-        ...matchHandlerDependencies,
-        attachSessionSocket
-      }).catch((error) => {
+      void (async () => {
+        await dispatchExecution(null, await commandService.disconnectPlayer(session));
+      })().catch((error) => {
         logger.error("realtime.connection_close_failed", {
           error,
           connectionId: socketContext.connectionId,
@@ -653,15 +636,7 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await handleRoomCreate(socket, event.payload.displayName, {
-              roomService,
-              matchService,
-              createSession,
-              attachSessionSocket,
-              sendEvent,
-              sendChatHistory: sendRoomChatHistory,
-              broadcastToRoom
-            });
+            await dispatchExecution(socket, await commandService.createRoom(event.payload.displayName));
             break;
           }
           case CLIENT_EVENT_NAMES.roomJoin: {
@@ -678,15 +653,10 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await handleRoomJoin(socket, event.payload.inviteToken, event.payload.displayName, {
-              roomService,
-              matchService,
-              createSession,
-              attachSessionSocket,
-              sendEvent,
-              sendChatHistory: sendRoomChatHistory,
-              broadcastToRoom
-            });
+            await dispatchExecution(
+              socket,
+              await commandService.joinRoom(event.payload.inviteToken, event.payload.displayName)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.chatSend: {
@@ -710,21 +680,17 @@ export const createRealtimeServer = async ({
                 retryAfterMs: chatRateLimitResult.retryAfterMs,
                 limit: chatRateLimitResult.limit
               });
-              sendChatRejected(
-                socket,
-                session.roomCode,
-                "You're sending messages too quickly. Try again in a moment.",
-                { sendEvent }
-              );
+              sendEvent(socket, {
+                type: SERVER_EVENT_NAMES.chatMessageRejected,
+                payload: {
+                  roomCode: session.roomCode,
+                  message: "You're sending messages too quickly. Try again in a moment."
+                }
+              });
               return;
             }
 
-            await handleChatSend(socket, session, event.payload.text, {
-              chatService,
-              roomService,
-              sendEvent,
-              broadcastToRoom
-            });
+            await dispatchExecution(socket, await commandService.sendChat(session, event.payload.text));
             break;
           }
           case CLIENT_EVENT_NAMES.matchAction: {
@@ -737,10 +703,7 @@ export const createRealtimeServer = async ({
               event.payload.sessionToken,
               socket
             );
-            await handleMatchAction(socket, session, event.payload.action, {
-              ...matchHandlerDependencies,
-              attachSessionSocket
-            });
+            await dispatchExecution(socket, await commandService.applyMatchAction(session, event.payload.action));
             break;
           }
           case CLIENT_EVENT_NAMES.matchResign: {
@@ -753,21 +716,17 @@ export const createRealtimeServer = async ({
               event.payload.sessionToken,
               socket
             );
-            await handleMatchResign(socket, session, {
-              ...matchHandlerDependencies,
-              attachSessionSocket
-            });
+            await dispatchExecution(socket, await commandService.resignMatch(session));
             break;
           }
           case CLIENT_EVENT_NAMES.playerReconnect: {
-            const session = await playerSessionService.requireSession(
-              event.payload.roomCode,
-              event.payload.sessionToken
+            await dispatchExecution(
+              socket,
+              await commandService.reconnectPlayer(
+                event.payload.roomCode,
+                event.payload.sessionToken
+              )
             );
-            await handleReconnect(socket, session, {
-              ...matchHandlerDependencies,
-              attachSessionSocket
-            });
             break;
           }
           case CLIENT_EVENT_NAMES.matchRematchRequest: {
@@ -780,12 +739,7 @@ export const createRealtimeServer = async ({
               event.payload.sessionToken,
               socket
             );
-            await handleRematchRequest(socket, session, {
-              rematchService,
-              roomService,
-              sendEvent,
-              broadcastToRoom
-            });
+            await dispatchExecution(socket, await commandService.requestRematch(session));
             break;
           }
           case CLIENT_EVENT_NAMES.matchRematchCancel: {
@@ -798,12 +752,7 @@ export const createRealtimeServer = async ({
               event.payload.sessionToken,
               socket
             );
-            await handleRematchCancel(socket, session, {
-              rematchService,
-              roomService,
-              sendEvent,
-              broadcastToRoom
-            });
+            await dispatchExecution(socket, await commandService.cancelRematch(session));
             break;
           }
         }

@@ -3,6 +3,7 @@ import type { BoardCell, MatchState } from "../index.js";
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
+  MIN_BOMB_DEFICIT,
   TOTAL_MINES,
   createMatchState,
   resignMatch,
@@ -83,7 +84,7 @@ describe("resolveAction", () => {
     }
   });
 
-  it("only allows bombs while trailing", () => {
+  it("only allows bombs while trailing by the minimum deficit", () => {
     const match = createMatchState({
       roomId: "room-1",
       players: [
@@ -95,16 +96,18 @@ describe("resolveAction", () => {
       startingPlayerId: "p1"
     });
 
+    match.players[0].score = 3;
+    match.players[1].score = 3 + (MIN_BOMB_DEFICIT - 1);
     const resolution = resolveAction(match, { type: "bomb", playerId: "p1", row: 4, column: 4 }, 2);
 
     expect(resolution.ok).toBe(false);
 
     if (!resolution.ok) {
-      expect(resolution.error).toContain("trailing");
+      expect(resolution.error).toContain(`${MIN_BOMB_DEFICIT} or more`);
     }
   });
 
-  it("claims mines in the bomb area", () => {
+  it("claims mines in the bomb area once the deficit threshold is met", () => {
     const match = createMatchState({
       roomId: "room-1",
       players: [
@@ -117,7 +120,7 @@ describe("resolveAction", () => {
     });
 
     match.players[0].score = 0;
-    match.players[1].score = 2;
+    match.players[1].score = MIN_BOMB_DEFICIT;
     match.board = createCustomBoard([
       { row: 4, column: 4, hasMine: true },
       { row: 5, column: 5, hasMine: true }

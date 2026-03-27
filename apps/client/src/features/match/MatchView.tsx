@@ -1,5 +1,10 @@
-import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
+import {
+  MIN_BOMB_DEFICIT,
+  type ChatMessageDto,
+  type MatchStateDto
+} from "@minesweeper-flags/shared";
 import { BoardGrid } from "../../entities/board/BoardGrid.js";
+import { BombIcon } from "../../shared-ui/BombIcon.js";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 import { ChatPanel } from "../chat/ChatPanel.js";
 import { RematchPanel } from "../rematch/RematchPanel.js";
@@ -47,11 +52,12 @@ export const MatchView = ({
   const currentPlayer = match.players.find((player) => player.playerId === currentPlayerId) ?? null;
   const opponent = match.players.find((player) => player.playerId !== currentPlayerId) ?? null;
   const canAct = match.phase === "live" && match.currentTurnPlayerId === currentPlayerId;
+  const scoreDeficit = currentPlayer && opponent ? opponent.score - currentPlayer.score : 0;
   const canBomb = Boolean(
     currentPlayer &&
       opponent &&
       currentPlayer.bombsRemaining === 1 &&
-      currentPlayer.score < opponent.score
+      scoreDeficit >= MIN_BOMB_DEFICIT
   );
   const playerTones: Record<string, "blue" | "red"> = {
     [bluePlayer.playerId]: "blue",
@@ -89,6 +95,10 @@ export const MatchView = ({
         .filter(Boolean)
         .join(" ")}
     >
+      {/*
+        Bomb availability is easy to miss, so give the active player a distinct
+        ready state instead of relying on the disabled button contrast alone.
+      */}
       <header className="sidebar-player-header">
         <span className="sidebar-player-title">{slot.title}</span>
         <span className="sidebar-player-role">{slot.isSelf ? "YOU" : "OPPONENT"}</span>
@@ -108,20 +118,49 @@ export const MatchView = ({
           <FlagIcon color={slot.tone} size={22} />
           <strong>{slot.player.score}</strong>
         </div>
-        <button
-          className={[
-            "sidebar-pill",
-            "sidebar-bomb-pill",
-            slot.isSelf && bombArmed ? "is-armed" : ""
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={slot.isSelf ? onToggleBomb : undefined}
-          disabled={!slot.isSelf || !canAct || !canBomb}
-          title="Bomb: one use only, and only while trailing."
-        >
-          {slot.player.bombsRemaining ? "X" : "-"}
-        </button>
+        {(() => {
+          const bombVariant =
+            slot.player.bombsRemaining === 0
+              ? "spent"
+              : slot.isSelf && bombArmed
+                ? "armed"
+                : slot.isSelf && canAct && canBomb
+                  ? "ready"
+                  : "idle";
+          const bombLabel =
+            slot.player.bombsRemaining === 0
+              ? `${slot.isSelf ? "Your" : "Opponent"} bomb is spent.`
+              : slot.isSelf && canAct && canBomb
+                ? bombArmed
+                  ? "Bomb armed. Pick the center of a 5x5 blast."
+                  : "Bomb ready. Click to arm a 5x5 blast."
+                : slot.isSelf
+                  ? `Bomb unused. It becomes available while trailing by ${MIN_BOMB_DEFICIT} or more on your turn.`
+                  : "Opponent bomb status.";
+
+          return (
+            <button
+              aria-label={bombLabel}
+              className={[
+                "sidebar-pill",
+                "sidebar-bomb-pill",
+                slot.isSelf && canAct && canBomb ? "is-ready" : "",
+                slot.isSelf && bombArmed ? "is-armed" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={slot.isSelf ? onToggleBomb : undefined}
+              disabled={!slot.isSelf || !canAct || !canBomb}
+              title={
+                slot.isSelf && canAct && canBomb
+                  ? "Bomb ready: click to arm a 5x5 blast."
+                  : `Bomb: one use only, and only while trailing by ${MIN_BOMB_DEFICIT} or more.`
+              }
+            >
+              <BombIcon className="sidebar-bomb-icon" variant={bombVariant} size={19} />
+            </button>
+          );
+        })()}
       </div>
 
       <div className="sidebar-turn-box">
@@ -138,7 +177,11 @@ export const MatchView = ({
             {slot.isTurn
               ? bombArmed
                 ? "Bomb armed.\nPick center."
-                : "It's your turn!\nMake a move."
+                : canBomb
+                  ? "It's your turn!\nBomb ready."
+                  : scoreDeficit > 0 && scoreDeficit < MIN_BOMB_DEFICIT
+                    ? `It's your turn!\nBomb unlocks at down ${MIN_BOMB_DEFICIT}.`
+                    : "It's your turn!\nMake a move."
               : "Wait your turn."}
           </p>
         ) : slot.isTurn ? (

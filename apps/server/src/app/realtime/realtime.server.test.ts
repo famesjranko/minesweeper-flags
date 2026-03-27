@@ -303,6 +303,13 @@ describe("realtime server", () => {
         ]
       }
     });
+    expect(guestEvents[2]?.type).toBe(SERVER_EVENT_NAMES.roomState);
+    expect(guestEvents[3]?.type).toBe(SERVER_EVENT_NAMES.matchStarted);
+
+    const hostEventsAfterJoin = readSentEvents(hostSocket);
+
+    expect(hostEventsAfterJoin.at(-2)?.type).toBe(SERVER_EVENT_NAMES.roomState);
+    expect(hostEventsAfterJoin.at(-1)?.type).toBe(SERVER_EVENT_NAMES.matchStarted);
 
     const reconnectSocket = connectSocket(activeServer);
     await emitClientEvent(reconnectSocket, {
@@ -328,6 +335,42 @@ describe("realtime server", () => {
         ]
       }
     });
+    expect(reconnectEvents[2]?.type).toBe(SERVER_EVENT_NAMES.playerReconnected);
+    expect(reconnectEvents[3]?.type).toBe(SERVER_EVENT_NAMES.matchState);
+  });
+
+  it("broadcasts ordered disconnect side effects when an attached player socket closes", async () => {
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+
+    const hostSocket = connectSocket(activeServer);
+    await emitClientEvent(hostSocket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: {
+        displayName: "Host"
+      }
+    });
+
+    const roomCreatedEvent = readSentEvents(hostSocket)[0];
+    const guestSocket = connectSocket(activeServer);
+
+    await emitClientEvent(guestSocket, {
+      type: CLIENT_EVENT_NAMES.roomJoin,
+      payload: {
+        inviteToken: roomCreatedEvent?.payload.inviteToken,
+        displayName: "Guest"
+      }
+    });
+
+    const guestEventsBeforeDisconnect = guestSocket.sentMessages.length;
+
+    hostSocket.emit("close", 1001, Buffer.from(""));
+    await flushAsyncWork();
+
+    const guestEventsAfterDisconnect = readSentEvents(guestSocket).slice(guestEventsBeforeDisconnect);
+
+    expect(guestEventsAfterDisconnect[0]?.type).toBe(SERVER_EVENT_NAMES.playerDisconnected);
+    expect(guestEventsAfterDisconnect[1]?.type).toBe(SERVER_EVENT_NAMES.matchState);
   });
 
   it("closes replaced sockets with an explicit session-replaced close code", async () => {

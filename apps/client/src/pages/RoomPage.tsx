@@ -1,9 +1,9 @@
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { buildInvitePath } from "../features/room/invite-link.js";
 import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
-import { getStoredSession } from "../lib/socket/session-storage.js";
 import { MatchView } from "../features/match/MatchView.js";
 
 export const RoomPage = () => {
@@ -19,6 +19,7 @@ export const RoomPage = () => {
     chatError,
     chatDraft,
     chatPending,
+    hasStoredSession,
     reconnect,
     submitCellAction,
     setChatDraft,
@@ -34,14 +35,10 @@ export const RoomPage = () => {
       return;
     }
 
-    if (!session || session.roomCode !== roomCode) {
-      const storedSession = getStoredSession(roomCode);
-
-      if (storedSession) {
-        reconnect(roomCode);
-      }
+    if ((!session || session.roomCode !== roomCode) && hasStoredSession(roomCode)) {
+      reconnect(roomCode);
     }
-  }, [reconnect, roomCode, session]);
+  }, [hasStoredSession, reconnect, roomCode, session]);
 
   const inviteLink =
     session?.inviteToken
@@ -109,7 +106,7 @@ export const RoomPage = () => {
               featurePills={[
                 "Shared 16x16 field",
                 "First to 26 mines",
-                "One comeback bomb"
+                `One comeback bomb at down ${MIN_BOMB_DEFICIT}+`
               ]}
             />
 

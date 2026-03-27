@@ -1,5 +1,11 @@
 import { createBoard, getCell, revealBombArea, revealConnectedSafeCells } from "../board/board.logic.js";
-import { clearRematchVotes, incrementPlayerScore, isPlayerTrailing, useBomb } from "../match/scoring.logic.js";
+import {
+  MIN_BOMB_DEFICIT,
+  clearRematchVotes,
+  incrementPlayerScore,
+  isPlayerTrailingByAtLeast,
+  useBomb
+} from "../match/scoring.logic.js";
 import type { MatchState, PlayerMatchState } from "../match/match.types.js";
 import { keepTurn, switchTurn } from "../match/turn.logic.js";
 import { findWinnerPlayerId, isFinished } from "../match/win.logic.js";
@@ -166,8 +172,8 @@ export const resolveAction = (
     return reject("You have already used your bomb.");
   }
 
-  if (!isPlayerTrailing(state, action.playerId)) {
-    return reject("Bombs can only be used while trailing.");
+  if (!isPlayerTrailingByAtLeast(state, action.playerId)) {
+    return reject(`Bombs can only be used while trailing by ${MIN_BOMB_DEFICIT} or more.`);
   }
 
   const bombResult = revealBombArea(state.board, action.row, action.column);
@@ -213,4 +219,3 @@ export const resolveAction = (
 
   return { ok: true, state: nextState, action: actionResult };
 };
-

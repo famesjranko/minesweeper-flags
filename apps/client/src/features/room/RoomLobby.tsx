@@ -1,4 +1,4 @@
-import { INVITE_TOKEN_LENGTH } from "@minesweeper-flags/shared";
+import { INVITE_TOKEN_LENGTH, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
 import { extractInviteToken } from "./invite-link.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
@@ -65,7 +65,7 @@ export const RoomLobby = ({
           featurePills={[
             "Shared 16x16 field",
             "First to 26 mines",
-            "One comeback bomb"
+            `One comeback bomb at down ${MIN_BOMB_DEFICIT}+`
           ]}
         />
 

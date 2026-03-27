@@ -1,5 +1,7 @@
 import type { MatchState } from "./match.types.js";
 
+export const MIN_BOMB_DEFICIT = 4;
+
 export const incrementPlayerScore = (
   state: MatchState,
   playerId: string,
@@ -79,3 +81,19 @@ export const isPlayerTrailing = (state: MatchState, playerId: string): boolean =
   return player.score < opponent.score;
 };
 
+export const getPlayerScoreDeficit = (state: MatchState, playerId: string): number => {
+  const player = state.players.find((entry) => entry.playerId === playerId);
+  const opponent = state.players.find((entry) => entry.playerId !== playerId);
+
+  if (!player || !opponent) {
+    throw new Error(`Unknown player ${playerId}.`);
+  }
+
+  return opponent.score - player.score;
+};
+
+export const isPlayerTrailingByAtLeast = (
+  state: MatchState,
+  playerId: string,
+  minimumDeficit = MIN_BOMB_DEFICIT
+): boolean => getPlayerScoreDeficit(state, playerId) >= minimumDeficit;
