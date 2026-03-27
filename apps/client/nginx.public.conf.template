@@ -1,0 +1,28 @@
+server {
+  listen 8080;
+  server_name _;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  add_header Content-Security-Policy "default-src 'self'; connect-src 'self' ${CSP_CONNECT_SRC}; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), fullscreen=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+
+  location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    try_files $uri =404;
+  }
+
+  location = /index.html {
+    add_header Cache-Control "no-cache" always;
+  }
+
+  location / {
+    add_header Cache-Control "no-cache" always;
+    try_files $uri $uri/ /index.html;
+  }
+}

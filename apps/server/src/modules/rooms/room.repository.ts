@@ -79,16 +79,28 @@ export class RedisRoomRepository implements RoomRepository {
         .map((player) => player.playerId)
         .filter((playerId) => !nextPlayerIds.has(playerId)) ?? [];
 
-    await this.redis.set(this.roomKey(room.roomCode), serializeRoomRecord(room));
-    await this.redis.sAdd(this.roomCodesKey, [room.roomCode]);
-    await this.redis.hSet(
-      this.roomCodesByPlayerIdKey,
-      Object.fromEntries(room.players.map((player) => [player.playerId, room.roomCode]))
-    );
-
-    if (removedPlayerIds.length > 0) {
-      await this.redis.hDel(this.roomCodesByPlayerIdKey, removedPlayerIds);
-    }
+    await this.redis.executeTransaction([
+      {
+        type: "set",
+        key: this.roomKey(room.roomCode),
+        value: serializeRoomRecord(room)
+      },
+      {
+        type: "sAdd",
+        key: this.roomCodesKey,
+        members: [room.roomCode]
+      },
+      {
+        type: "hSet",
+        key: this.roomCodesByPlayerIdKey,
+        values: Object.fromEntries(room.players.map((player) => [player.playerId, room.roomCode]))
+      },
+      {
+        type: "hDel",
+        key: this.roomCodesByPlayerIdKey,
+        fields: removedPlayerIds
+      }
+    ]);
   }
 
   async getByCode(roomCode: string): Promise<RoomRecord | undefined> {
@@ -133,17 +145,26 @@ export class RedisRoomRepository implements RoomRepository {
   async delete(roomCode: string): Promise<RoomRecord | undefined> {
     const room = await this.getByCode(roomCode);
 
-    await this.redis.sRem(this.roomCodesKey, [roomCode]);
+    await this.redis.executeTransaction([
+      {
+        type: "sRem",
+        key: this.roomCodesKey,
+        members: [roomCode]
+      },
+      {
+        type: "del",
+        keys: room ? [this.roomKey(roomCode)] : []
+      },
+      {
+        type: "hDel",
+        key: this.roomCodesByPlayerIdKey,
+        fields: room?.players.map((player) => player.playerId) ?? []
+      }
+    ]);
 
     if (!room) {
       return undefined;
     }
-
-    await this.redis.del(this.roomKey(roomCode));
-    await this.redis.hDel(
-      this.roomCodesByPlayerIdKey,
-      room.players.map((player) => player.playerId)
-    );
 
     return room;
   }

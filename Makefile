@@ -8,6 +8,7 @@ SERVER_WORKSPACE := @minesweeper-flags/server
 CLIENT_WORKSPACE := @minesweeper-flags/client
 SHARED_WORKSPACE := @minesweeper-flags/shared
 ENGINE_WORKSPACE := @minesweeper-flags/game-engine
+PUBLIC_COMPOSE_FILE := deploy/container/docker-compose.public.yml
 
 SERVER_ENV_PREFIX = set -a; if [ -f "$(SERVER_ENV_FILE)" ]; then . "$(SERVER_ENV_FILE)"; fi; set +a;
 
@@ -35,7 +36,14 @@ SERVER_ENV_PREFIX = set -a; if [ -f "$(SERVER_ENV_FILE)" ]; then . "$(SERVER_ENV
 	compose-up-detached \
 	compose-down \
 	compose-logs \
-	compose-ps
+	compose-ps \
+	compose-public-config \
+	compose-public-build \
+	compose-public-up \
+	compose-public-up-detached \
+	compose-public-down \
+	compose-public-logs \
+	compose-public-ps
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "%-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -89,6 +97,7 @@ check: ## Run the main local verification flow
 	$(MAKE) test
 	$(MAKE) build
 	$(MAKE) compose-config
+	$(MAKE) compose-public-config
 
 compose-config: ## Validate docker compose configuration
 	$(DOCKER_COMPOSE) config
@@ -110,3 +119,24 @@ compose-logs: ## Tail local Docker Compose logs
 
 compose-ps: ## Show local Docker Compose service status
 	$(DOCKER_COMPOSE) ps
+
+compose-public-config: ## Validate the parity/public Docker Compose overlay
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) config
+
+compose-public-build: ## Build the parity/public Docker Compose images
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) build server client
+
+compose-public-up: ## Start the parity/public Docker Compose stack in the foreground
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) up --build
+
+compose-public-up-detached: ## Start the parity/public Docker Compose stack in the background
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) up --build -d
+
+compose-public-down: ## Stop the parity/public Docker Compose stack
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) down
+
+compose-public-logs: ## Tail parity/public Docker Compose logs
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) logs -f
+
+compose-public-ps: ## Show parity/public Docker Compose service status
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) ps

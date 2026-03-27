@@ -8,22 +8,26 @@ Source of truth in code:
 - `apps/server/src/app/state/state-backend.ts`
 - `apps/client/src/lib/config/env.ts`
 - `apps/client/Dockerfile`
+- `apps/client/Dockerfile.public`
 - `docker-compose.yml`
+- `deploy/container/docker-compose.public.yml`
 
 Example templates in repo:
 
 - `apps/server/.env.example`
 - `apps/client/.env.example`
 - `apps/client/.env.production.example`
+- `deploy/container/public.env.example`
 
 ## At A Glance
 
-The project currently has three configuration layers:
+The project currently has five configuration layers:
 
 1. Server runtime environment variables.
 2. Client build-time variables.
-3. Local Docker Compose defaults.
-4. Repo-level `Makefile` shortcuts for dev and testing.
+3. Convenience local Docker Compose defaults.
+4. Parity/public Docker Compose defaults.
+5. Repo-level `Makefile` shortcuts for dev and testing.
 
 The server reads environment variables at process start.
 The client resolves its WebSocket endpoint at build time through Vite env vars.
@@ -46,7 +50,14 @@ Run these from the repo root:
 - `make build` builds all workspaces.
 - `make compose-up` starts the local Docker Compose stack.
 - `make compose-down` stops the local Docker Compose stack.
+- `make compose-public-up` starts the parity/public Docker Compose stack.
+- `make compose-public-down` stops the parity/public Docker Compose stack.
 - `make check` runs tests, builds, and validates the Compose config.
+
+Important:
+
+- The `make compose-public-*` targets use the defaults embedded in `deploy/container/docker-compose.public.yml`.
+- If you want to override those values, run `docker compose --env-file ... -f deploy/container/docker-compose.public.yml ...` directly.
 
 ## Server Runtime Variables
 
@@ -58,9 +69,12 @@ Example template:
 
 | Variable | Default | Valid values | Required | What it does |
 | --- | --- | --- | --- | --- |
+| `DEPLOYMENT_MODE` | `local` | `local`, `public` | no | Controls whether the server uses permissive local defaults or strict public-deploy validation. |
 | `PORT` | `3001` | numeric string | no | HTTP and WebSocket listen port. |
 | `HOST` | `0.0.0.0` | host or bind address | no | HTTP and WebSocket bind address. |
 | `WS_PATH` | `/ws` | path string | no | WebSocket upgrade path. |
+| `WEBSOCKET_ALLOWED_ORIGINS` | unset | comma-separated origins or `*` | no | Optional origin allowlist for browser WebSocket upgrades. Leave unset for local dev; set this for public deployments. |
+| `MAX_WEBSOCKET_MESSAGE_BYTES` | `16384` | positive integer | no | Maximum accepted inbound WebSocket frame size before the connection is closed. |
 | `TRUST_PROXY` | `false` | `true` or `false` | no | When `true`, per-IP abuse controls use the first `X-Forwarded-For` address instead of the direct TCP peer. Only enable this behind a trusted proxy or load balancer. |
 | `MAX_CONNECTIONS_PER_IP` | `6` | positive integer | no | Maximum concurrent WebSocket connections allowed per client IP. |
 | `ROOM_CREATE_RATE_LIMIT_MAX` | `4` | positive integer | no | Number of room-create events allowed per window per client IP. |
@@ -83,10 +97,14 @@ Example template:
 
 - All rate-limit and heartbeat values use a positive-integer parser.
   Invalid, empty, zero, or negative values fall back to the defaults above.
+- `DEPLOYMENT_MODE` is strict.
+  Any value other than `local` or `public` throws at startup.
 - `STATE_BACKEND` is strict.
   Any value other than `memory` or `redis` throws at startup.
-- `PORT` currently uses `Number(...)` directly.
-  Give it a numeric string.
+- `DEPLOYMENT_MODE=public` requires:
+  `STATE_BACKEND=redis`, explicit `WEBSOCKET_ALLOWED_ORIGINS`, `TRUST_PROXY=true`, and a valid positive `PORT`.
+- `WEBSOCKET_ALLOWED_ORIGINS` normalizes entries to URL origins.
+  Example: `https://app.example.com,https://www.example.com`.
 - Chat remains single-instance safe today.
   Redis preserves recent history across restarts, but live cross-instance fanout still needs future pub/sub work.
 
@@ -120,16 +138,22 @@ If the frontend URL changes but the backend URL does not, rebuild only if `VITE_
 
 ## Docker Build Arguments
 
-The client container accepts build-time socket configuration in `apps/client/Dockerfile`.
+The client containers accept build-time socket configuration in `apps/client/Dockerfile` and `apps/client/Dockerfile.public`.
 
 | Build arg | Default | What it does |
 | --- | --- | --- |
 | `VITE_SOCKET_URL` | unset | Passed into the Vite build for explicit backend targeting. |
 | `VITE_SOCKET_PATH` | `/ws` | Passed into the Vite build for same-origin fallback path selection. |
 
+The public client container also accepts this runtime env var:
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `CSP_CONNECT_SRC` | `http://localhost:3001 ws://localhost:3001` | Sets the allowed `connect-src` values in the public nginx CSP header. |
+
 The server container does not currently define custom Docker build args.
 
-## Local Docker Compose Defaults
+## Convenience Local Docker Compose Defaults
 
 `docker-compose.yml` currently starts three services:
 
@@ -152,9 +176,36 @@ The Compose file sets these server runtime values:
 The Compose client does not pass `VITE_SOCKET_URL`.
 That is intentional because local Compose keeps same-origin behavior and nginx proxies `/ws` to `server:3001`.
 
+## Parity/Public Docker Compose Defaults
+
+`deploy/container/docker-compose.public.yml` also starts three services:
+
+- `redis`
+- `server`
+- `client`
+
+Its main purpose is to keep local production-like testing close to the public deployment shape.
+
+The parity/public Compose file sets these server runtime values by default:
+
+| Variable | Compose value |
+| --- | --- |
+| `DEPLOYMENT_MODE` | `public` |
+| `HOST` | `0.0.0.0` |
+| `PORT` | `3001` |
+| `WS_PATH` | `/ws` |
+| `STATE_BACKEND` | `redis` |
+| `REDIS_URL` | `redis://redis:6379` |
+| `TRUST_PROXY` | `true` |
+| `WEBSOCKET_ALLOWED_ORIGINS` | `http://localhost:8080` |
+| `REDIS_KEY_PREFIX` | `minesweeper-flags-public` |
+| `RECONNECT_SESSION_TTL_SECONDS` | `1800` |
+
+The parity/public Compose client builds with an explicit `VITE_SOCKET_URL` and serves the frontend without a `/ws` proxy.
+
 ## Common Config Recipes
 
-### Local App With Redis-Backed State
+### Convenience Local App With Redis-Backed State
 
 Use the existing Compose defaults:
 
@@ -167,15 +218,41 @@ Frontend:
 - open `http://localhost:8080`
 - same-origin `/ws` is proxied by nginx
 
-### Single-Instance Cloud Run Backend
+### Parity-Local Stack
 
-Recommended backend env:
+Use the parity/public Compose overlay with the built-in localhost defaults:
 
 ```bash
-PORT=3001
-HOST=0.0.0.0
-WS_PATH=/ws
-STATE_BACKEND=memory
+make compose-public-up
+```
+
+Default local parity values:
+
+```bash
+DEPLOYMENT_MODE=public
+VITE_SOCKET_URL=ws://localhost:3001/ws
+WEBSOCKET_ALLOWED_ORIGINS=http://localhost:8080
+CSP_CONNECT_SRC=http://localhost:3001 ws://localhost:3001
+```
+
+To run the same stack with an explicit env file instead of the baked-in defaults:
+
+```bash
+docker compose --env-file deploy/container/public.env.example -f deploy/container/docker-compose.public.yml up --build
+```
+
+### Redis-Backed Public Single-Instance Backend
+
+Use this when you want room, match, chat, and reconnect-session persistence across restarts and want the same runtime contract you tested locally:
+
+```bash
+DEPLOYMENT_MODE=public
+STATE_BACKEND=redis
+REDIS_URL=redis://user:password@host:6379
+REDIS_KEY_PREFIX=minesweeper-flags-prod
+RECONNECT_SESSION_TTL_SECONDS=1800
+WEBSOCKET_ALLOWED_ORIGINS=https://app.example.com
+MAX_WEBSOCKET_MESSAGE_BYTES=16384
 TRUST_PROXY=true
 ```
 
@@ -183,18 +260,6 @@ Recommended frontend build:
 
 ```bash
 VITE_SOCKET_URL=wss://api.example.com/ws
-```
-
-### Redis-Backed Single-Instance Backend
-
-Use this when you want room, match, chat, and reconnect-session persistence across restarts:
-
-```bash
-STATE_BACKEND=redis
-REDIS_URL=redis://user:password@host:6379
-REDIS_KEY_PREFIX=minesweeper-flags-prod
-RECONNECT_SESSION_TTL_SECONDS=1800
-TRUST_PROXY=true
 ```
 
 ### Tighten Abuse Controls
@@ -233,6 +298,9 @@ If you use nginx or another reverse proxy, update that route as well.
 
 - Change `VITE_SOCKET_URL` when the frontend must talk to a different backend origin.
 - Change `VITE_SOCKET_PATH` and `WS_PATH` together when you move the upgrade path.
+- Change `DEPLOYMENT_MODE` to `public` when you want strict validation of production-safe server settings.
+- Change `WEBSOCKET_ALLOWED_ORIGINS` when you publish the backend behind a browser-facing frontend origin.
+- Change `MAX_WEBSOCKET_MESSAGE_BYTES` only if your client protocol legitimately needs larger inbound frames.
 - Change `STATE_BACKEND` to `redis` when you need restart-safe shared state.
 - Change the chat variables when you want a longer backlog, tighter message caps, or a stricter anti-spam posture.
 - Change `REDIS_KEY_PREFIX` when multiple environments share one Redis instance.
@@ -242,3 +310,4 @@ If you use nginx or another reverse proxy, update that route as well.
 ## Related Docs
 
 - `Makefile`
+- `deploy/container/README.md`

@@ -35,5 +35,6 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 
 EXPOSE 3001
+USER node
 
 CMD ["node", "apps/server/dist/index.js"]

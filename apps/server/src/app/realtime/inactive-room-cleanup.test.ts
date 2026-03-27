@@ -5,6 +5,7 @@ import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
+import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import { ConnectionRegistry } from "./connection.registry.js";
 import { cleanupInactiveRooms } from "./inactive-room-cleanup.js";
 import { PlayerSessionService } from "./player-session.service.js";
@@ -33,6 +34,7 @@ describe("inactive room cleanup", () => {
     const chatRepository = new InMemoryChatRepository(25);
     const playerSessionService = new PlayerSessionService();
     const connectionRegistry = new ConnectionRegistry();
+    const taskRunner = new KeyedSerialTaskRunner();
     const room = createRoom(0);
     const [host] = room.players;
 
@@ -58,6 +60,7 @@ describe("inactive room cleanup", () => {
         chatRepository,
         playerSessionService,
         connectionRegistry,
+        taskRunner,
         now: 5_000,
         ttlMs: 1_000
       })
@@ -83,6 +86,7 @@ describe("inactive room cleanup", () => {
     const chatRepository = new InMemoryChatRepository(25);
     const playerSessionService = new PlayerSessionService();
     const connectionRegistry = new ConnectionRegistry();
+    const taskRunner = new KeyedSerialTaskRunner();
     const room = createRoom(0);
     const [host] = room.players;
 
@@ -102,6 +106,7 @@ describe("inactive room cleanup", () => {
         chatRepository,
         playerSessionService,
         connectionRegistry,
+        taskRunner,
         now: 5_000,
         ttlMs: 1_000
       })
@@ -114,5 +119,48 @@ describe("inactive room cleanup", () => {
     await expect(
       playerSessionService.requireSession(room.roomCode, session.sessionToken)
     ).resolves.toEqual(session);
+  });
+
+  it("re-checks room activity inside the room lock before deleting a stale snapshot", async () => {
+    const taskRunner = new KeyedSerialTaskRunner();
+    const freshRoom = createRoom(5_000);
+    let deletedRoomCode: string | undefined;
+
+    const roomRepository = {
+      async save(): Promise<void> {},
+      async getByCode(roomCode: string): Promise<RoomRecord | undefined> {
+        return roomCode === freshRoom.roomCode ? freshRoom : undefined;
+      },
+      async getByPlayerId(): Promise<RoomRecord | undefined> {
+        return undefined;
+      },
+      async roomCodeExists(): Promise<boolean> {
+        return true;
+      },
+      async listAll(): Promise<RoomRecord[]> {
+        return [
+          createRoom(0)
+        ];
+      },
+      async delete(roomCode: string): Promise<RoomRecord | undefined> {
+        deletedRoomCode = roomCode;
+        return freshRoom;
+      }
+    };
+
+    await expect(
+      cleanupInactiveRooms({
+        roomRepository,
+        matchRepository: new InMemoryMatchRepository(),
+        chatRepository: new InMemoryChatRepository(25),
+        playerSessionService: new PlayerSessionService(),
+        connectionRegistry: new ConnectionRegistry(),
+        taskRunner,
+        now: 5_000,
+        ttlMs: 1_000
+      })
+    ).resolves.toEqual([]);
+
+    expect(deletedRoomCode).toBeUndefined();
   });
 });

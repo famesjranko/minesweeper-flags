@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createStateStores } from "./state-store.js";
 import { PlayerSessionService } from "../realtime/player-session.service.js";
-import type { RedisSetOptions, RedisStateClient } from "./redis-state-client.js";
+import type {
+  RedisSetOptions,
+  RedisStateClient,
+  RedisTransactionCommand
+} from "./redis-state-client.js";
 
 class FakeRedisStateClient implements RedisStateClient {
   readonly expiryByKey = new Map<string, number>();
@@ -176,6 +180,40 @@ class FakeRedisStateClient implements RedisStateClient {
     return 1;
   }
 
+  async executeTransaction(commands: RedisTransactionCommand[]): Promise<void> {
+    for (const command of commands) {
+      switch (command.type) {
+        case "set":
+          await this.set(command.key, command.value, command.options);
+          break;
+        case "del":
+          await this.del(command.keys);
+          break;
+        case "lTrim":
+          await this.lTrim(command.key, command.start, command.stop);
+          break;
+        case "rPush":
+          await this.rPush(command.key, command.values);
+          break;
+        case "hSet":
+          await this.hSet(command.key, command.values);
+          break;
+        case "hDel":
+          await this.hDel(command.key, command.fields);
+          break;
+        case "sAdd":
+          await this.sAdd(command.key, command.members);
+          break;
+        case "sRem":
+          await this.sRem(command.key, command.members);
+          break;
+        case "expire":
+          await this.expire(command.key, command.seconds);
+          break;
+      }
+    }
+  }
+
   async close(): Promise<void> {}
 }
 
@@ -225,6 +263,9 @@ describe("state stores", () => {
     await expect(
       playerSessionService.requireSession(room.roomCode, session.sessionToken)
     ).resolves.toEqual(session);
+
+    await stateStores.deleteRoomState(room);
+    await expect(stateStores.roomRepository.getByCode(room.roomCode)).resolves.toBeUndefined();
   });
 
   it("creates working redis adapters with an injected redis client", async () => {
@@ -298,6 +339,17 @@ describe("state stores", () => {
       playerSessionService.requireSession(room.roomCode, session.sessionToken)
     ).rejects.toThrow("That session is not valid for this room.");
 
+    const sessionForDelete = await playerSessionService.createSession(room.roomCode, room.players[0]!);
+    await stateStores.deleteRoomState(room);
+
+    await expect(stateStores.roomRepository.getByCode(room.roomCode)).resolves.toBeUndefined();
+    await expect(stateStores.matchRepository.getByRoomId(room.roomId)).resolves.toBeUndefined();
+    await expect(stateStores.chatRepository.listRecent(room.roomCode, 25)).resolves.toEqual([]);
+    await expect(
+      playerSessionService.requireSession(room.roomCode, sessionForDelete.sessionToken)
+    ).rejects.toThrow("That session is not valid for this room.");
+
+    await stateStores.roomRepository.save(room);
     expect(await stateStores.roomRepository.delete(room.roomCode)).toEqual(room);
     expect(await stateStores.roomRepository.getByPlayerId(room.players[0]!.playerId)).toBeUndefined();
     expect(await stateStores.roomRepository.listAll()).toEqual([]);

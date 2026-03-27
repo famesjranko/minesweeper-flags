@@ -106,6 +106,11 @@ const emitClientEvent = async (socket: FakeSocket, event: Record<string, unknown
   await flushAsyncWork();
 };
 
+const emitRawMessage = async (socket: FakeSocket, message: Buffer) => {
+  socket.emit("message", message);
+  await flushAsyncWork();
+};
+
 const readSentEvents = (socket: FakeSocket): SentEvent[] =>
   socket.sentMessages.map((message) => JSON.parse(message) as SentEvent);
 
@@ -182,6 +187,7 @@ describe("realtime server", () => {
         matchRepository: new InMemoryMatchRepository(),
         chatRepository: new InMemoryChatRepository(25),
         playerSessionStore,
+        deleteRoomState: async () => {},
         dispose: async () => {}
       }
     });
@@ -399,5 +405,16 @@ describe("realtime server", () => {
     expect(chatRejections.at(-1)?.payload.message).toBe(
       "You're sending messages too quickly. Try again in a moment."
     );
+  });
+
+  it("closes sockets that send oversized websocket messages", async () => {
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+
+    const socket = connectSocket(activeServer);
+
+    await emitRawMessage(socket, Buffer.alloc(20_000, "a"));
+
+    expect(socket.close).toHaveBeenCalledWith(1009, "Message too large");
   });
 });

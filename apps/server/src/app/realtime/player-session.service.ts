@@ -51,15 +51,34 @@ export class RedisPlayerSessionStore implements PlayerSessionStore {
   async save(session: PlayerSession): Promise<void> {
     const existingSession = await this.getByToken(session.sessionToken);
 
-    await this.redis.set(this.sessionKey(session.sessionToken), serializePlayerSession(session), {
-      expireInSeconds: this.sessionTtlSeconds
-    });
-    await this.redis.sAdd(this.roomSessionsKey(session.roomCode), [session.sessionToken]);
-    await this.redis.expire(this.roomSessionsKey(session.roomCode), this.sessionTtlSeconds);
-
-    if (existingSession && existingSession.roomCode !== session.roomCode) {
-      await this.redis.sRem(this.roomSessionsKey(existingSession.roomCode), [session.sessionToken]);
-    }
+    await this.redis.executeTransaction([
+      {
+        type: "set",
+        key: this.sessionKey(session.sessionToken),
+        value: serializePlayerSession(session),
+        options: {
+          expireInSeconds: this.sessionTtlSeconds
+        }
+      },
+      {
+        type: "sAdd",
+        key: this.roomSessionsKey(session.roomCode),
+        members: [session.sessionToken]
+      },
+      {
+        type: "expire",
+        key: this.roomSessionsKey(session.roomCode),
+        seconds: this.sessionTtlSeconds
+      },
+      {
+        type: "sRem",
+        key: existingSession ? this.roomSessionsKey(existingSession.roomCode) : this.roomSessionsKey(session.roomCode),
+        members:
+          existingSession && existingSession.roomCode !== session.roomCode
+            ? [session.sessionToken]
+            : []
+      }
+    ]);
   }
 
   async getByToken(sessionToken: string): Promise<PlayerSession | undefined> {
@@ -72,19 +91,38 @@ export class RedisPlayerSessionStore implements PlayerSessionStore {
     const roomSessionsKey = this.roomSessionsKey(roomCode);
     const sessionTokens = await this.redis.sMembers(roomSessionsKey);
 
-    if (sessionTokens.length > 0) {
-      await this.redis.del(sessionTokens.map((sessionToken) => this.sessionKey(sessionToken)));
-    }
-
-    await this.redis.del(roomSessionsKey);
+    await this.redis.executeTransaction([
+      {
+        type: "del",
+        keys: [
+          ...sessionTokens.map((sessionToken) => this.sessionKey(sessionToken)),
+          roomSessionsKey
+        ]
+      }
+    ]);
   }
 
   async touch(session: PlayerSession): Promise<void> {
-    await this.redis.set(this.sessionKey(session.sessionToken), serializePlayerSession(session), {
-      expireInSeconds: this.sessionTtlSeconds
-    });
-    await this.redis.sAdd(this.roomSessionsKey(session.roomCode), [session.sessionToken]);
-    await this.redis.expire(this.roomSessionsKey(session.roomCode), this.sessionTtlSeconds);
+    await this.redis.executeTransaction([
+      {
+        type: "set",
+        key: this.sessionKey(session.sessionToken),
+        value: serializePlayerSession(session),
+        options: {
+          expireInSeconds: this.sessionTtlSeconds
+        }
+      },
+      {
+        type: "sAdd",
+        key: this.roomSessionsKey(session.roomCode),
+        members: [session.sessionToken]
+      },
+      {
+        type: "expire",
+        key: this.roomSessionsKey(session.roomCode),
+        seconds: this.sessionTtlSeconds
+      }
+    ]);
   }
 
   private sessionKey(sessionToken: string): string {

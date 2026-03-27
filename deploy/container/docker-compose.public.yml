@@ -1,0 +1,80 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - redis-public-data:/data
+
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-public}
+      PORT: 3001
+      HOST: 0.0.0.0
+      WS_PATH: /ws
+      WEBSOCKET_ALLOWED_ORIGINS: ${WEBSOCKET_ALLOWED_ORIGINS:-http://localhost:8080}
+      MAX_WEBSOCKET_MESSAGE_BYTES: ${MAX_WEBSOCKET_MESSAGE_BYTES:-16384}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      MAX_CONNECTIONS_PER_IP: ${MAX_CONNECTIONS_PER_IP:-6}
+      ROOM_CREATE_RATE_LIMIT_MAX: ${ROOM_CREATE_RATE_LIMIT_MAX:-4}
+      ROOM_CREATE_RATE_LIMIT_WINDOW_MS: ${ROOM_CREATE_RATE_LIMIT_WINDOW_MS:-60000}
+      ROOM_JOIN_RATE_LIMIT_MAX: ${ROOM_JOIN_RATE_LIMIT_MAX:-10}
+      ROOM_JOIN_RATE_LIMIT_WINDOW_MS: ${ROOM_JOIN_RATE_LIMIT_WINDOW_MS:-60000}
+      INVALID_MESSAGE_RATE_LIMIT_MAX: ${INVALID_MESSAGE_RATE_LIMIT_MAX:-5}
+      INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS: ${INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS:-30000}
+      SOCKET_HEARTBEAT_INTERVAL_MS: ${SOCKET_HEARTBEAT_INTERVAL_MS:-30000}
+      CHAT_MESSAGE_MAX_LENGTH: ${CHAT_MESSAGE_MAX_LENGTH:-200}
+      CHAT_HISTORY_LIMIT: ${CHAT_HISTORY_LIMIT:-25}
+      CHAT_MESSAGE_RATE_LIMIT_MAX: ${CHAT_MESSAGE_RATE_LIMIT_MAX:-8}
+      CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS: ${CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS:-10000}
+      STATE_BACKEND: redis
+      REDIS_URL: redis://redis:6379
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-minesweeper-flags-public}
+      RECONNECT_SESSION_TTL_SECONDS: ${RECONNECT_SESSION_TTL_SECONDS:-1800}
+    ports:
+      - "${SERVER_PUBLIC_PORT:-3001}:3001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ../..
+      dockerfile: apps/client/Dockerfile.public
+      args:
+        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-ws://localhost:3001/ws}
+        VITE_SOCKET_PATH: /ws
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-http://localhost:3001 ws://localhost:3001}
+    ports:
+      - "${CLIENT_PUBLIC_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  redis-public-data:

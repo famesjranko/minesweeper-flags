@@ -107,4 +107,18 @@ describe("realtime abuse prevention", () => {
       retryAfterMs: 0
     });
   });
+
+  it("prunes expired rate-limit buckets during later traffic", () => {
+    const abusePrevention = createAbusePrevention();
+    const bucketsByKey = (abusePrevention as unknown as { bucketsByKey: Map<string, unknown> })
+      .bucketsByKey;
+
+    abusePrevention.consumeRoomCreate("1.2.3.4", 0);
+    abusePrevention.consumeChatMessage("player-1", 0);
+    expect(bucketsByKey.size).toBe(2);
+
+    abusePrevention.consumeRoomJoin("5.6.7.8", 2_000);
+
+    expect(bucketsByKey.size).toBe(1);
+  });
 });

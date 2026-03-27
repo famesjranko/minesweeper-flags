@@ -24,11 +24,25 @@ export interface ConnectionAdmissionResult {
   activeConnections: number;
 }
 
+interface RateLimitBucket {
+  timestamps: number[];
+  windowMs: number;
+}
+
 export class RealtimeAbusePrevention {
   private readonly activeConnectionsByIp = new Map<string, number>();
-  private readonly timestampsByBucket = new Map<string, number[]>();
+  private readonly bucketsByKey = new Map<string, RateLimitBucket>();
+  private readonly bucketCleanupIntervalMs: number;
+  private nextBucketCleanupAt = 0;
 
-  constructor(private readonly options: RealtimeAbusePreventionOptions) {}
+  constructor(private readonly options: RealtimeAbusePreventionOptions) {
+    this.bucketCleanupIntervalMs = Math.max(
+      options.roomCreateLimit.windowMs,
+      options.roomJoinLimit.windowMs,
+      options.chatMessageLimit.windowMs,
+      options.invalidMessageLimit.windowMs
+    );
+  }
 
   registerConnection(ipAddress: string): ConnectionAdmissionResult {
     const ipKey = this.normalizeIpAddress(ipAddress);
@@ -86,15 +100,21 @@ export class RealtimeAbusePrevention {
   }
 
   private consume(bucketKey: string, limit: FixedWindowLimit, now: number): RateLimitResult {
+    this.pruneExpiredBuckets(now);
+
     const cutoff = now - limit.windowMs;
-    const activeTimestamps = (this.timestampsByBucket.get(bucketKey) ?? []).filter(
+    const bucket = this.bucketsByKey.get(bucketKey);
+    const activeTimestamps = (bucket?.timestamps ?? []).filter(
       (timestamp) => timestamp > cutoff
     );
 
     if (activeTimestamps.length >= limit.maxEvents) {
       const oldestTimestamp = activeTimestamps[0] ?? now;
 
-      this.timestampsByBucket.set(bucketKey, activeTimestamps);
+      this.bucketsByKey.set(bucketKey, {
+        timestamps: activeTimestamps,
+        windowMs: limit.windowMs
+      });
 
       return {
         allowed: false,
@@ -105,7 +125,10 @@ export class RealtimeAbusePrevention {
     }
 
     activeTimestamps.push(now);
-    this.timestampsByBucket.set(bucketKey, activeTimestamps);
+    this.bucketsByKey.set(bucketKey, {
+      timestamps: activeTimestamps,
+      windowMs: limit.windowMs
+    });
 
     return {
       allowed: true,
@@ -117,5 +140,29 @@ export class RealtimeAbusePrevention {
 
   private normalizeIpAddress(ipAddress: string): string {
     return ipAddress.trim() || "unknown";
+  }
+
+  private pruneExpiredBuckets(now: number): void {
+    if (now < this.nextBucketCleanupAt) {
+      return;
+    }
+
+    this.nextBucketCleanupAt = now + this.bucketCleanupIntervalMs;
+
+    for (const [bucketKey, bucket] of this.bucketsByKey) {
+      const activeTimestamps = bucket.timestamps.filter(
+        (timestamp) => timestamp > now - bucket.windowMs
+      );
+
+      if (activeTimestamps.length === 0) {
+        this.bucketsByKey.delete(bucketKey);
+        continue;
+      }
+
+      this.bucketsByKey.set(bucketKey, {
+        ...bucket,
+        timestamps: activeTimestamps
+      });
+    }
   }
 }

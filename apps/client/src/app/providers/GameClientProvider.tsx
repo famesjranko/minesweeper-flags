@@ -62,6 +62,9 @@ interface GameClientContextValue {
 }
 
 const GameClientContext = createContext<GameClientContextValue | null>(null);
+const INITIAL_RECONNECT_DELAY_MS = 1_000;
+const MAX_RECONNECT_DELAY_MS = 10_000;
+const RECONNECT_JITTER_MS = 250;
 
 const updateRematchState = (match: MatchStateDto, players: Array<{ playerId: string; rematchRequested: boolean }>) => ({
   ...match,
@@ -91,6 +94,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const sessionRef = useRef<ClientSession | null>(initialState.session);
   const pendingEventsRef = useRef<ClientEvent[]>(initialState.pendingEvents);
   const reconnectAttemptRef = useRef<StoredSession | null>(null);
+  const reconnectAttemptCountRef = useRef(0);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const shouldReconnectRef = useRef(true);
   const chatDraftRef = useRef(initialState.chatDraft);
@@ -122,6 +126,19 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       window.clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
+  };
+
+  const getNextReconnectDelayMs = () => {
+    const attemptNumber = reconnectAttemptCountRef.current;
+    const baseDelay = Math.min(
+      INITIAL_RECONNECT_DELAY_MS * 2 ** attemptNumber,
+      MAX_RECONNECT_DELAY_MS
+    );
+    const jitter = Math.floor(Math.random() * RECONNECT_JITTER_MS);
+
+    reconnectAttemptCountRef.current += 1;
+
+    return baseDelay + jitter;
   };
 
   const setClientSession = (nextSession: ClientSession | null) => {
@@ -210,6 +227,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       }
 
       setConnectionStatus("connected");
+      reconnectAttemptCountRef.current = 0;
 
       const reconnectSession = reconnectAttemptRef.current ?? sessionRef.current;
 
@@ -401,9 +419,10 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       }
 
       clearReconnectTimer();
+      const reconnectDelayMs = getNextReconnectDelayMs();
       reconnectTimeoutRef.current = window.setTimeout(() => {
         connectSocket();
-      }, 1000);
+      }, reconnectDelayMs);
     });
   };
 
@@ -414,6 +433,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     shouldReconnectRef.current = false;
     socketRef.current = null;
     setConnectionStatus("disconnected");
+    reconnectAttemptCountRef.current = 0;
 
     if (
       currentSocket &&
@@ -447,6 +467,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     shouldReconnectRef.current = true;
+    reconnectAttemptCountRef.current = 0;
     connectSocket();
 
     return () => {

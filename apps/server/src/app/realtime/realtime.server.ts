@@ -1,6 +1,7 @@
 import { createServer, type ServerResponse } from "node:http";
 import type { Socket as NetSocket } from "node:net";
-import { WebSocket, WebSocketServer } from "ws";
+import type { Duplex } from "node:stream";
+import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
@@ -10,6 +11,7 @@ import {
 } from "@minesweeper-flags/shared";
 import { logger } from "../../lib/logging/logger.js";
 import { createId } from "../../lib/ids/id.js";
+import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import { ConnectionRegistry } from "./connection.registry.js";
 import { resolveClientAddress } from "./client-address.js";
 import { cleanupInactiveRooms } from "./inactive-room-cleanup.js";
@@ -43,14 +45,20 @@ import {
   INVALID_MESSAGE_RATE_LIMIT_MAX,
   INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
   MAX_CONNECTIONS_PER_IP,
+  MAX_WEBSOCKET_MESSAGE_BYTES,
   ROOM_CREATE_RATE_LIMIT_MAX,
   ROOM_CREATE_RATE_LIMIT_WINDOW_MS,
   ROOM_JOIN_RATE_LIMIT_MAX,
   ROOM_JOIN_RATE_LIMIT_WINDOW_MS,
   STATE_BACKEND,
   SOCKET_HEARTBEAT_INTERVAL_MS,
+  WEBSOCKET_ALLOWED_ORIGINS,
   TRUST_PROXY
 } from "../config/env.js";
+import {
+  getRawMessageByteLength,
+  isAllowedWebSocketOrigin
+} from "./websocket-admission.js";
 
 const INACTIVE_ROOM_TTL_MS = 30 * 60 * 1000;
 const INACTIVE_ROOM_SWEEP_INTERVAL_MS = 60 * 1000;
@@ -114,6 +122,51 @@ const getCloseReason = (reasonBuffer: Buffer): string | undefined => {
   return reason ? reason : undefined;
 };
 
+const getStatusText = (statusCode: number): string => {
+  switch (statusCode) {
+    case 403:
+      return "Forbidden";
+    case 404:
+      return "Not Found";
+    case 503:
+      return "Service Unavailable";
+    default:
+      return "Error";
+  }
+};
+
+const rejectWebSocketUpgrade = (socket: Duplex, statusCode: number, message: string): void => {
+  const body = `${message}\n`;
+
+  socket.write(
+    [
+      `HTTP/1.1 ${statusCode} ${getStatusText(statusCode)}`,
+      "Connection: close",
+      "Content-Type: text/plain; charset=utf-8",
+      `Content-Length: ${Buffer.byteLength(body)}`,
+      "",
+      body
+    ].join("\r\n")
+  );
+  socket.destroy();
+};
+
+const rawDataToString = (message: RawData): string => {
+  if (typeof message === "string") {
+    return message;
+  }
+
+  if (Array.isArray(message)) {
+    return Buffer.concat(message).toString();
+  }
+
+  if (message instanceof ArrayBuffer) {
+    return Buffer.from(message).toString();
+  }
+
+  return Buffer.from(message as Uint8Array).toString();
+};
+
 export const createRealtimeServer = async ({
   websocketPath,
   stateStores
@@ -121,13 +174,14 @@ export const createRealtimeServer = async ({
   const ownsStateStores = !stateStores;
   const activeStateStores = stateStores ?? (await createStateStores(STATE_BACKEND));
   const { roomRepository, matchRepository, chatRepository, playerSessionStore } = activeStateStores;
-  const roomService = new RoomService(roomRepository);
-  const matchService = new MatchService(roomService, matchRepository);
+  const roomTaskRunner = new KeyedSerialTaskRunner();
+  const roomService = new RoomService(roomRepository, roomTaskRunner);
+  const matchService = new MatchService(roomService, matchRepository, roomTaskRunner);
   const chatService = new ChatService(roomService, chatRepository, {
     historyLimit: CHAT_HISTORY_LIMIT,
     messageMaxLength: CHAT_MESSAGE_MAX_LENGTH
   });
-  const rematchService = new RematchService(roomService, matchService);
+  const rematchService = new RematchService(roomService, matchService, roomTaskRunner);
   const playerSessionService = new PlayerSessionService(playerSessionStore);
   const connectionRegistry = new ConnectionRegistry();
   const abusePrevention = new RealtimeAbusePrevention({
@@ -262,8 +316,8 @@ export const createRealtimeServer = async ({
   });
 
   const webSocketServer = new WebSocketServer({
-    server: httpServer,
-    path: websocketPath
+    noServer: true,
+    maxPayload: MAX_WEBSOCKET_MESSAGE_BYTES
   });
   const stopHeartbeat = heartbeatMonitor.start(webSocketServer);
   const cleanupInterval = setInterval(() => {
@@ -274,6 +328,8 @@ export const createRealtimeServer = async ({
         chatRepository,
         playerSessionService,
         connectionRegistry,
+        taskRunner: roomTaskRunner,
+        deleteRoomState: activeStateStores.deleteRoomState,
         now: Date.now(),
         ttlMs: INACTIVE_ROOM_TTL_MS
       });
@@ -299,6 +355,33 @@ export const createRealtimeServer = async ({
     activeSockets.add(socket);
     socket.on("close", () => {
       activeSockets.delete(socket);
+    });
+  });
+  httpServer.on("upgrade", (request, socket, head) => {
+    const requestPath = getRequestPath(request.url);
+
+    if (requestPath !== websocketPath) {
+      rejectWebSocketUpgrade(socket, 404, "WebSocket endpoint not found.");
+      return;
+    }
+
+    if (!isAllowedWebSocketOrigin(request, WEBSOCKET_ALLOWED_ORIGINS)) {
+      logger.warn("realtime.upgrade_rejected", {
+        remoteAddress: resolveClientAddress(request, { trustProxy: TRUST_PROXY }),
+        reason: "origin_not_allowed",
+        origin: request.headers.origin
+      });
+      rejectWebSocketUpgrade(socket, 403, "WebSocket origin is not allowed.");
+      return;
+    }
+
+    if (lifecycleState === "shutting_down" || lifecycleState === "stopped") {
+      rejectWebSocketUpgrade(socket, 503, "The server is shutting down.");
+      return;
+    }
+
+    webSocketServer.handleUpgrade(request, socket, head, (client) => {
+      webSocketServer.emit("connection", client, request);
     });
   });
 
@@ -492,7 +575,7 @@ export const createRealtimeServer = async ({
       return;
     }
 
-    socket.on("message", async (messageBuffer) => {
+    socket.on("message", async (message) => {
       let eventType: string | undefined;
 
       try {
@@ -507,7 +590,21 @@ export const createRealtimeServer = async ({
           return;
         }
 
-        const parsedMessage = JSON.parse(messageBuffer.toString()) as unknown;
+        const messageByteLength = getRawMessageByteLength(message);
+
+        if (messageByteLength > MAX_WEBSOCKET_MESSAGE_BYTES) {
+          logger.warn("realtime.message_rejected", {
+            connectionId: socketContext.connectionId,
+            remoteAddress,
+            reason: "message_too_large",
+            messageByteLength,
+            limit: MAX_WEBSOCKET_MESSAGE_BYTES
+          });
+          socket.close(1009, "Message too large");
+          return;
+        }
+
+        const parsedMessage = JSON.parse(rawDataToString(message)) as unknown;
         const parsedEvent = clientEventSchema.safeParse(parsedMessage);
 
         if (!parsedEvent.success) {

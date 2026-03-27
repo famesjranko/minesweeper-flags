@@ -45,8 +45,19 @@ export class RedisChatRepository implements ChatRepository {
   async append(roomCode: string, message: ChatMessageRecord): Promise<void> {
     const roomKey = this.chatRoomKey(roomCode);
 
-    await this.redis.rPush(roomKey, [serializeChatMessageRecord(message)]);
-    await this.redis.lTrim(roomKey, -this.historyLimit, -1);
+    await this.redis.executeTransaction([
+      {
+        type: "rPush",
+        key: roomKey,
+        values: [serializeChatMessageRecord(message)]
+      },
+      {
+        type: "lTrim",
+        key: roomKey,
+        start: -this.historyLimit,
+        stop: -1
+      }
+    ]);
   }
 
   async listRecent(roomCode: string, limit: number): Promise<ChatMessageRecord[]> {

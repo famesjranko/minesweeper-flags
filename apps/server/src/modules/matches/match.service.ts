@@ -9,6 +9,7 @@ import {
   type MatchState
 } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
+import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import type { RoomService } from "../rooms/room.service.js";
 import type { RoomRecord } from "../rooms/room.types.js";
 import type { MatchRepository } from "./match.repository.js";
@@ -82,38 +83,41 @@ const toMatchStateDto = (matchState: MatchState): MatchStateDto => ({
 export class MatchService {
   constructor(
     private readonly roomService: RoomService,
-    private readonly matchRepository: MatchRepository
+    private readonly matchRepository: MatchRepository,
+    private readonly taskRunner: KeyedSerialTaskRunner = new KeyedSerialTaskRunner()
   ) {}
 
   async startMatchForRoom(room: RoomRecord, startedAt: number): Promise<MatchResult> {
-    if (room.players.length !== 2) {
-      throw new Error("Two players are required to start a match.");
-    }
+    return await this.taskRunner.run(room.roomCode, async () => {
+      if (room.players.length !== 2) {
+        throw new Error("Two players are required to start a match.");
+      }
 
-    const [firstPlayer, secondPlayer] = room.players;
+      const [firstPlayer, secondPlayer] = room.players;
 
-    if (!firstPlayer || !secondPlayer) {
-      throw new Error("Two players are required to start a match.");
-    }
+      if (!firstPlayer || !secondPlayer) {
+        throw new Error("Two players are required to start a match.");
+      }
 
-    const matchState = createMatchState({
-      roomId: room.roomId,
-      players: [
-        firstPlayer,
-        secondPlayer
-      ],
-      seed: startedAt,
-      createdAt: startedAt,
-      startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId
+      const matchState = createMatchState({
+        roomId: room.roomId,
+        players: [
+          firstPlayer,
+          secondPlayer
+        ],
+        seed: startedAt,
+        createdAt: startedAt,
+        startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId
+      });
+
+      await this.matchRepository.save(matchState);
+
+      return {
+        roomCode: room.roomCode,
+        state: matchState,
+        dto: toMatchStateDto(matchState)
+      };
     });
-
-    await this.matchRepository.save(matchState);
-
-    return {
-      roomCode: room.roomCode,
-      state: matchState,
-      dto: toMatchStateDto(matchState)
-    };
   }
 
   async getMatchByRoomCode(roomCode: string): Promise<MatchResult> {
@@ -137,26 +141,28 @@ export class MatchService {
     action: Omit<MatchAction, "playerId">,
     now: number
   ): Promise<MatchResult> {
-    const room = await this.roomService.getRoomByCode(roomCode);
-    const matchState = await this.matchRepository.getByRoomId(room.roomId);
+    return await this.taskRunner.run(roomCode, async () => {
+      const room = await this.roomService.getRoomByCode(roomCode);
+      const matchState = await this.matchRepository.getByRoomId(room.roomId);
 
-    if (!matchState) {
-      throw new Error("The match has not started yet.");
-    }
+      if (!matchState) {
+        throw new Error("The match has not started yet.");
+      }
 
-    const resolution = resolveAction(matchState, { ...action, playerId } as MatchAction, now);
+      const resolution = resolveAction(matchState, { ...action, playerId } as MatchAction, now);
 
-    if (!resolution.ok) {
-      throw new Error(resolution.error);
-    }
+      if (!resolution.ok) {
+        throw new Error(resolution.error);
+      }
 
-    await this.matchRepository.save(resolution.state);
+      await this.matchRepository.save(resolution.state);
 
-    return {
-      roomCode,
-      state: resolution.state,
-      dto: toMatchStateDto(resolution.state)
-    };
+      return {
+        roomCode,
+        state: resolution.state,
+        dto: toMatchStateDto(resolution.state)
+      };
+    });
   }
 
   async setConnectionState(
@@ -164,39 +170,43 @@ export class MatchService {
     playerId: string,
     connected: boolean
   ): Promise<MatchResult | null> {
-    const room = await this.roomService.getRoomByCode(roomCode);
-    const matchState = await this.matchRepository.getByRoomId(room.roomId);
+    return await this.taskRunner.run(roomCode, async () => {
+      const room = await this.roomService.getRoomByCode(roomCode);
+      const matchState = await this.matchRepository.getByRoomId(room.roomId);
 
-    if (!matchState) {
-      return null;
-    }
+      if (!matchState) {
+        return null;
+      }
 
-    const nextState = setPlayerConnection(matchState, playerId, connected);
-    await this.matchRepository.save(nextState);
+      const nextState = setPlayerConnection(matchState, playerId, connected);
+      await this.matchRepository.save(nextState);
 
-    return {
-      roomCode,
-      state: nextState,
-      dto: toMatchStateDto(nextState)
-    };
+      return {
+        roomCode,
+        state: nextState,
+        dto: toMatchStateDto(nextState)
+      };
+    });
   }
 
   async resign(roomCode: string, playerId: string, now: number): Promise<MatchResult> {
-    const room = await this.roomService.getRoomByCode(roomCode);
-    const matchState = await this.matchRepository.getByRoomId(room.roomId);
+    return await this.taskRunner.run(roomCode, async () => {
+      const room = await this.roomService.getRoomByCode(roomCode);
+      const matchState = await this.matchRepository.getByRoomId(room.roomId);
 
-    if (!matchState) {
-      throw new Error("The match has not started yet.");
-    }
+      if (!matchState) {
+        throw new Error("The match has not started yet.");
+      }
 
-    const nextState = resignMatch(matchState, playerId, now);
-    await this.matchRepository.save(nextState);
+      const nextState = resignMatch(matchState, playerId, now);
+      await this.matchRepository.save(nextState);
 
-    return {
-      roomCode,
-      state: nextState,
-      dto: toMatchStateDto(nextState)
-    };
+      return {
+        roomCode,
+        state: nextState,
+        dto: toMatchStateDto(nextState)
+      };
+    });
   }
 
   async setRematchRequested(
@@ -204,39 +214,43 @@ export class MatchService {
     playerId: string,
     rematchRequested: boolean
   ): Promise<MatchResult> {
-    const room = await this.roomService.getRoomByCode(roomCode);
-    const matchState = await this.matchRepository.getByRoomId(room.roomId);
+    return await this.taskRunner.run(roomCode, async () => {
+      const room = await this.roomService.getRoomByCode(roomCode);
+      const matchState = await this.matchRepository.getByRoomId(room.roomId);
 
-    if (!matchState) {
-      throw new Error("The match has not started yet.");
-    }
+      if (!matchState) {
+        throw new Error("The match has not started yet.");
+      }
 
-    const nextState = setPlayerRematchRequested(matchState, playerId, rematchRequested);
-    await this.matchRepository.save(nextState);
+      const nextState = setPlayerRematchRequested(matchState, playerId, rematchRequested);
+      await this.matchRepository.save(nextState);
 
-    return {
-      roomCode,
-      state: nextState,
-      dto: toMatchStateDto(nextState)
-    };
+      return {
+        roomCode,
+        state: nextState,
+        dto: toMatchStateDto(nextState)
+      };
+    });
   }
 
   async clearRematchRequested(roomCode: string): Promise<MatchResult> {
-    const room = await this.roomService.getRoomByCode(roomCode);
-    const matchState = await this.matchRepository.getByRoomId(room.roomId);
+    return await this.taskRunner.run(roomCode, async () => {
+      const room = await this.roomService.getRoomByCode(roomCode);
+      const matchState = await this.matchRepository.getByRoomId(room.roomId);
 
-    if (!matchState) {
-      throw new Error("The match has not started yet.");
-    }
+      if (!matchState) {
+        throw new Error("The match has not started yet.");
+      }
 
-    const nextState = clearRematchVotes(matchState);
-    await this.matchRepository.save(nextState);
+      const nextState = clearRematchVotes(matchState);
+      await this.matchRepository.save(nextState);
 
-    return {
-      roomCode,
-      state: nextState,
-      dto: toMatchStateDto(nextState)
-    };
+      return {
+        roomCode,
+        state: nextState,
+        dto: toMatchStateDto(nextState)
+      };
+    });
   }
 }
 
