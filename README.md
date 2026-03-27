@@ -8,7 +8,7 @@ The game flow is simple:
 - player two joins with a private invite link or invite token
 - both players share a 16x16 board with 51 mines
 - first to 26 claimed mines wins
-- each player gets one bomb comeback move
+- each player gets one 5x5 bomb comeback move that unlocks only while trailing by 4 or more
 - room chat stays with the room through reconnects and rematches
 
 ## Screenshots
@@ -28,6 +28,12 @@ The game flow is simple:
 - shared protocol/types in `packages/shared`
 - pure game logic in `packages/game-engine`
 - optional Redis-backed state persistence for rooms, matches, chat history, and reconnect sessions
+
+## Architecture
+
+- the server routes websocket input through a transport-neutral command layer before binding direct events and room broadcasts back to sockets
+- the client separates controller behavior, runtime store, transport wiring, and the thin React provider boundary
+- shared protocol modules distinguish commands, direct events, and room-stream events without changing the wire contract
 
 ## Quick Start
 
@@ -174,6 +180,12 @@ Run only the server suite:
 make test-server
 ```
 
+Run only the client suite:
+
+```bash
+make test-client
+```
+
 The server currently has coverage around:
 
 - realtime connection handling
@@ -182,6 +194,13 @@ The server currently has coverage around:
 - state-store behavior for memory and Redis-backed paths
 - health/readiness behavior
 - room-scoped concurrency and rematch/cleanup race regressions
+
+The client currently has coverage around:
+
+- provider/controller/store integration
+- session persistence and reconnect bootstrap behavior
+- rematch UI state changes
+- bomb availability and board-preview behavior
 
 ## Health And Realtime Behavior
 

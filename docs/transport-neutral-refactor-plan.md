@@ -1,5 +1,11 @@
 # Transport-Neutral Refactor Plan
 
+## Status
+
+Implemented on March 28, 2026.
+
+This document is kept as the implementation record for the transport-neutral refactor that is now in the codebase. The phased plan below reflects what was executed, not outstanding work.
+
 ## Goal
 
 Refactor the app so transport concerns are isolated and the game flow is expressed in transport-neutral commands and room events.
