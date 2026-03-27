@@ -5,6 +5,8 @@ import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  WEBSOCKET_CLOSE_CODES,
+  WEBSOCKET_CLOSE_REASONS,
   clientEventSchema,
   serverEventSchema,
   type ServerEvent
@@ -284,7 +286,10 @@ export const createRealtimeServer = async ({
     }
 
     if (replacedSocket && replacedSocket.readyState !== WebSocket.CLOSED) {
-      replacedSocket.close();
+      replacedSocket.close(
+        WEBSOCKET_CLOSE_CODES.sessionReplaced,
+        WEBSOCKET_CLOSE_REASONS.sessionReplaced
+      );
     }
   };
 

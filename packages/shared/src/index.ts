@@ -1,4 +1,5 @@
 export * from "./constants/game.constants.js";
+export * from "./constants/realtime.constants.js";
 export * from "./protocol/client-to-server.schema.js";
 export * from "./protocol/dto.js";
 export * from "./protocol/event-names.js";

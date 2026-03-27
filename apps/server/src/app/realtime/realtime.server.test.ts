@@ -1,6 +1,11 @@
 import { EventEmitter } from "node:events";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { CLIENT_EVENT_NAMES, SERVER_EVENT_NAMES } from "@minesweeper-flags/shared";
+import {
+  CLIENT_EVENT_NAMES,
+  SERVER_EVENT_NAMES,
+  WEBSOCKET_CLOSE_CODES,
+  WEBSOCKET_CLOSE_REASONS
+} from "@minesweeper-flags/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, type RawData } from "ws";
 import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
@@ -322,6 +327,35 @@ describe("realtime server", () => {
         ]
       }
     });
+  });
+
+  it("closes replaced sockets with an explicit session-replaced close code", async () => {
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+
+    const originalSocket = connectSocket(activeServer);
+    await emitClientEvent(originalSocket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: {
+        displayName: "Host"
+      }
+    });
+
+    const roomCreatedEvent = readSentEvents(originalSocket)[0];
+    const replacementSocket = connectSocket(activeServer);
+
+    await emitClientEvent(replacementSocket, {
+      type: CLIENT_EVENT_NAMES.playerReconnect,
+      payload: {
+        roomCode: roomCreatedEvent?.payload.roomCode,
+        sessionToken: roomCreatedEvent?.payload.self.sessionToken
+      }
+    });
+
+    expect(originalSocket.close).toHaveBeenCalledWith(
+      WEBSOCKET_CLOSE_CODES.sessionReplaced,
+      WEBSOCKET_CLOSE_REASONS.sessionReplaced
+    );
   });
 
   it("rejects blank and oversized chat messages without using server:error", async () => {

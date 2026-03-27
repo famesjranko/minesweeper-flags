@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  WEBSOCKET_CLOSE_CODES,
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import {
@@ -10,6 +11,7 @@ import {
   buildSessionFromRoomEvent,
   reconcileRecoveredChatDraft,
   replaceChatHistory,
+  shouldReconnectAfterClose,
   shouldApplyServerEvent,
   shouldQueueWhileOffline
 } from "./game-client.state.js";
@@ -177,6 +179,12 @@ describe("game client state helpers", () => {
         }
       })
     ).toBe(false);
+  });
+
+  it("does not auto-reconnect after the session is replaced in another tab", () => {
+    expect(shouldReconnectAfterClose(1001)).toBe(true);
+    expect(shouldReconnectAfterClose(1006)).toBe(true);
+    expect(shouldReconnectAfterClose(WEBSOCKET_CLOSE_CODES.sessionReplaced)).toBe(false);
   });
 
   it("builds persisted client session data from room bootstrap events", () => {

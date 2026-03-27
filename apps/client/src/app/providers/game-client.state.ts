@@ -1,6 +1,7 @@
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  WEBSOCKET_CLOSE_CODES,
   type ChatMessageDto,
   type ClientEvent,
   type MatchStateDto,
@@ -62,6 +63,9 @@ export const buildSessionFromRoomEvent = (
 
 export const shouldQueueWhileOffline = (event: ClientEvent): boolean =>
   event.type === CLIENT_EVENT_NAMES.roomCreate || event.type === CLIENT_EVENT_NAMES.roomJoin;
+
+export const shouldReconnectAfterClose = (closeCode: number): boolean =>
+  closeCode !== WEBSOCKET_CLOSE_CODES.sessionReplaced;
 
 export const replaceChatHistory = (messages: ChatMessageDto[]): ChatMessageDto[] => {
   const seenMessageIds = new Set<string>();

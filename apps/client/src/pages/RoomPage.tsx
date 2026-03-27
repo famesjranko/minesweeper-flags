@@ -78,7 +78,8 @@ export const RoomPage = () => {
             </Link>
           </div>
           <p className="waiting-room-note">
-            Share links should use the home page with the invite code prefilled.
+            Share links should use <strong>/invite/{roomCode}</strong>. This page is only for a
+            browser that already has a saved room session.
           </p>
         </section>
       </main>

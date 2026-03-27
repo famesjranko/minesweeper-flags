@@ -30,6 +30,7 @@ import {
   hasDeliveredChatText,
   reconcileRecoveredChatDraft,
   replaceChatHistory,
+  shouldReconnectAfterClose,
   shouldApplyServerEvent,
   shouldQueueWhileOffline,
   type ClientSession
@@ -398,7 +399,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       }
     });
 
-    nextSocket.addEventListener("close", () => {
+    nextSocket.addEventListener("close", (event) => {
       if (socketRef.current !== nextSocket) {
         return;
       }
@@ -415,6 +416,11 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       setConnectionStatus("disconnected");
 
       if (!shouldReconnectRef.current) {
+        return;
+      }
+
+      if (!shouldReconnectAfterClose(event.code)) {
+        setError("This room is active in another tab or window. Use that tab, or reconnect here.");
         return;
       }
 
