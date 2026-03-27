@@ -5,7 +5,7 @@ Realtime two-player competitive Minesweeper with room-scoped match chat, built a
 The game flow is simple:
 
 - player one creates a room
-- player two joins with a room code or invite link
+- player two joins with a private invite link or invite token
 - both players share a 16x16 board with 51 mines
 - first to 26 claimed mines wins
 - each player gets one bomb comeback move
@@ -88,7 +88,6 @@ make check
 The main configuration reference is:
 
 - [docs/config-reference.md](docs/config-reference.md)
-- [docs/two-player-chat-plan.md](docs/two-player-chat-plan.md)
 
 Example env templates:
 
