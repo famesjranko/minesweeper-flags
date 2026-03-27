@@ -1,27 +1,29 @@
+import { INVITE_TOKEN_LENGTH } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
+import { extractInviteToken } from "./invite-link.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
 
 interface RoomLobbyProps {
   connectionStatus: string;
   error: string | null;
-  initialRoomCode?: string;
+  initialInviteValue?: string;
   onCreateRoom: (displayName: string) => void;
-  onJoinRoom: (displayName: string, roomCode: string) => void;
+  onJoinRoom: (displayName: string, inviteToken: string) => void;
 }
 
 export const RoomLobby = ({
   connectionStatus,
   error,
-  initialRoomCode = "",
+  initialInviteValue = "",
   onCreateRoom,
   onJoinRoom
 }: RoomLobbyProps) => {
   const [displayName, setDisplayName] = useState("Captain Sweeper");
-  const [roomCode, setRoomCode] = useState(initialRoomCode);
+  const [inviteValue, setInviteValue] = useState(initialInviteValue);
   const trimmedDisplayName = displayName.trim();
-  const normalizedRoomCode = roomCode.trim().toUpperCase();
+  const inviteToken = extractInviteToken(inviteValue);
   const canCreateRoom = trimmedDisplayName.length > 0;
-  const canJoinRoom = trimmedDisplayName.length > 0 && normalizedRoomCode.length >= 4;
+  const canJoinRoom = trimmedDisplayName.length > 0 && inviteToken !== null;
 
   const handleCreateRoom = () => {
     if (!canCreateRoom) {
@@ -32,18 +34,18 @@ export const RoomLobby = ({
   };
 
   const handleJoinRoom = () => {
-    if (!canJoinRoom) {
+    if (!canJoinRoom || !inviteToken) {
       return;
     }
 
-    onJoinRoom(trimmedDisplayName, normalizedRoomCode);
+    onJoinRoom(trimmedDisplayName, inviteToken);
   };
 
   useEffect(() => {
-    if (initialRoomCode) {
-      setRoomCode(initialRoomCode);
+    if (initialInviteValue) {
+      setInviteValue(initialInviteValue);
     }
-  }, [initialRoomCode]);
+  }, [initialInviteValue]);
 
   return (
     <section className="panel hero-panel lobby-panel">
@@ -97,7 +99,7 @@ export const RoomLobby = ({
             >
               <div className="lobby-card-heading">
                 <h2>Create a Match</h2>
-                <span>Host a room and share the code.</span>
+                <span>Host a room and share a private invite link.</span>
               </div>
 
               <button
@@ -116,18 +118,21 @@ export const RoomLobby = ({
               }}
             >
               <div className="lobby-card-heading">
-                <h2>Join by Invite</h2>
-                <span>Enter a room code from another player.</span>
+                <h2>Join by Token</h2>
+                <span>Paste the invite token from another player.</span>
               </div>
 
               <label className="field lobby-field">
-                <span>Invite code</span>
+                <span>Invite token</span>
                 <input
-                  value={normalizedRoomCode}
-                  onChange={(event) => setRoomCode(event.target.value.toUpperCase())}
-                  maxLength={8}
-                  placeholder="ABCDE"
+                  className="invite-token-input"
+                  value={inviteValue}
+                  onChange={(event) => setInviteValue(event.target.value)}
+                  maxLength={INVITE_TOKEN_LENGTH}
+                  placeholder="Paste invite token"
                   spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
               </label>
 
@@ -141,7 +146,7 @@ export const RoomLobby = ({
                   .join(" ")}
                 disabled={!canJoinRoom}
               >
-                Join Room
+                Join Match
               </button>
             </form>
           </div>
@@ -151,9 +156,9 @@ export const RoomLobby = ({
       <div className="status-strip lobby-status-strip">
         <span className="lobby-status-note">No account needed. Open two tabs or invite a friend.</span>
         {!canJoinRoom ? (
-          <span className="lobby-status-note">Enter a room code to unlock Join Room.</span>
+          <span className="lobby-status-note">Paste an invite token to unlock Join Match.</span>
         ) : (
-          <span className="lobby-status-note">Invite code looks good. Press Join Room.</span>
+          <span className="lobby-status-note">Invite looks valid. Press Join Match.</span>
         )}
         {error ? <span className="error-text">{error}</span> : null}
       </div>

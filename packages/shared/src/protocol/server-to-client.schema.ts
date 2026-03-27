@@ -3,6 +3,7 @@ import { chatMessageDtoSchema } from "../schemas/chat.schema.js";
 import { matchStateDtoSchema, playerMatchDtoSchema } from "../schemas/match.schema.js";
 import {
   displayNameSchema,
+  inviteTokenSchema,
   playerIdSchema,
   roomCodeSchema,
   sessionTokenSchema
@@ -23,6 +24,7 @@ export const roomCreatedEventSchema = z.object({
   payload: z.object({
     roomId: z.string().min(1),
     roomCode: roomCodeSchema,
+    inviteToken: inviteTokenSchema,
     self: playerSessionSchema,
     players: z.array(playerIdentitySchema)
   })

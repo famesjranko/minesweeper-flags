@@ -14,6 +14,7 @@ describe("state codec", () => {
     const room = {
       roomId: "room-1",
       roomCode: "ABCDE",
+      inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
       players: [
         { playerId: "player-1", displayName: "Host" },
         { playerId: "player-2", displayName: "Guest" }

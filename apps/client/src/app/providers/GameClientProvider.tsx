@@ -50,7 +50,7 @@ interface GameClientContextValue {
   chatPending: boolean;
   openLobby: () => void;
   createRoom: (displayName: string) => void;
-  joinRoom: (displayName: string, roomCode: string) => void;
+  joinRoom: (displayName: string, inviteToken: string) => void;
   reconnect: (roomCode: string) => void;
   submitCellAction: (row: number, column: number) => void;
   setChatDraft: (value: string) => void;
@@ -507,11 +507,11 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     });
   };
 
-  const joinRoom = (displayName: string, roomCode: string) => {
+  const joinRoom = (displayName: string, inviteToken: string) => {
     startLobbyTransition();
     sendEvent({
       type: CLIENT_EVENT_NAMES.roomJoin,
-      payload: { displayName, roomCode }
+      payload: { displayName, inviteToken }
     });
   };
 

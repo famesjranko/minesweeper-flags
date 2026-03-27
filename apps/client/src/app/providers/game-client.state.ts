@@ -55,6 +55,8 @@ export const buildSessionFromRoomEvent = (
 ): ClientSession => ({
   roomId: event.payload.roomId,
   roomCode: event.payload.roomCode,
+  inviteToken:
+    event.type === SERVER_EVENT_NAMES.roomCreated ? event.payload.inviteToken : undefined,
   playerId: event.payload.self.playerId,
   displayName: event.payload.self.displayName,
   sessionToken: event.payload.self.sessionToken,

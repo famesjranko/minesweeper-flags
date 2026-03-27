@@ -678,7 +678,7 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await handleRoomJoin(socket, event.payload.roomCode, event.payload.displayName, {
+            await handleRoomJoin(socket, event.payload.inviteToken, event.payload.displayName, {
               roomService,
               matchService,
               createSession,

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { coordinateSchema, displayNameSchema, roomCodeSchema, sessionTokenSchema } from "../schemas/primitives.js";
+import {
+  coordinateSchema,
+  displayNameSchema,
+  inviteTokenSchema,
+  roomCodeSchema,
+  sessionTokenSchema
+} from "../schemas/primitives.js";
 import { CLIENT_EVENT_NAMES } from "./event-names.js";
 
 export const actionSchema = z.discriminatedUnion("type", [
@@ -25,7 +31,7 @@ export const roomCreateEventSchema = z.object({
 export const roomJoinEventSchema = z.object({
   type: z.literal(CLIENT_EVENT_NAMES.roomJoin),
   payload: z.object({
-    roomCode: roomCodeSchema,
+    inviteToken: inviteTokenSchema,
     displayName: displayNameSchema
   })
 });

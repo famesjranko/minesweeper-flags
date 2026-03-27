@@ -24,6 +24,11 @@ export const handleRoomCreate = async (
   dependencies: RoomHandlerDependencies
 ): Promise<void> => {
   const { room, player } = await dependencies.roomService.createRoom(displayName);
+
+  if (!room.inviteToken) {
+    throw new Error("Created rooms must include an invite token.");
+  }
+
   const session = await dependencies.createSession(room.roomCode, player);
   await dependencies.attachSessionSocket(session, socket);
 
@@ -38,6 +43,7 @@ export const handleRoomCreate = async (
     payload: {
       roomId: room.roomId,
       roomCode: room.roomCode,
+      inviteToken: room.inviteToken,
       self: {
         playerId: session.playerId,
         displayName: session.displayName,
@@ -51,11 +57,14 @@ export const handleRoomCreate = async (
 
 export const handleRoomJoin = async (
   socket: WebSocket,
-  roomCode: string,
+  inviteToken: string,
   displayName: string,
   dependencies: RoomHandlerDependencies
 ): Promise<void> => {
-  const { room, player } = await dependencies.roomService.joinRoom(roomCode, displayName);
+  const { room, player } = await dependencies.roomService.joinRoomByInviteToken(
+    inviteToken,
+    displayName
+  );
   const session = await dependencies.createSession(room.roomCode, player);
   await dependencies.attachSessionSocket(session, socket);
 

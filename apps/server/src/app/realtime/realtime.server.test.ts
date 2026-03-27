@@ -208,10 +208,11 @@ describe("realtime server", () => {
 
     const roomCreatedEvent = JSON.parse(socket.sentMessages[0] ?? "null") as {
       type: string;
-      payload: { roomCode: string; self: { sessionToken: string } };
+      payload: { roomCode: string; inviteToken: string; self: { sessionToken: string } };
     };
 
     expect(roomCreatedEvent.type).toBe(SERVER_EVENT_NAMES.roomCreated);
+    expect(roomCreatedEvent.payload.inviteToken).toHaveLength(22);
 
     const roomBeforePong = await roomRepository.getByCode(roomCreatedEvent.payload.roomCode);
 
@@ -282,7 +283,7 @@ describe("realtime server", () => {
     await emitClientEvent(guestSocket, {
       type: CLIENT_EVENT_NAMES.roomJoin,
       payload: {
-        roomCode: roomCreatedEvent?.payload.roomCode,
+        inviteToken: roomCreatedEvent?.payload.inviteToken,
         displayName: "Guest"
       }
     });

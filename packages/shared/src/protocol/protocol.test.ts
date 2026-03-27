@@ -26,6 +26,18 @@ describe("protocol schemas", () => {
     }
   });
 
+  it("accepts a valid invite join event", () => {
+    const parsed = clientEventSchema.parse({
+      type: CLIENT_EVENT_NAMES.roomJoin,
+      payload: {
+        inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
+        displayName: "Guest"
+      }
+    });
+
+    expect(parsed.type).toBe(CLIENT_EVENT_NAMES.roomJoin);
+  });
+
   it("accepts a valid resign event", () => {
     const parsed = clientEventSchema.parse({
       type: CLIENT_EVENT_NAMES.matchResign,
@@ -121,5 +133,29 @@ describe("protocol schemas", () => {
     });
 
     expect(parsed.type).toBe(SERVER_EVENT_NAMES.chatHistory);
+  });
+
+  it("accepts a valid room created event with an invite token", () => {
+    const parsed = serverEventSchema.parse({
+      type: SERVER_EVENT_NAMES.roomCreated,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
+        self: {
+          playerId: "player-1",
+          displayName: "Host",
+          sessionToken: "session-1"
+        },
+        players: [
+          {
+            playerId: "player-1",
+            displayName: "Host"
+          }
+        ]
+      }
+    });
+
+    expect(parsed.type).toBe(SERVER_EVENT_NAMES.roomCreated);
   });
 });

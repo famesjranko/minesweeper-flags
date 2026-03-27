@@ -5,6 +5,7 @@ import type { RoomRecord } from "./room.types.js";
 export interface RoomRepository {
   save(room: RoomRecord): Promise<void>;
   getByCode(roomCode: string): Promise<RoomRecord | undefined>;
+  getByInviteToken(inviteToken: string): Promise<RoomRecord | undefined>;
   getByPlayerId(playerId: string): Promise<RoomRecord | undefined>;
   roomCodeExists(roomCode: string): Promise<boolean>;
   listAll(): Promise<RoomRecord[]>;
@@ -13,10 +14,21 @@ export interface RoomRepository {
 
 export class InMemoryRoomRepository implements RoomRepository {
   private readonly roomsByCode = new Map<string, RoomRecord>();
+  private readonly roomCodesByInviteToken = new Map<string, string>();
   private readonly roomCodesByPlayerId = new Map<string, string>();
 
   async save(room: RoomRecord): Promise<void> {
+    const existingRoom = this.roomsByCode.get(room.roomCode);
+
+    if (existingRoom?.inviteToken && existingRoom.inviteToken !== room.inviteToken) {
+      this.roomCodesByInviteToken.delete(existingRoom.inviteToken);
+    }
+
     this.roomsByCode.set(room.roomCode, room);
+
+    if (room.inviteToken) {
+      this.roomCodesByInviteToken.set(room.inviteToken, room.roomCode);
+    }
 
     for (const player of room.players) {
       this.roomCodesByPlayerId.set(player.playerId, room.roomCode);
@@ -25,6 +37,12 @@ export class InMemoryRoomRepository implements RoomRepository {
 
   async getByCode(roomCode: string): Promise<RoomRecord | undefined> {
     return this.roomsByCode.get(roomCode);
+  }
+
+  async getByInviteToken(inviteToken: string): Promise<RoomRecord | undefined> {
+    const roomCode = this.roomCodesByInviteToken.get(inviteToken);
+
+    return roomCode ? this.roomsByCode.get(roomCode) : undefined;
   }
 
   async getByPlayerId(playerId: string): Promise<RoomRecord | undefined> {
@@ -49,6 +67,10 @@ export class InMemoryRoomRepository implements RoomRepository {
 
     this.roomsByCode.delete(roomCode);
 
+    if (room.inviteToken) {
+      this.roomCodesByInviteToken.delete(room.inviteToken);
+    }
+
     for (const player of room.players) {
       if (this.roomCodesByPlayerId.get(player.playerId) === roomCode) {
         this.roomCodesByPlayerId.delete(player.playerId);
@@ -61,6 +83,7 @@ export class InMemoryRoomRepository implements RoomRepository {
 
 export class RedisRoomRepository implements RoomRepository {
   private readonly roomCodesKey: string;
+  private readonly roomCodesByInviteTokenKey: string;
   private readonly roomCodesByPlayerIdKey: string;
 
   constructor(
@@ -68,6 +91,7 @@ export class RedisRoomRepository implements RoomRepository {
     private readonly keyPrefix: string
   ) {
     this.roomCodesKey = this.key("rooms:index");
+    this.roomCodesByInviteTokenKey = this.key("rooms:invite-index");
     this.roomCodesByPlayerIdKey = this.key("rooms:player-index");
   }
 
@@ -92,6 +116,19 @@ export class RedisRoomRepository implements RoomRepository {
       },
       {
         type: "hSet",
+        key: this.roomCodesByInviteTokenKey,
+        values: room.inviteToken ? { [room.inviteToken]: room.roomCode } : {}
+      },
+      {
+        type: "hDel",
+        key: this.roomCodesByInviteTokenKey,
+        fields:
+          existingRoom?.inviteToken && existingRoom.inviteToken !== room.inviteToken
+            ? [existingRoom.inviteToken]
+            : []
+      },
+      {
+        type: "hSet",
         key: this.roomCodesByPlayerIdKey,
         values: Object.fromEntries(room.players.map((player) => [player.playerId, room.roomCode]))
       },
@@ -107,6 +144,23 @@ export class RedisRoomRepository implements RoomRepository {
     const storedRoom = await this.redis.get(this.roomKey(roomCode));
 
     return storedRoom ? deserializeRoomRecord(storedRoom) : undefined;
+  }
+
+  async getByInviteToken(inviteToken: string): Promise<RoomRecord | undefined> {
+    const roomCode = await this.redis.hGet(this.roomCodesByInviteTokenKey, inviteToken);
+
+    if (!roomCode) {
+      return undefined;
+    }
+
+    const room = await this.getByCode(roomCode);
+
+    if (!room || room.inviteToken !== inviteToken) {
+      await this.redis.hDel(this.roomCodesByInviteTokenKey, [inviteToken]);
+      return undefined;
+    }
+
+    return room;
   }
 
   async getByPlayerId(playerId: string): Promise<RoomRecord | undefined> {
@@ -154,6 +208,11 @@ export class RedisRoomRepository implements RoomRepository {
       {
         type: "del",
         keys: room ? [this.roomKey(roomCode)] : []
+      },
+      {
+        type: "hDel",
+        key: this.roomCodesByInviteTokenKey,
+        fields: room?.inviteToken ? [room.inviteToken] : []
       },
       {
         type: "hDel",

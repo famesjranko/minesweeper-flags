@@ -16,6 +16,7 @@ const createSocket = (readyState = 1) =>
 const createRoom = (updatedAt: number): RoomRecord => ({
   roomId: "room-1",
   roomCode: "ABCDE",
+  inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
   players: [
     {
       playerId: "player-1",
@@ -130,6 +131,9 @@ describe("inactive room cleanup", () => {
       async save(): Promise<void> {},
       async getByCode(roomCode: string): Promise<RoomRecord | undefined> {
         return roomCode === freshRoom.roomCode ? freshRoom : undefined;
+      },
+      async getByInviteToken(): Promise<RoomRecord | undefined> {
+        return undefined;
       },
       async getByPlayerId(): Promise<RoomRecord | undefined> {
         return undefined;

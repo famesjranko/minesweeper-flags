@@ -224,6 +224,7 @@ describe("state stores", () => {
     const room = {
       roomId: "room-1",
       roomCode: "ABCDE",
+      inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
       players: [
         {
           playerId: "player-1",
@@ -237,6 +238,7 @@ describe("state stores", () => {
 
     await stateStores.roomRepository.save(room);
     expect(await stateStores.roomRepository.getByCode(room.roomCode)).toEqual(room);
+    expect(await stateStores.roomRepository.getByInviteToken(room.inviteToken)).toEqual(room);
 
     await stateStores.matchRepository.save({ roomId: room.roomId } as never);
     expect(await stateStores.matchRepository.getByRoomId(room.roomId)).toEqual({
@@ -281,6 +283,7 @@ describe("state stores", () => {
     const room = {
       roomId: "room-1",
       roomCode: "ABCDE",
+      inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
       players: [
         {
           playerId: "player-1",
@@ -294,6 +297,7 @@ describe("state stores", () => {
 
     await stateStores.roomRepository.save(room);
     expect(await stateStores.roomRepository.getByCode(room.roomCode)).toEqual(room);
+    expect(await stateStores.roomRepository.getByInviteToken(room.inviteToken)).toEqual(room);
     expect(await stateStores.roomRepository.getByPlayerId(room.players[0]!.playerId)).toEqual(room);
     expect(await stateStores.roomRepository.roomCodeExists(room.roomCode)).toBe(true);
     expect(await stateStores.roomRepository.listAll()).toEqual([room]);
@@ -351,6 +355,7 @@ describe("state stores", () => {
 
     await stateStores.roomRepository.save(room);
     expect(await stateStores.roomRepository.delete(room.roomCode)).toEqual(room);
+    expect(await stateStores.roomRepository.getByInviteToken(room.inviteToken)).toBeUndefined();
     expect(await stateStores.roomRepository.getByPlayerId(room.players[0]!.playerId)).toBeUndefined();
     expect(await stateStores.roomRepository.listAll()).toEqual([]);
     await stateStores.chatRepository.deleteByRoomCode(room.roomCode);

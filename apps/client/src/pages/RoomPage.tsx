@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
+import { buildInvitePath } from "../features/room/invite-link.js";
 import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
 import { getStoredSession } from "../lib/socket/session-storage.js";
 import { MatchView } from "../features/match/MatchView.js";
@@ -43,9 +44,11 @@ export const RoomPage = () => {
   }, [reconnect, roomCode, session]);
 
   const inviteLink =
-    typeof window === "undefined"
-      ? `/invite/${roomCode}`
-      : `${window.location.origin}/invite/${roomCode}`;
+    session?.inviteToken
+      ? typeof window === "undefined"
+        ? buildInvitePath(session.inviteToken)
+        : `${window.location.origin}${buildInvitePath(session.inviteToken)}`
+      : null;
 
   const copyInviteValue = async (value: string, successMessage: string) => {
     try {
@@ -70,16 +73,12 @@ export const RoomPage = () => {
           </p>
           <p>{error ?? "Create or join the room from the home page first."}</p>
           <div className="waiting-action-row">
-            <Link className="primary-button link-button" to={`/invite/${roomCode}`}>
-              Open Invite Page
-            </Link>
-            <Link className="secondary-button link-button" to="/lobby">
+            <Link className="primary-button link-button" to="/lobby">
               Go To Lobby
             </Link>
           </div>
           <p className="waiting-room-note">
-            Share links should use <strong>/invite/{roomCode}</strong>. This page is only for a
-            browser that already has a saved room session.
+            This page is only for a browser that already has a saved room session. Use the host's private invite link to join a room.
           </p>
         </section>
       </main>
@@ -89,6 +88,7 @@ export const RoomPage = () => {
   if (!match) {
     const host = session.players[0];
     const opponent = session.players[1];
+    const inviteToken = session.inviteToken ?? null;
 
     return (
       <main className="page-shell home-page-shell room-page-shell">
@@ -97,8 +97,8 @@ export const RoomPage = () => {
             <p className="eyebrow">MSN-style competitive minesweeper</p>
             <h1>Minesweeper Flags</h1>
             <p>
-              Room <strong>{roomCode}</strong> is ready. Share the code or invite link and
-              the match will begin as soon as player two joins.
+              Room <strong>{roomCode}</strong> is ready. Share the private invite link and the
+              match will begin as soon as player two joins.
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export const RoomPage = () => {
                 </div>
 
                 <div className="field lobby-field">
-                  <span>Invite code</span>
+                  <span>Room reference</span>
                   <div className="invite-code-readonly">{roomCode}</div>
                 </div>
               </div>
@@ -132,33 +132,51 @@ export const RoomPage = () => {
                 <div className="lobby-action-card is-create">
                   <div className="lobby-card-heading">
                     <h2>Share This Room</h2>
-                    <span>Copy the invite link for one-click join.</span>
+                    <span>Copy the private invite link. It already includes the token.</span>
                   </div>
 
                   <button
                     className="lobby-action-button lobby-create-button"
-                    onClick={() => copyInviteValue(inviteLink, "Invite link copied.")}
+                    disabled={!inviteLink}
+                    onClick={() =>
+                      inviteLink
+                        ? copyInviteValue(inviteLink, "Invite link copied.")
+                        : undefined
+                    }
                   >
-                    Copy Invite Link
+                    {inviteLink ? "Copy Invite Link" : "Invite Link Unavailable"}
                   </button>
                 </div>
 
                 <div className="lobby-action-card is-join">
                   <div className="lobby-card-heading">
-                    <h2>Share Room Code</h2>
-                    <span>{opponent ? "Guest connected." : "Manual join backup."}</span>
+                    <h2>Copy Invite Token</h2>
+                    <span>{opponent ? "Guest connected." : "Manual fallback."}</span>
                   </div>
 
                   <div className="field lobby-field">
-                    <span>Invite code</span>
-                    <div className="invite-code-readonly">{roomCode}</div>
+                    <span>Invite token</span>
+                    <div className="invite-code-readonly invite-token-readonly">
+                      {inviteToken ?? "Unavailable"}
+                    </div>
                   </div>
 
                   <button
-                    className="lobby-action-button lobby-join-button is-ready"
-                    onClick={() => copyInviteValue(roomCode, "Invite code copied.")}
+                    className={[
+                      "lobby-action-button",
+                      "lobby-join-button",
+                      inviteToken ? "is-ready" : ""
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    disabled={!inviteToken}
+                    onClick={() =>
+                      inviteToken
+                        ? copyInviteValue(inviteToken, "Invite token copied.")
+                        : undefined
+                    }
                   >
-                    Copy Code
+                    {inviteToken ? "Copy Invite Token" : "Invite Token Unavailable"}
                   </button>
                 </div>
               </div>
@@ -166,7 +184,9 @@ export const RoomPage = () => {
           </div>
 
           <div className="status-strip lobby-status-strip">
-            <span className="lobby-status-note">{inviteNotice ?? "Waiting for player two."}</span>
+            <span className="lobby-status-note">
+              {inviteNotice ?? (inviteLink ? "Waiting for player two." : "Invite link unavailable on this device.")}
+            </span>
             <span className="lobby-status-note">
               Host: {host?.displayName ?? session.displayName}.{" "}
               {opponent ? `Guest joined as ${opponent.displayName}.` : "Guest slot is open."}

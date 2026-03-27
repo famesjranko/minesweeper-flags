@@ -412,6 +412,11 @@ button {
   text-transform: uppercase;
 }
 
+.invite-private-readout strong {
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+
 .invite-code-readonly {
   display: grid;
   place-items: center;
@@ -429,6 +434,18 @@ button {
     0 6px 16px rgba(65, 86, 128, 0.08);
 }
 
+.invite-token-readonly {
+  min-height: 44px;
+  padding: 10px 12px;
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .invite-status-strip {
   margin-top: 4px;
 }
@@ -443,6 +460,10 @@ button {
 .invite-secondary-actions {
   display: flex;
   justify-content: flex-start;
+}
+
+.invite-error-panel {
+  text-align: center;
 }
 
 .waiting-control-panel {
@@ -589,6 +610,14 @@ button {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   text-align: center;
+}
+
+.lobby-action-card.is-join .lobby-field input.invite-token-input {
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-align: left;
 }
 
 .lobby-action-button {

@@ -1,6 +1,7 @@
 export interface StoredSession {
   roomId: string;
   roomCode: string;
+  inviteToken?: string;
   playerId: string;
   displayName: string;
   sessionToken: string;

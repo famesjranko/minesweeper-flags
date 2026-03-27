@@ -15,7 +15,7 @@ describe("rematch service", () => {
     const matchService = new MatchService(roomService, matchRepository, roomTaskRunner);
     const rematchService = new RematchService(roomService, matchService, roomTaskRunner);
     const { room: lobbyRoom } = await roomService.createRoom("Host");
-    const { room } = await roomService.joinRoom(lobbyRoom.roomCode, "Guest");
+    const { room } = await roomService.joinRoomByInviteToken(lobbyRoom.inviteToken ?? "", "Guest");
     const [host, guest] = room.players;
 
     if (!host || !guest) {

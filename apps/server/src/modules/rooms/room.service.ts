@@ -1,4 +1,4 @@
-import { createId, createRoomCode } from "../../lib/ids/id.js";
+import { createId, createInviteToken, createRoomCode } from "../../lib/ids/id.js";
 import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import type { RoomRepository } from "./room.repository.js";
 import type { RoomPlayer, RoomRecord } from "./room.types.js";
@@ -28,6 +28,7 @@ export class RoomService {
       const room: RoomRecord = {
         roomId: createId(),
         roomCode,
+        inviteToken: createInviteToken(),
         players: [player],
         nextStarterIndex: 0,
         createdAt: now,
@@ -40,19 +41,29 @@ export class RoomService {
     });
   }
 
-  async joinRoom(
-    roomCode: string,
+  async joinRoomByInviteToken(
+    inviteToken: string,
     displayName: string
   ): Promise<{ room: RoomRecord; player: RoomPlayer }> {
-    return await this.taskRunner.run(roomCode, async () => {
-      const room = await this.roomRepository.getByCode(roomCode);
+    const room = await this.roomRepository.getByInviteToken(inviteToken);
 
-      if (!room) {
-        throw new Error("That room does not exist.");
+    if (!room) {
+      throw new Error("That invite link is no longer valid.");
+    }
+
+    return await this.taskRunner.run(room.roomCode, async () => {
+      const currentRoom = await this.roomRepository.getByCode(room.roomCode);
+
+      if (!currentRoom) {
+        throw new Error("That invite link is no longer valid.");
       }
 
-      if (room.players.length >= 2) {
+      if (currentRoom.players.length >= 2) {
         throw new Error("That room is already full.");
+      }
+
+      if (currentRoom.inviteToken !== inviteToken) {
+        throw new Error("That invite link is no longer valid.");
       }
 
       const player = {
@@ -62,8 +73,9 @@ export class RoomService {
       const now = Date.now();
 
       const updatedRoom: RoomRecord = {
-        ...room,
-        players: [...room.players, player],
+        ...currentRoom,
+        inviteToken: null,
+        players: [...currentRoom.players, player],
         updatedAt: now
       };
 
@@ -89,7 +101,12 @@ export class RoomService {
 
   async advanceStarter(roomCode: string): Promise<RoomRecord> {
     return await this.taskRunner.run(roomCode, async () => {
-      const room = await this.getRoomByCode(roomCode);
+      const room = await this.roomRepository.getByCode(roomCode);
+
+      if (!room) {
+        throw new Error("That room does not exist.");
+      }
+
       const updatedRoom: RoomRecord = {
         ...room,
         nextStarterIndex: room.nextStarterIndex === 0 ? 1 : 0,

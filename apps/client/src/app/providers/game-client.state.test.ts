@@ -22,6 +22,7 @@ describe("game client state helpers", () => {
       buildReconnectEvent({
         roomId: "room-1",
         roomCode: "ABCDE",
+        inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
         playerId: "player-1",
         displayName: "Host",
         sessionToken: "session-1"
@@ -193,6 +194,7 @@ describe("game client state helpers", () => {
       payload: {
         roomId: "room-1",
         roomCode: "ABCDE",
+        inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
         self: {
           playerId: "player-1",
           displayName: "Host",
@@ -208,6 +210,7 @@ describe("game client state helpers", () => {
     });
 
     expect(session.sessionToken).toBe("session-1");
+    expect(session.inviteToken).toBe("AbCdEfGhIjKlMnOpQrStUw");
     expect(session.players).toHaveLength(1);
   });
 });
