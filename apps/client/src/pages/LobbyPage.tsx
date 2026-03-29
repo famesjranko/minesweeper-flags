@@ -5,7 +5,7 @@ import { useGameClient } from "../features/connection/useGameClient.js";
 
 export const LobbyPage = () => {
   const [isReady, setIsReady] = useState(false);
-  const { connectionStatus, error, session, createRoom, joinRoom, openLobby } = useGameClient();
+  const { connectionStatus, error, session, createRoom, joinRoom, openLobby, slotAvailability, refreshSlotCount } = useGameClient();
 
   useEffect(() => {
     openLobby();
@@ -25,6 +25,8 @@ export const LobbyPage = () => {
       <RoomLobby
         connectionStatus={connectionStatus}
         error={error}
+        slotAvailability={slotAvailability}
+        onRefreshSlots={refreshSlotCount}
         onCreateRoom={createRoom}
         onJoinRoom={joinRoom}
       />

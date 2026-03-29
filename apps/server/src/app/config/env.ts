@@ -61,6 +61,7 @@ export interface ServerEnv {
   MAX_WEBSOCKET_MESSAGE_BYTES: number;
   TRUST_PROXY: boolean;
   MAX_CONNECTIONS_PER_IP: number;
+  MAX_CONCURRENT_ROOMS: number;
   ROOM_CREATE_RATE_LIMIT_MAX: number;
   ROOM_CREATE_RATE_LIMIT_WINDOW_MS: number;
   ROOM_JOIN_RATE_LIMIT_MAX: number;
@@ -90,6 +91,7 @@ export const parseServerEnv = (environment: NodeJS.ProcessEnv = process.env): Se
   );
   const TRUST_PROXY = parseBoolean(environment.TRUST_PROXY, false);
   const MAX_CONNECTIONS_PER_IP = parsePositiveInteger(environment.MAX_CONNECTIONS_PER_IP, 6);
+  const MAX_CONCURRENT_ROOMS = parsePositiveInteger(environment.MAX_CONCURRENT_ROOMS, 4);
   const ROOM_CREATE_RATE_LIMIT_MAX = parsePositiveInteger(
     environment.ROOM_CREATE_RATE_LIMIT_MAX,
     4
@@ -176,6 +178,7 @@ export const parseServerEnv = (environment: NodeJS.ProcessEnv = process.env): Se
     MAX_WEBSOCKET_MESSAGE_BYTES,
     TRUST_PROXY,
     MAX_CONNECTIONS_PER_IP,
+    MAX_CONCURRENT_ROOMS,
     ROOM_CREATE_RATE_LIMIT_MAX,
     ROOM_CREATE_RATE_LIMIT_WINDOW_MS,
     ROOM_JOIN_RATE_LIMIT_MAX,
@@ -204,6 +207,7 @@ export const WEBSOCKET_ALLOWED_ORIGINS = serverEnv.WEBSOCKET_ALLOWED_ORIGINS;
 export const MAX_WEBSOCKET_MESSAGE_BYTES = serverEnv.MAX_WEBSOCKET_MESSAGE_BYTES;
 export const TRUST_PROXY = serverEnv.TRUST_PROXY;
 export const MAX_CONNECTIONS_PER_IP = serverEnv.MAX_CONNECTIONS_PER_IP;
+export const MAX_CONCURRENT_ROOMS = serverEnv.MAX_CONCURRENT_ROOMS;
 export const ROOM_CREATE_RATE_LIMIT_MAX = serverEnv.ROOM_CREATE_RATE_LIMIT_MAX;
 export const ROOM_CREATE_RATE_LIMIT_WINDOW_MS = serverEnv.ROOM_CREATE_RATE_LIMIT_WINDOW_MS;
 export const ROOM_JOIN_RATE_LIMIT_MAX = serverEnv.ROOM_JOIN_RATE_LIMIT_MAX;

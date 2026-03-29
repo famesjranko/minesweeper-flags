@@ -35,6 +35,7 @@ import {
   CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS,
   INVALID_MESSAGE_RATE_LIMIT_MAX,
   INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
+  MAX_CONCURRENT_ROOMS,
   MAX_CONNECTIONS_PER_IP,
   MAX_WEBSOCKET_MESSAGE_BYTES,
   ROOM_CREATE_RATE_LIMIT_MAX,
@@ -179,7 +180,8 @@ export const createRealtimeServer = async ({
     matchService,
     chatService,
     rematchService,
-    playerSessionService
+    playerSessionService,
+    maxConcurrentRooms: MAX_CONCURRENT_ROOMS
   });
   const connectionRegistry = new ConnectionRegistry();
   const abusePrevention = new RealtimeAbusePrevention({
@@ -290,7 +292,19 @@ export const createRealtimeServer = async ({
     const path = getRequestPath(request.url);
 
     if (path === "/" || path === "/health") {
-      respondWithJson(response, 200, { status: "ok" });
+      roomRepository
+        .listAll()
+        .then((rooms) => {
+          respondWithJson(response, 200, {
+            status: "ok",
+            activeRooms: rooms.length,
+            maxRooms: MAX_CONCURRENT_ROOMS
+          });
+        })
+        .catch((error) => {
+          logger.error("realtime.health_check_failed", { error });
+          respondWithJson(response, 200, { status: "ok" });
+        });
       return;
     }
 
@@ -539,6 +553,36 @@ export const createRealtimeServer = async ({
 
       void (async () => {
         await dispatchExecution(null, await commandService.disconnectPlayer(session));
+
+        await roomTaskRunner.run(session.roomCode, async () => {
+          const room = await roomRepository.getByCode(session.roomCode);
+
+          if (!room) {
+            return;
+          }
+
+          const hasActiveConnection = room.players.some((player) => {
+            const playerSocket = connectionRegistry.getSocketForPlayer(player.playerId);
+            return playerSocket && playerSocket.readyState === WebSocket.OPEN;
+          });
+
+          if (!hasActiveConnection) {
+            const deleteRoomState = activeStateStores.deleteRoomState ?? (async () => {
+              await roomRepository.delete(room.roomCode);
+              await matchRepository.deleteByRoomId(room.roomId);
+              await chatRepository.deleteByRoomCode(room.roomCode);
+              await playerSessionService.revokeRoomSessions(room.roomCode);
+            });
+
+            await deleteRoomState(room);
+
+            logger.info("realtime.empty_room_cleaned_up", {
+              roomId: room.roomId,
+              roomCode: room.roomCode,
+              playerCount: room.players.length
+            });
+          }
+        });
       })().catch((error) => {
         logger.error("realtime.connection_close_failed", {
           error,

@@ -31,6 +31,7 @@ interface GameCommandServiceDependencies {
   chatService: ChatService;
   rematchService: RematchService;
   playerSessionService: PlayerSessionService;
+  maxConcurrentRooms?: number;
   now?: () => number;
 }
 
@@ -42,8 +43,8 @@ export class GameCommandService {
   }
 
   async createRoom(displayName: string): Promise<CommandExecution> {
-    const { roomService, playerSessionService } = this.dependencies;
-    const { room, player } = await roomService.createRoom(displayName);
+    const { roomService, playerSessionService, maxConcurrentRooms } = this.dependencies;
+    const { room, player } = await roomService.createRoom(displayName, maxConcurrentRooms);
 
     if (!room.inviteToken) {
       throw new Error("Created rooms must include an invite token.");

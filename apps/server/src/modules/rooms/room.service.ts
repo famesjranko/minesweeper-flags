@@ -11,8 +11,19 @@ export class RoomService {
     private readonly taskRunner: KeyedSerialTaskRunner = new KeyedSerialTaskRunner()
   ) {}
 
-  async createRoom(displayName: string): Promise<{ room: RoomRecord; player: RoomPlayer }> {
+  async createRoom(
+    displayName: string,
+    maxConcurrentRooms?: number
+  ): Promise<{ room: RoomRecord; player: RoomPlayer }> {
     return await this.taskRunner.run(ROOM_CREATION_LOCK_KEY, async () => {
+      if (maxConcurrentRooms !== undefined) {
+        const allRooms = await this.roomRepository.listAll();
+
+        if (allRooms.length >= maxConcurrentRooms) {
+          throw new Error("All room slots are in use \u2014 try again in a moment.");
+        }
+      }
+
       let roomCode = createRoomCode();
 
       while (await this.roomRepository.roomCodeExists(roomCode)) {

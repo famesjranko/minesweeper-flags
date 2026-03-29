@@ -45,3 +45,5 @@ export const resolveServerUrl = ({
 };
 
 export const SERVER_URL = resolveServerUrl();
+
+export const SERVER_HEALTH_URL = "/api/health";

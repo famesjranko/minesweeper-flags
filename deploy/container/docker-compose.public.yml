@@ -1,5 +1,6 @@
 services:
   redis:
+    container_name: minesweeper-redis
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     expose:
@@ -14,6 +15,7 @@ services:
       - redis-public-data:/data
 
   server:
+    container_name: minesweeper-server
     build:
       context: ../..
       dockerfile: apps/server/Dockerfile
@@ -29,6 +31,7 @@ services:
       MAX_WEBSOCKET_MESSAGE_BYTES: ${MAX_WEBSOCKET_MESSAGE_BYTES:-16384}
       TRUST_PROXY: ${TRUST_PROXY:-true}
       MAX_CONNECTIONS_PER_IP: ${MAX_CONNECTIONS_PER_IP:-6}
+      MAX_CONCURRENT_ROOMS: ${MAX_CONCURRENT_ROOMS:-4}
       ROOM_CREATE_RATE_LIMIT_MAX: ${ROOM_CREATE_RATE_LIMIT_MAX:-4}
       ROOM_CREATE_RATE_LIMIT_WINDOW_MS: ${ROOM_CREATE_RATE_LIMIT_WINDOW_MS:-60000}
       ROOM_JOIN_RATE_LIMIT_MAX: ${ROOM_JOIN_RATE_LIMIT_MAX:-10}
@@ -61,6 +64,7 @@ services:
     restart: unless-stopped
 
   client:
+    container_name: minesweeper-client
     build:
       context: ../..
       dockerfile: apps/client/Dockerfile.public
@@ -74,6 +78,12 @@ services:
       CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-http://localhost:3001 ws://localhost:3001}
     ports:
       - "${CLIENT_PUBLIC_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     restart: unless-stopped
 
 volumes:

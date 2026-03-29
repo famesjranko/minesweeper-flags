@@ -1,5 +1,6 @@
 import { INVITE_TOKEN_LENGTH, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
+import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import { extractInviteToken } from "./invite-link.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
 
@@ -7,6 +8,8 @@ interface RoomLobbyProps {
   connectionStatus: string;
   error: string | null;
   initialInviteValue?: string;
+  slotAvailability?: SlotAvailability | null;
+  onRefreshSlots?: () => void;
   onCreateRoom: (displayName: string) => void;
   onJoinRoom: (displayName: string, inviteToken: string) => void;
 }
@@ -15,6 +18,8 @@ export const RoomLobby = ({
   connectionStatus,
   error,
   initialInviteValue = "",
+  slotAvailability = null,
+  onRefreshSlots,
   onCreateRoom,
   onJoinRoom
 }: RoomLobbyProps) => {
@@ -22,8 +27,11 @@ export const RoomLobby = ({
   const [inviteValue, setInviteValue] = useState(initialInviteValue);
   const trimmedDisplayName = displayName.trim();
   const inviteToken = extractInviteToken(inviteValue);
-  const canCreateRoom = trimmedDisplayName.length > 0;
+  const slotsFull = slotAvailability !== null && slotAvailability.activeRooms >= slotAvailability.maxRooms;
+  const canCreateRoom = trimmedDisplayName.length > 0 && !slotsFull;
   const canJoinRoom = trimmedDisplayName.length > 0 && inviteToken !== null;
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleCreateRoom = () => {
     if (!canCreateRoom) {
@@ -31,6 +39,13 @@ export const RoomLobby = ({
     }
 
     onCreateRoom(trimmedDisplayName);
+    onRefreshSlots?.();
+  };
+
+  const handleRefreshSlots = () => {
+    setRefreshing(true);
+    onRefreshSlots?.();
+    setTimeout(() => setRefreshing(false), 600);
   };
 
   const handleJoinRoom = () => {
@@ -98,8 +113,25 @@ export const RoomLobby = ({
               }}
             >
               <div className="lobby-card-heading">
-                <h2>Create a Match</h2>
-                <span>Host a room and share a private invite link.</span>
+                <div className="lobby-card-heading-row">
+                  <h2>Create a Match</h2>
+                  {slotAvailability !== null && (
+                    <span className="lobby-slot-indicator">
+                      <span className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}>
+                        {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
+                      </span>
+                      <button
+                        type="button"
+                        className={`lobby-slot-refresh${refreshing ? " is-refreshing" : ""}`}
+                        onClick={handleRefreshSlots}
+                        title="Refresh slot count"
+                      >
+                        &#x21bb;
+                      </button>
+                    </span>
+                  )}
+                </div>
+                <span>{slotsFull ? "All room slots are in use." : "Host a room and share a private invite link."}</span>
               </div>
 
               <button
