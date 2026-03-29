@@ -206,7 +206,7 @@ The client currently has coverage around:
 
 The backend exposes:
 
-- `/health` for liveness
+- `/health` for liveness (also returns `activeRooms` / `maxRooms` slot availability)
 - `/ready` for readiness
 
 The realtime server includes:
@@ -214,7 +214,9 @@ The realtime server includes:
 - room create/join flows over WebSockets
 - room-scoped live chat with reconnect-safe recent history
 - reconnect support with stored session tokens
+- configurable max concurrent rooms with lobby slot indicator
 - per-IP connection caps and event throttling
+- immediate room cleanup when all players disconnect
 - heartbeat-based stale socket cleanup
 - optional Redis-backed persistence
 - strict public-mode config validation
