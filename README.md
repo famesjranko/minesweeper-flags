@@ -1,6 +1,6 @@
 # Minesweeper Flags
 
-Realtime two-player competitive Minesweeper with room-scoped match chat, built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
+This is an homage to the MSN Messenger game I used to play with friends back in the day.  A realtime two-player competitive Minesweeper with room-scoped match chat, built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
 
 The game flow is simple:
 
