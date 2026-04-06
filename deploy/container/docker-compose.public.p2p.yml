@@ -1,0 +1,72 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - redis-public-data:/data
+
+  signaling:
+    build:
+      context: ../..
+      dockerfile: apps/signaling/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-public}
+      PORT: 3002
+      HOST: 0.0.0.0
+      STATE_BACKEND: redis
+      REDIS_URL: redis://redis:6379
+      REDIS_KEY_PREFIX: ${SIGNALING_REDIS_KEY_PREFIX:-minesweeper-flags-public:signaling}
+      P2P_SIGNALING_SESSION_TTL_SECONDS: ${P2P_SIGNALING_SESSION_TTL_SECONDS:-900}
+      P2P_SIGNALING_MAX_PAYLOAD_BYTES: ${P2P_SIGNALING_MAX_PAYLOAD_BYTES:-16384}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?Set SIGNALING_ALLOWED_ORIGINS to the public client origin, such as https://app.example.com}
+      SIGNALING_CREATE_RATE_LIMIT_MAX: ${SIGNALING_CREATE_RATE_LIMIT_MAX:-6}
+      SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS: ${SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS:-60000}
+      SIGNALING_ANSWER_RATE_LIMIT_MAX: ${SIGNALING_ANSWER_RATE_LIMIT_MAX:-12}
+      SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS: ${SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS:-60000}
+    ports:
+      - "${SIGNALING_PUBLIC_PORT:-3002}:3002"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3002/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ../..
+      dockerfile: apps/client/Dockerfile.public
+      args:
+        VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-p2p}
+        VITE_P2P_STUN_URLS: ${VITE_P2P_STUN_URLS:-}
+        VITE_P2P_SIGNALING_URL: ${VITE_P2P_SIGNALING_URL:?Set VITE_P2P_SIGNALING_URL to the public signaling origin, such as https://signal.example.com}
+    depends_on:
+      signaling:
+        condition: service_healthy
+    environment:
+      CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:?Set CSP_CONNECT_SRC to the client connect-src allowlist, including the signaling origin}
+    ports:
+      - "${CLIENT_PUBLIC_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  redis-public-data:

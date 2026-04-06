@@ -1,5 +1,4 @@
 import type { ClientEvent, ServerEvent } from "@minesweeper-flags/shared";
-import { SERVER_URL } from "../../lib/config/env.js";
 import { decodeServerEvent } from "./game-client.protocol.js";
 import type { ConnectionStatus } from "./game-client.store.js";
 
@@ -26,6 +25,8 @@ export class WebSocketGameClientTransport implements GameClientTransport {
   private status: ConnectionStatus = "disconnected";
   private readonly listeners = new Set<GameClientTransportListener>();
 
+  constructor(private readonly serverUrl: string) {}
+
   connect = (): void => {
     if (
       this.socket &&
@@ -34,7 +35,7 @@ export class WebSocketGameClientTransport implements GameClientTransport {
       return;
     }
 
-    const nextSocket = new WebSocket(SERVER_URL);
+    const nextSocket = new WebSocket(this.serverUrl);
     this.socket = nextSocket;
     this.emitStatus({ status: "connecting" });
 

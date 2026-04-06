@@ -260,7 +260,7 @@ export const MatchView = ({
           error={chatError}
           helperText={
             opponent
-              ? `${opponent.displayName} is ${opponent.connected ? "online" : "reconnecting"}.`
+              ? `${opponent.displayName} is ${opponent.connected ? "online" : "offline"}.`
               : "Waiting for the second player to join chat."
           }
           className="classic-match-chat"

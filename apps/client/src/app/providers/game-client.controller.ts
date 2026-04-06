@@ -38,13 +38,24 @@ interface GameClientControllerOptions {
   transport: GameClientTransport;
   persistence: SessionPersistence;
   scheduler: GameClientScheduler;
+  copy?: {
+    chatDisconnectedMessage?: string;
+    actionDisconnectedMessage?: string;
+  };
 }
+
+const DEFAULT_CHAT_DISCONNECTED_MESSAGE =
+  "Chat is reconnecting. Try again once the room reconnects.";
+const DEFAULT_ACTION_DISCONNECTED_MESSAGE =
+  "Connection lost. Reconnecting before your next action.";
 
 export class GameClientController {
   private readonly store: GameClientStore;
   private readonly transport: GameClientTransport;
   private readonly persistence: SessionPersistence;
   private readonly scheduler: GameClientScheduler;
+  private readonly chatDisconnectedMessage: string;
+  private readonly actionDisconnectedMessage: string;
 
   private pendingBootstrapEvent: ClientEvent | null = null;
   private reconnectAttempt: StoredSession | null = null;
@@ -58,12 +69,17 @@ export class GameClientController {
     store,
     transport,
     persistence,
-    scheduler
+    scheduler,
+    copy
   }: GameClientControllerOptions) {
     this.store = store;
     this.transport = transport;
     this.persistence = persistence;
     this.scheduler = scheduler;
+    this.chatDisconnectedMessage =
+      copy?.chatDisconnectedMessage ?? DEFAULT_CHAT_DISCONNECTED_MESSAGE;
+    this.actionDisconnectedMessage =
+      copy?.actionDisconnectedMessage ?? DEFAULT_ACTION_DISCONNECTED_MESSAGE;
   }
 
   start = (): void => {
@@ -200,7 +216,7 @@ export class GameClientController {
     }
 
     if (this.transport.getStatus() !== "connected") {
-      this.store.setChatError("Chat is reconnecting. Try again once the room reconnects.");
+      this.store.setChatError(this.chatDisconnectedMessage);
       this.connectTransport();
       return;
     }
@@ -554,7 +570,7 @@ export class GameClientController {
         this.transport.send(event);
         return true;
       } catch {
-        this.store.setError("Connection lost. Reconnecting before your next action.");
+        this.store.setError(this.actionDisconnectedMessage);
         this.connectTransport();
         return false;
       }
@@ -566,7 +582,7 @@ export class GameClientController {
       return true;
     }
 
-    this.store.setError("Connection lost. Reconnecting before your next action.");
+    this.store.setError(this.actionDisconnectedMessage);
     this.connectTransport();
     return false;
   }
@@ -583,7 +599,7 @@ export class GameClientController {
 }
 
 export const createBrowserGameClientScheduler = (): GameClientScheduler => ({
-  setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs),
-  clearTimeout: (timeoutId) => window.clearTimeout(timeoutId),
+  setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs) as unknown as number,
+  clearTimeout: (timeoutId) => globalThis.clearTimeout(timeoutId),
   random: () => Math.random()
 });

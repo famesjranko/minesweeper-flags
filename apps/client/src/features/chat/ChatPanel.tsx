@@ -39,7 +39,7 @@ export const ChatPanel = ({
     : pending
       ? "Sending..."
       : connectionStatus !== "connected"
-        ? "Chat reconnecting. You can keep typing."
+        ? "Chat offline. You can keep typing."
         : helperText ?? "Press Enter to send.";
 
   return (

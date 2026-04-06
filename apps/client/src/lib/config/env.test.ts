@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isLocalHostname, resolveServerUrl } from "./env.js";
+import {
+  isLocalHostname,
+  resolveDeploymentMode,
+  resolveP2PSignalingUrl,
+  resolveP2PStunUrls,
+  resolveServerUrl
+} from "./env.js";
 
 const remoteLocation = {
   host: "play.example.com",
@@ -8,6 +14,51 @@ const remoteLocation = {
 };
 
 describe("client socket env", () => {
+  it("defaults the deployment mode to server", () => {
+    expect(resolveDeploymentMode()).toBe("server");
+  });
+
+  it("accepts p2p as a deployment mode", () => {
+    expect(resolveDeploymentMode({ explicitMode: "p2p" })).toBe("p2p");
+  });
+
+  it("rejects unsupported deployment modes", () => {
+    expect(() => resolveDeploymentMode({ explicitMode: "hybrid" })).toThrow(
+      'VITE_DEPLOYMENT_MODE must be "server" or "p2p".'
+    );
+  });
+
+  it("parses comma-separated STUN URLs", () => {
+    expect(
+      resolveP2PStunUrls({
+        explicitUrls: "stun:stun1.example.com:3478, stun:stun2.example.com:3478 , ,"
+      })
+    ).toEqual(["stun:stun1.example.com:3478", "stun:stun2.example.com:3478"]);
+  });
+
+  it("allows an empty STUN URL list", () => {
+    expect(resolveP2PStunUrls({ explicitUrls: undefined })).toEqual([]);
+  });
+
+  it("requires a signaling URL for p2p builds", () => {
+    expect(() => resolveP2PSignalingUrl({ deploymentMode: "p2p" })).toThrow(
+      "VITE_P2P_SIGNALING_URL is required when VITE_DEPLOYMENT_MODE=p2p."
+    );
+  });
+
+  it("accepts a signaling URL for p2p builds", () => {
+    expect(
+      resolveP2PSignalingUrl({
+        explicitUrl: "https://signal.example.com",
+        deploymentMode: "p2p"
+      })
+    ).toBe("https://signal.example.com");
+  });
+
+  it("does not require a signaling URL for server builds", () => {
+    expect(resolveP2PSignalingUrl({ deploymentMode: "server" })).toBeUndefined();
+  });
+
   it("prefers the explicit socket URL when provided", () => {
     expect(
       resolveServerUrl({

@@ -13,6 +13,7 @@ import {
   type GameClientRuntime
 } from "./game-client.runtime.js";
 import type { ConnectionStatus } from "./game-client.store.js";
+import type { P2PSetupSnapshot } from "../../p2p/setup/p2p-setup.types.js";
 
 interface GameClientContextValue {
   connectionStatus: ConnectionStatus;
@@ -37,9 +38,19 @@ interface GameClientContextValue {
   requestRematch: () => void;
   cancelRematch: () => void;
   clearError: () => void;
+  p2pSetup: P2PSetupSnapshot | null;
+  openGuestSetupSession: (sessionId: string) => void;
+  openGuestSetupFromFragment: (fragment: string) => void;
+  createGuestAnswer: (displayName: string) => void;
+  setHostGuestAnswerText: (value: string) => void;
+  applyHostGuestAnswer: () => boolean;
+  clearHostSetupError: () => void;
+  clearGuestSetupError: () => void;
 }
 
 const GameClientContext = createContext<GameClientContextValue | null>(null);
+const subscribeToEmptySnapshot = (_listener: () => void) => () => {};
+const getEmptyP2PSnapshot = (): null => null;
 
 export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const runtimeRef = useRef<GameClientRuntime | null>(null);
@@ -53,6 +64,11 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     runtime.store.subscribe,
     runtime.store.getSnapshot,
     runtime.store.getSnapshot
+  );
+  const p2pSetupSnapshot = useSyncExternalStore(
+    runtime.p2p?.subscribe ?? subscribeToEmptySnapshot,
+    runtime.p2p?.getSnapshot ?? getEmptyP2PSnapshot,
+    runtime.p2p?.getSnapshot ?? getEmptyP2PSnapshot
   );
 
   useEffect(() => {
@@ -87,7 +103,15 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         resignMatch: runtime.controller.resignMatch,
         requestRematch: runtime.controller.requestRematch,
         cancelRematch: runtime.controller.cancelRematch,
-        clearError: runtime.controller.clearError
+        clearError: runtime.controller.clearError,
+        p2pSetup: p2pSetupSnapshot,
+        openGuestSetupSession: runtime.p2p?.controller.openGuestSetupSession ?? (() => {}),
+        openGuestSetupFromFragment: runtime.p2p?.controller.openGuestSetupFromFragment ?? (() => {}),
+        createGuestAnswer: runtime.p2p?.controller.createGuestAnswer ?? (() => {}),
+        setHostGuestAnswerText: runtime.p2p?.controller.setHostGuestAnswerText ?? (() => {}),
+        applyHostGuestAnswer: runtime.p2p?.controller.applyHostGuestAnswer ?? (() => false),
+        clearHostSetupError: runtime.p2p?.controller.clearHostSetupError ?? (() => {}),
+        clearGuestSetupError: runtime.p2p?.controller.clearGuestSetupError ?? (() => {})
       }}
     >
       {children}

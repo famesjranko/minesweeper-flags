@@ -8,6 +8,7 @@
     "packages/game-engine",
     "packages/shared",
     "apps/server",
+    "apps/signaling",
     "apps/client"
   ],
   "scripts": {

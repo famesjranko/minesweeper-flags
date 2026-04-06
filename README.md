@@ -24,10 +24,16 @@ The game flow is simple:
 ## Stack
 
 - React + Vite client in `apps/client`
-- Node + `ws` realtime server in `apps/server`
+- Node + `ws` realtime server in `apps/server` (hosted server flow)
+- Lightweight HTTP signaling service in `apps/signaling` (browser-to-browser direct match flow)
 - shared protocol/types in `packages/shared`
 - pure game logic in `packages/game-engine`
 - optional Redis-backed state persistence for rooms, matches, chat history, and reconnect sessions
+
+The client ships in two product shapes selected at build time:
+
+- `VITE_DEPLOYMENT_MODE=server` — hosted realtime server, room codes and invite links
+- `VITE_DEPLOYMENT_MODE=p2p` — browser-to-browser direct matches over WebRTC, with the host browser as the gameplay authority and `apps/signaling` only used for offer/answer/reconnect rendezvous
 
 ## Architecture
 
@@ -64,6 +70,18 @@ For the parity-first stack that matches the public deployment shape more closely
 
 ```bash
 make compose-public-up
+```
+
+For the local direct-match (P2P) stack with the signaling service instead of the hosted server:
+
+```bash
+make compose-p2p-up
+```
+
+For the parity/public direct-match stack:
+
+```bash
+make compose-public-p2p-up
 ```
 
 Then open:
@@ -201,6 +219,12 @@ The client currently has coverage around:
 - session persistence and reconnect bootstrap behavior
 - rematch UI state changes
 - bomb availability and board-preview behavior
+- direct-match (P2P) host/guest setup, refresh recovery, displacement and duplicate-tab handling
+
+The signaling service has coverage around:
+
+- offer/answer/finalization session lifecycle and TTL
+- reconnect control sessions, role claims, heartbeat staleness, and stale-attempt reconciliation
 
 ## Health And Realtime Behavior
 
@@ -223,8 +247,9 @@ The realtime server includes:
 
 ```text
 apps/
-  client/         React + Vite frontend
-  server/         Node realtime server
+  client/         React + Vite frontend (server and p2p builds)
+  server/         Node realtime server (hosted flow)
+  signaling/      Lightweight HTTP signaling service (p2p flow)
 packages/
   game-engine/    Pure game rules and board logic
   shared/         Shared schemas, DTOs, and protocol definitions
@@ -234,6 +259,7 @@ deploy/
   container/       parity/public compose overlay and docs
 Makefile
 docker-compose.yml
+docker-compose.p2p.yml
 ```
 
 ## Notes
