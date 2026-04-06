@@ -9,3 +9,4 @@ apps/server/.env
 apps/client/.env
 apps/client/.env.local
 apps/client/.env.*.local
+.claude/
