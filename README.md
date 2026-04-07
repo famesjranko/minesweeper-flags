@@ -330,7 +330,6 @@ packages/
 docs/
   config-reference.md              Operator env + Compose reference
   p2p-architecture.md              P2P design, signaling endpoints, reconnect protocol
-  transport-neutral-refactor-plan.md   Historical record of the server-flow refactor
 deploy/
   container/
     docker-compose.public.yml      parity/public hosted-server overlay
