@@ -181,6 +181,35 @@ describe("p2p recovery storage", () => {
     expect(state.match).not.toBe(hostRecord.match);
   });
 
+  it("preserves match field order across read/write (regression for safeParse reorder)", () => {
+    const localStorage = new MemoryStorage();
+    (globalThis as unknown as { window: MockWindow }).window = { localStorage };
+
+    // Lock the test setup: createMatchState produces `players` at position 4,
+    // while matchStateSchema declares `players` last. This divergence is what
+    // makes the regression observable — if the engine's natural key ordering
+    // ever drifts toward the schema's order, the assertions below stop being
+    // meaningful (they would pass even with a buggy clone-from-result.data).
+    // The guard tells a future contributor exactly what to do if this fires.
+    const matchKeys = Object.keys(hostRecord.match!);
+    expect(matchKeys.indexOf("players")).toBeLessThan(matchKeys.length - 1);
+
+    const persistence = createBrowserP2PRecoveryPersistence();
+    persistence.write(hostRecord);
+
+    // Write path: validateHostAuthoritySnapshot must clone from the original
+    // input (not safeParse's result.data) so the bytes written preserve the
+    // engine's natural key order, not the schema's.
+    const stored = localStorage.getItem(P2P_RECOVERY_KEY);
+    expect(stored).toBe(JSON.stringify(hostRecord));
+
+    // Read path: createBrowserP2PRecoveryPersistence.read must return the
+    // original parsed value (not result.data) for the same reason.
+    const readBack = persistence.read(ROOM_CODE);
+    expect(readBack).not.toBeNull();
+    expect(JSON.stringify(readBack)).toBe(JSON.stringify(hostRecord));
+  });
+
   it("rejects malformed json and wrong versions, then clears them", () => {
     const localStorage = new MemoryStorage();
     (globalThis as unknown as { window: MockWindow }).window = { localStorage };

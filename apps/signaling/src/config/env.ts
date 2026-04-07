@@ -146,6 +146,11 @@ export const parseSignalingEnv = (
     environment.SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS,
     60_000
   );
+  // Despite the "RECONNECT" name this bucket is shared across every
+  // post-create signaling operation: register/claim/heartbeat, offer and
+  // answer reads/writes, finalization, and the GET reads on
+  // /signaling/sessions/{id}. The high default (240/min) reflects the
+  // polling cadence of those routes, not just reconnect heartbeats.
   const SIGNALING_RECONNECT_RATE_LIMIT_MAX = parsePositiveInteger(
     environment.SIGNALING_RECONNECT_RATE_LIMIT_MAX,
     240

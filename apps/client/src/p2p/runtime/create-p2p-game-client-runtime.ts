@@ -58,11 +58,11 @@ const DIRECT_MATCH_AUTHORITATIVE_MESSAGE =
 const DIRECT_MATCH_CLAIM_ACTIVE_MESSAGE =
   "Reconnected. You now have an active claim.";
 
-const createNoopSessionPersistence = (): SessionPersistence => ({
+const noopSessionPersistence: SessionPersistence = {
   read: () => null,
   write: () => {},
   remove: () => {}
-});
+};
 
 type RendezvousClient = Pick<
   P2PRendezvousClient,
@@ -172,7 +172,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
   private activeReconnectClaim: ActiveReconnectClaimState | null = null;
   private guestReconnectInFlight = false;
   private lastClaimWasVictory = false;
-  private readonly noopPersistence = createNoopSessionPersistence();
+  private readonly noopPersistence = noopSessionPersistence;
 
   constructor(
     private readonly store: GameClientStore,

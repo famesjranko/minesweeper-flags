@@ -15,6 +15,10 @@ const readForwardedForHeader = (request: IncomingMessage): string | undefined =>
     .map((forwardedAddress) => forwardedAddress.trim())
     .filter(Boolean);
 
+  // Take the rightmost entry. This assumes the CLAUDE.md "single trusted
+  // ingress" model: exactly one proxy in front of us appends the real client
+  // IP to X-Forwarded-For, so the rightmost value is the client. Multi-hop
+  // proxy chains are explicitly unsupported — do not change this to `[0]`.
   return forwardedAddresses.at(-1);
 };
 
