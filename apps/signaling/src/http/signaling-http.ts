@@ -63,9 +63,14 @@ class SignalingHttpAbusePrevention {
 
   constructor(
     private readonly createLimit: FixedWindowLimit,
-    private readonly answerLimit: FixedWindowLimit
+    private readonly answerLimit: FixedWindowLimit,
+    private readonly reconnectLimit: FixedWindowLimit
   ) {
-    this.bucketCleanupIntervalMs = Math.max(createLimit.windowMs, answerLimit.windowMs);
+    this.bucketCleanupIntervalMs = Math.max(
+      createLimit.windowMs,
+      answerLimit.windowMs,
+      reconnectLimit.windowMs
+    );
   }
 
   consumeCreate(ipAddress: string, now = Date.now()): RateLimitResult {
@@ -74,6 +79,10 @@ class SignalingHttpAbusePrevention {
 
   consumeAnswer(ipAddress: string, now = Date.now()): RateLimitResult {
     return this.consume(`answer:${ipAddress.trim() || "unknown"}`, this.answerLimit, now);
+  }
+
+  consumeReconnect(ipAddress: string, now = Date.now()): RateLimitResult {
+    return this.consume(`reconnect:${ipAddress.trim() || "unknown"}`, this.reconnectLimit, now);
   }
 
   private consume(bucketKey: string, limit: FixedWindowLimit, now: number): RateLimitResult {
@@ -276,6 +285,7 @@ export interface CreateSignalingHttpHandlerOptions {
   allowedOrigins: string[];
   createRateLimit: FixedWindowLimit;
   answerRateLimit: FixedWindowLimit;
+  reconnectRateLimit: FixedWindowLimit;
 }
 
 export const createSignalingHttpHandler = ({
@@ -284,9 +294,40 @@ export const createSignalingHttpHandler = ({
   trustProxy,
   allowedOrigins,
   createRateLimit,
-  answerRateLimit
+  answerRateLimit,
+  reconnectRateLimit
 }: CreateSignalingHttpHandlerOptions) => {
-  const abusePrevention = new SignalingHttpAbusePrevention(createRateLimit, answerRateLimit);
+  const abusePrevention = new SignalingHttpAbusePrevention(
+    createRateLimit,
+    answerRateLimit,
+    reconnectRateLimit
+  );
+
+  const enforceReconnectRateLimit = (
+    request: IncomingMessage,
+    response: ServerResponse,
+    ipAddress: string
+  ): boolean => {
+    const rateLimitResult = abusePrevention.consumeReconnect(ipAddress);
+
+    if (!rateLimitResult.allowed) {
+      response.setHeader("retry-after", Math.ceil(rateLimitResult.retryAfterMs / 1000));
+      respondWithJson(
+        request,
+        response,
+        429,
+        {
+          error: "Too many reconnect requests.",
+          retryAfterMs: rateLimitResult.retryAfterMs,
+          limit: rateLimitResult.limit
+        },
+        allowedOrigins
+      );
+      return false;
+    }
+
+    return true;
+  };
 
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const path = getRequestPath(request.url);
@@ -325,6 +366,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "register" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = registerReconnectControlSessionRequestSchema.parse(
           await readJsonBody(request, maxPayloadBytes)
         );
@@ -347,6 +392,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "read" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = readReconnectControlSessionRequestSchema.parse(
           await readJsonBody(request, maxPayloadBytes)
         );
@@ -366,6 +415,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "claim" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = claimReconnectRoleRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
         const reconnectSession = claimReconnectRoleResponseSchema.parse(
           await service.claimReconnectRole(sessionId, body)
@@ -383,6 +436,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "heartbeat" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = heartbeatReconnectRoleRequestSchema.parse(
           await readJsonBody(request, maxPayloadBytes)
         );
@@ -402,6 +459,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "offer" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = writeReconnectOfferRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
         const reconnectSession = writeReconnectOfferResponseSchema.parse(
           await service.writeReconnectOffer(sessionId, body)
@@ -420,6 +481,10 @@ export const createSignalingHttpHandler = ({
         segments[4] === "read" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = readReconnectOfferRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
         const reconnectOffer = readReconnectOfferResponseSchema.parse(
           await service.readReconnectOffer(sessionId, body.secret, body.instanceId)
@@ -437,6 +502,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "answer" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = writeReconnectAnswerRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
         const reconnectSession = writeReconnectAnswerResponseSchema.parse(
           await service.writeReconnectAnswer(sessionId, body)
@@ -455,6 +524,10 @@ export const createSignalingHttpHandler = ({
         segments[4] === "read" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = readReconnectAnswerRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
         const reconnectAnswer = readReconnectAnswerResponseSchema.parse(
           await service.readReconnectAnswer(sessionId, body.secret, body.instanceId)
@@ -472,6 +545,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "finalize" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = finalizeReconnectAttemptRequestSchema.parse(
           await readJsonBody(request, maxPayloadBytes)
         );
@@ -492,6 +569,10 @@ export const createSignalingHttpHandler = ({
         segments[4] === "read" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = readReconnectFinalizationRequestSchema.parse(
           await readJsonBody(request, maxPayloadBytes)
         );

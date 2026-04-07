@@ -203,6 +203,8 @@ These are read by the signaling service in `apps/signaling/src/config/env.ts`.
 | `SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS` | `60000` | positive integer | no | Rate-limit window for session creation. |
 | `SIGNALING_ANSWER_RATE_LIMIT_MAX` | `12` | positive integer | no | Maximum answer submissions allowed per rate-limit window per client IP. |
 | `SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS` | `60000` | positive integer | no | Rate-limit window for answer submission. |
+| `SIGNALING_RECONNECT_RATE_LIMIT_MAX` | `240` | positive integer | no | Maximum reconnect-control requests (register, claim, heartbeat, offer, answer, finalize, and their `/read` variants) allowed per rate-limit window per client IP. Shared bucket across the entire reconnect endpoint family. |
+| `SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS` | `60000` | positive integer | no | Rate-limit window for reconnect-control requests. |
 
 ### Signaling Deployment Rules
 

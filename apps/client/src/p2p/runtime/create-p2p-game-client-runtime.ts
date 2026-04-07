@@ -433,6 +433,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
       this.store.clearTransientRoomState();
       this.store.setError(error instanceof Error ? error.message : "Failed to restore the direct match.");
     }).finally(() => {
+      // safe vs CLAUDE.md hang bug: runHostReconnectAttempt has already settled (via the .catch above) by the time this .finally runs — no in-flight poll loop to orphan.
       if (this.hostReconnectAbortController?.signal === reconnectSignal) {
         this.hostReconnectInFlight = false;
       }
@@ -784,7 +785,11 @@ class P2PBootstrapController implements GameClientRuntimeController {
         if (change.status === "failed" || change.status === "closed") {
           if (this.hostReconnectControl && this.hostTransport?.hasGuestSession()) {
             if (!this.hostReconnectInFlight) {
-                void this.handleHostPeerClosed(peer);
+                void this.handleHostPeerClosed(peer).catch((error: unknown) => {
+                  if (this.isAbortError(error)) {
+                    return;
+                  }
+                });
               }
 
               return;
@@ -1128,6 +1133,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
         this.scheduleHostReconnectRetry(nextPeer, reconnectControl);
       }
     } finally {
+      // safe vs CLAUDE.md hang bug: the awaited runHostReconnectAttempt above has already settled by the time this finally runs — no in-flight poll loop to orphan.
       this.hostReconnectInFlight = false;
       this.hostReconnectAbortController = null;
     }
@@ -1244,7 +1250,11 @@ class P2PBootstrapController implements GameClientRuntimeController {
         this.hostTransport?.hasGuestSession() &&
         this.hostReconnectControl === reconnectControl
       ) {
-        void this.handleHostPeerClosed(peer);
+        void this.handleHostPeerClosed(peer).catch((error: unknown) => {
+          if (this.isAbortError(error)) {
+            return;
+          }
+        });
       }
     }, HOST_RECONNECT_RETRY_DELAY_MS);
   }

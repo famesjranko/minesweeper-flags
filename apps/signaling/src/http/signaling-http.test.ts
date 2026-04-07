@@ -48,6 +48,7 @@ const startServer = async (options?: {
   allowedOrigins?: string[];
   createRateLimitMax?: number;
   answerRateLimitMax?: number;
+  reconnectRateLimitMax?: number;
   trustProxy?: boolean;
 }): Promise<StartedTestServer> => {
   const service = new SignalingService(new InMemorySignalingRepository(), {
@@ -64,6 +65,10 @@ const startServer = async (options?: {
     },
     answerRateLimit: {
       maxEvents: options?.answerRateLimitMax ?? 12,
+      windowMs: 60_000
+    },
+    reconnectRateLimit: {
+      maxEvents: options?.reconnectRateLimitMax ?? 240,
       windowMs: 60_000
     }
   });
@@ -723,6 +728,148 @@ describe("signaling http api", () => {
           "x-forwarded-for": "198.51.100.99, 203.0.113.20"
         },
         body: JSON.stringify({ answer })
+      })
+    ).toMatchObject({
+      status: 429
+    });
+  });
+
+  it("rate limits the reconnect endpoint family per IP", async () => {
+    const { server, baseUrl } = await startServer({
+      reconnectRateLimitMax: 1
+    });
+    activeServer = server;
+
+    const sessionId = "reconnect-rate-limit-family";
+
+    const registered = await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/register`, {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId,
+        hostSecret: "host-secret",
+        guestSecret: "guest-secret"
+      })
+    });
+
+    expect(registered.status).toBe(201);
+
+    const readBlocked = await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/read`, {
+      method: "POST",
+      body: JSON.stringify({ secret: "host-secret", instanceId: "instance-1" })
+    });
+
+    expect(readBlocked.status).toBe(429);
+    const retryAfter = readBlocked.headers.get("retry-after");
+    expect(retryAfter).not.toBeNull();
+    const retryAfterSeconds = Number(retryAfter);
+    expect(Number.isInteger(retryAfterSeconds)).toBe(true);
+    expect(retryAfterSeconds).toBeGreaterThan(0);
+    expect(retryAfterSeconds).toBeLessThanOrEqual(60);
+    expect(readBlocked.body).toMatchObject({
+      error: "Too many reconnect requests.",
+      limit: 1
+    });
+
+    const heartbeatBlocked = await requestJson(
+      baseUrl,
+      `/signaling/reconnect/${sessionId}/heartbeat`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          role: "host",
+          secret: "host-secret",
+          instanceId: "instance-1"
+        })
+      }
+    );
+
+    expect(heartbeatBlocked.status).toBe(429);
+    expect(heartbeatBlocked.body).toMatchObject({
+      error: "Too many reconnect requests.",
+      limit: 1
+    });
+  });
+
+  it("rate limits reconnect requests by the proxy-appended forwarded address", async () => {
+    const { server, baseUrl } = await startServer({
+      reconnectRateLimitMax: 1,
+      trustProxy: true
+    });
+    activeServer = server;
+
+    const sessionId = "reconnect-rate-limit-proxy";
+
+    const registered = await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/register`, {
+      method: "POST",
+      headers: {
+        "x-forwarded-for": "198.51.100.10, 203.0.113.20"
+      },
+      body: JSON.stringify({
+        sessionId,
+        hostSecret: "host-secret",
+        guestSecret: "guest-secret"
+      })
+    });
+
+    expect(registered.status).toBe(201);
+
+    expect(
+      await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/read`, {
+        method: "POST",
+        headers: {
+          "x-forwarded-for": "198.51.100.99, 203.0.113.20"
+        },
+        body: JSON.stringify({ secret: "host-secret", instanceId: "instance-1" })
+      })
+    ).toMatchObject({
+      status: 429
+    });
+  });
+
+  it("does not consume the reconnect bucket for create/answer endpoints", async () => {
+    const { server, baseUrl } = await startServer({
+      reconnectRateLimitMax: 1
+    });
+    activeServer = server;
+
+    const firstCreate = await requestJson(baseUrl, "/signaling/sessions", {
+      method: "POST",
+      body: JSON.stringify({ offer })
+    });
+    const secondCreate = await requestJson(baseUrl, "/signaling/sessions", {
+      method: "POST",
+      body: JSON.stringify({ offer })
+    });
+
+    expect(firstCreate.status).toBe(201);
+    expect(secondCreate.status).toBe(201);
+
+    expect(
+      await requestJson(baseUrl, `/signaling/sessions/${firstCreate.body.sessionId as string}/answer`, {
+        method: "POST",
+        body: JSON.stringify({ answer })
+      })
+    ).toMatchObject({
+      status: 200
+    });
+
+    const sessionId = "reconnect-bucket-isolation";
+
+    const registered = await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/register`, {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId,
+        hostSecret: "host-secret",
+        guestSecret: "guest-secret"
+      })
+    });
+
+    expect(registered.status).toBe(201);
+
+    expect(
+      await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/read`, {
+        method: "POST",
+        body: JSON.stringify({ secret: "host-secret", instanceId: "instance-1" })
       })
     ).toMatchObject({
       status: 429

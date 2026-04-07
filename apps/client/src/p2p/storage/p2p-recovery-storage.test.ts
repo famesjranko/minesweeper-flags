@@ -338,6 +338,23 @@ describe("p2p recovery storage", () => {
           : hostRecord.match
       })
     ).toThrow("Invalid host recovery snapshot.");
+
+    expect(() =>
+      createHostRecoveryRecord({
+        state: {
+          room: hostRecord.room,
+          hostSession: hostRecord.hostSession,
+          guestSession: hostRecord.guestSession,
+          chatMessages: hostRecord.chatMessages,
+          match: hostRecord.match
+        },
+        reconnect: {
+          controlSessionId: "control-session-1",
+          hostSecret: 123 as unknown as string,
+          guestSecret: "guest-secret-1"
+        }
+      })
+    ).toThrow("Invalid host recovery snapshot.");
   });
 
   it("uses a separate storage namespace from hosted session persistence", () => {

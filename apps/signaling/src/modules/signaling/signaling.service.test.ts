@@ -115,6 +115,16 @@ describe.each([
     createRepository: () => new RedisSignalingRepository(new FakeRedisClient(), "test-signaling")
   }
 ])("signaling service with $name repository", ({ createRepository }) => {
+  it("emits session ids with at least 128 bits of entropy", async () => {
+    const service = createService(createRepository());
+    const createdSession = await service.createSession({ offer }, 1_000);
+
+    // randomBytes(16).toString("base64url") yields 22 characters of unpadded
+    // base64url, encoding 128 bits of entropy. Catches accidental regressions
+    // that would shorten the session id (e.g. randomBytes(9) → 12 chars).
+    expect(createdSession.sessionId.length).toBeGreaterThanOrEqual(22);
+  });
+
   it("creates, answers, and finalizes a signaling session", async () => {
     const service = createService(createRepository());
     const createdSession = await service.createSession({ offer }, 1_000);

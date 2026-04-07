@@ -117,4 +117,21 @@ describe("signaling env parsing", () => {
       })
     ).toThrow("DEPLOYMENT_MODE=public requires PORT to be a positive integer.");
   });
+
+  it("defaults the reconnect rate-limit configuration and accepts overrides", () => {
+    expect(parseSignalingEnv({})).toMatchObject({
+      SIGNALING_RECONNECT_RATE_LIMIT_MAX: 240,
+      SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS: 60_000
+    });
+
+    expect(
+      parseSignalingEnv({
+        SIGNALING_RECONNECT_RATE_LIMIT_MAX: "30",
+        SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS: "15000"
+      })
+    ).toMatchObject({
+      SIGNALING_RECONNECT_RATE_LIMIT_MAX: 30,
+      SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS: 15_000
+    });
+  });
 });

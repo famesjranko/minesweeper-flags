@@ -46,7 +46,7 @@ import {
 
 const SESSION_CREATION_LOCK_KEY = "__signaling-session-create__";
 
-const createSessionId = (): string => randomBytes(9).toString("base64url");
+const createSessionId = (): string => randomBytes(16).toString("base64url");
 
 const createHostSecret = (): string => randomBytes(18).toString("base64url");
 
