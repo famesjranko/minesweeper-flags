@@ -115,6 +115,8 @@ Refactor transport flow and tighten bomb UX
 
 Do not amend published commits. Do not skip pre-commit hooks.
 
+**No AI attribution.** Do not add `Co-Authored-By: Claude ...` (or any other AI-attribution trailer) to commits, PR descriptions, issue comments, or anywhere else in the repo. Same goes for "Generated with Claude Code" footers. Commits should read as the author's own work.
+
 ## When in doubt
 
 - Prefer the smallest correct change.
