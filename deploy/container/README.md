@@ -12,8 +12,10 @@ This folder contains the parity-first public deployment overlay.
 
 ## Files
 
-- `docker-compose.public.yml` starts `client`, `server`, and `redis`
-- `public.env.example` shows the environment contract for parity-local and public runs
+- `docker-compose.public.yml` starts `client`, `server`, `signaling`, and `redis`. Ships localhost-safe defaults for all browser-facing values so `make compose-public-up` works out of the box.
+- `public.env.example` shows the environment contract for parity-local and public server-flow runs.
+- `docker-compose.public.p2p.yml` starts `client`, `signaling`, and `redis`. **Stricter than the hosted overlay by design**: it fails fast with `:?` if `VITE_P2P_SIGNALING_URL`, `SIGNALING_ALLOWED_ORIGINS`, or `CSP_CONNECT_SRC` are missing. No localhost fallbacks, because a public p2p deploy that silently picks `http://localhost:3002` is worse than a loud failure.
+- `public.p2p.env.example` shows the explicit env contract for public or parity-local p2p runs.
 
 Important:
 
@@ -56,6 +58,18 @@ This exercises the production-like behavior locally:
 - frontend and backend are exposed on separate origins such as:
   - `https://app.example.com`
   - `wss://api.example.com/ws`
+
+## Public p2p overlay
+
+- `docker-compose.public.p2p.yml` intentionally does not default browser-facing signaling values to localhost.
+- You must set `VITE_P2P_SIGNALING_URL`, `SIGNALING_ALLOWED_ORIGINS`, and `CSP_CONNECT_SRC` explicitly.
+- For public deploys, use real origins such as:
+  - `VITE_P2P_SIGNALING_URL=https://signal.example.com`
+  - `SIGNALING_ALLOWED_ORIGINS=https://app.example.com`
+  - `CSP_CONNECT_SRC=https://signal.example.com`
+- For localhost parity testing with that same file, put explicit localhost values in `public.p2p.env.example` or your own env file.
+- Signaling stays small and non-authoritative: it brokers offer/answer rendezvous and short-lived reconnect control sessions, but the host browser owns all gameplay state. Live direct matches recover after host or guest tab refresh through browser-local recovery plus the reconnect control session. If signaling state is lost, peers must start a new direct match.
+- The compose file remaps `SIGNALING_REDIS_KEY_PREFIX` from the env file to the signaling service's `REDIS_KEY_PREFIX` variable. If you run the signaling image outside Compose, set `REDIS_KEY_PREFIX` directly instead.
 
 ## Recommended public values
 

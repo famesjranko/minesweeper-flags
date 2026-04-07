@@ -44,10 +44,41 @@ services:
       retries: 3
     restart: unless-stopped
 
+  signaling:
+    build:
+      context: .
+      dockerfile: apps/signaling/Dockerfile
+    environment:
+      DEPLOYMENT_MODE: local
+      HOST: 0.0.0.0
+      PORT: 3002
+      STATE_BACKEND: memory
+      P2P_SIGNALING_SESSION_TTL_SECONDS: 900
+      P2P_SIGNALING_MAX_PAYLOAD_BYTES: 16384
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3002/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
   client:
     build:
       context: .
       dockerfile: apps/client/Dockerfile
+      args:
+        VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-server}
+        VITE_P2P_STUN_URLS: ${VITE_P2P_STUN_URLS:-}
+        VITE_P2P_SIGNALING_URL: ${VITE_P2P_SIGNALING_URL:-}
     depends_on:
       server:
         condition: service_healthy

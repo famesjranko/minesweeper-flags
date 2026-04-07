@@ -16,7 +16,7 @@
     "test": "vitest run src"
   },
   "dependencies": {
+    "@minesweeper-flags/game-engine": "*",
     "zod": "^4.1.8"
   }
 }
-

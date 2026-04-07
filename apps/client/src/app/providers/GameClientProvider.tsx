@@ -15,7 +15,8 @@ import {
   type GameClientRuntime
 } from "./game-client.runtime.js";
 import type { ConnectionStatus } from "./game-client.store.js";
-import { SERVER_HEALTH_URL } from "../../lib/config/env.js";
+import type { P2PSetupSnapshot } from "../../p2p/setup/p2p-setup.types.js";
+import { DEPLOYMENT_MODE, SERVER_HEALTH_URL } from "../../lib/config/env.js";
 
 export interface SlotAvailability {
   activeRooms: number;
@@ -47,9 +48,19 @@ interface GameClientContextValue {
   requestRematch: () => void;
   cancelRematch: () => void;
   clearError: () => void;
+  p2pSetup: P2PSetupSnapshot | null;
+  openGuestSetupSession: (sessionId: string) => void;
+  openGuestSetupFromFragment: (fragment: string) => void;
+  createGuestAnswer: (displayName: string) => void;
+  setHostGuestAnswerText: (value: string) => void;
+  applyHostGuestAnswer: () => boolean;
+  clearHostSetupError: () => void;
+  clearGuestSetupError: () => void;
 }
 
 const GameClientContext = createContext<GameClientContextValue | null>(null);
+const subscribeToEmptySnapshot = (_listener: () => void) => () => {};
+const getEmptyP2PSnapshot = (): null => null;
 
 export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const runtimeRef = useRef<GameClientRuntime | null>(null);
@@ -65,6 +76,11 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     runtime.store.getSnapshot,
     runtime.store.getSnapshot
   );
+  const p2pSetupSnapshot = useSyncExternalStore(
+    runtime.p2p?.subscribe ?? subscribeToEmptySnapshot,
+    runtime.p2p?.getSnapshot ?? getEmptyP2PSnapshot,
+    runtime.p2p?.getSnapshot ?? getEmptyP2PSnapshot
+  );
 
   const refreshSlotCount = useCallback(() => {
     fetch(SERVER_HEALTH_URL)
@@ -79,7 +95,9 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     runtime.controller.start();
-    refreshSlotCount();
+    if (DEPLOYMENT_MODE === "server") {
+      refreshSlotCount();
+    }
 
     return () => {
       runtime.controller.dispose();
@@ -103,7 +121,9 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         hasStoredSession: runtime.controller.hasStoredSession,
         openLobby: () => {
           runtime.controller.openLobby();
-          setTimeout(refreshSlotCount, 500);
+          if (DEPLOYMENT_MODE === "server") {
+            setTimeout(refreshSlotCount, 500);
+          }
         },
         createRoom: runtime.controller.createRoom,
         joinRoom: runtime.controller.joinRoom,
@@ -115,7 +135,15 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         resignMatch: runtime.controller.resignMatch,
         requestRematch: runtime.controller.requestRematch,
         cancelRematch: runtime.controller.cancelRematch,
-        clearError: runtime.controller.clearError
+        clearError: runtime.controller.clearError,
+        p2pSetup: p2pSetupSnapshot,
+        openGuestSetupSession: runtime.p2p?.controller.openGuestSetupSession ?? (() => {}),
+        openGuestSetupFromFragment: runtime.p2p?.controller.openGuestSetupFromFragment ?? (() => {}),
+        createGuestAnswer: runtime.p2p?.controller.createGuestAnswer ?? (() => {}),
+        setHostGuestAnswerText: runtime.p2p?.controller.setHostGuestAnswerText ?? (() => {}),
+        applyHostGuestAnswer: runtime.p2p?.controller.applyHostGuestAnswer ?? (() => false),
+        clearHostSetupError: runtime.p2p?.controller.clearHostSetupError ?? (() => {}),
+        clearGuestSetupError: runtime.p2p?.controller.clearGuestSetupError ?? (() => {})
       }}
     >
       {children}
