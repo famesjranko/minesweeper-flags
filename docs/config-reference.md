@@ -310,6 +310,7 @@ VITE_DEPLOYMENT_MODE=p2p
 VITE_P2P_SIGNALING_URL=https://signal.example.com
 SIGNALING_ALLOWED_ORIGINS=https://app.example.com
 CSP_CONNECT_SRC=https://signal.example.com
+TRUST_PROXY=true
 ```
 
 Public p2p requires Redis-backed signaling even though gameplay remains browser-to-browser.

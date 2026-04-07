@@ -826,6 +826,82 @@ describe("signaling http api", () => {
     });
   });
 
+  it("rate limits the /signaling/sessions/ read endpoint family per IP", async () => {
+    const { server, baseUrl } = await startServer({
+      reconnectRateLimitMax: 1
+    });
+    activeServer = server;
+
+    const created = await requestJson(baseUrl, "/signaling/sessions", {
+      method: "POST",
+      body: JSON.stringify({ offer })
+    });
+
+    expect(created.status).toBe(201);
+
+    const sessionId = created.body.sessionId as string;
+    const hostSecret = created.body.hostSecret as string;
+
+    const firstRead = await requestJson(baseUrl, `/signaling/sessions/${sessionId}`, {
+      method: "GET"
+    });
+    expect(firstRead.status).toBe(200);
+
+    const sessionGetBlocked = await requestJson(baseUrl, `/signaling/sessions/${sessionId}`, {
+      method: "GET"
+    });
+    expect(sessionGetBlocked.status).toBe(429);
+    const retryAfter = sessionGetBlocked.headers.get("retry-after");
+    expect(retryAfter).not.toBeNull();
+    const retryAfterSeconds = Number(retryAfter);
+    expect(Number.isInteger(retryAfterSeconds)).toBe(true);
+    expect(retryAfterSeconds).toBeGreaterThan(0);
+    expect(retryAfterSeconds).toBeLessThanOrEqual(60);
+    expect(sessionGetBlocked.body).toMatchObject({
+      error: "Too many reconnect requests.",
+      limit: 1
+    });
+
+    const answerReadBlocked = await requestJson(
+      baseUrl,
+      `/signaling/sessions/${sessionId}/answer/read`,
+      {
+        method: "POST",
+        body: JSON.stringify({ hostSecret })
+      }
+    );
+    expect(answerReadBlocked.status).toBe(429);
+    expect(answerReadBlocked.body).toMatchObject({
+      error: "Too many reconnect requests.",
+      limit: 1
+    });
+
+    const finalizeBlocked = await requestJson(
+      baseUrl,
+      `/signaling/sessions/${sessionId}/finalize`,
+      {
+        method: "POST",
+        body: JSON.stringify({ hostSecret })
+      }
+    );
+    expect(finalizeBlocked.status).toBe(429);
+    expect(finalizeBlocked.body).toMatchObject({
+      error: "Too many reconnect requests.",
+      limit: 1
+    });
+
+    const finalizationBlocked = await requestJson(
+      baseUrl,
+      `/signaling/sessions/${sessionId}/finalization`,
+      { method: "GET" }
+    );
+    expect(finalizationBlocked.status).toBe(429);
+    expect(finalizationBlocked.body).toMatchObject({
+      error: "Too many reconnect requests.",
+      limit: 1
+    });
+  });
+
   it("does not consume the reconnect bucket for create/answer endpoints", async () => {
     const { server, baseUrl } = await startServer({
       reconnectRateLimitMax: 1

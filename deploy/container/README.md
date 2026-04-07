@@ -69,6 +69,7 @@ This exercises the production-like behavior locally:
   - `CSP_CONNECT_SRC=https://signal.example.com`
 - For localhost parity testing with that same file, put explicit localhost values in `public.p2p.env.example` or your own env file.
 - Signaling stays small and non-authoritative: it brokers offer/answer rendezvous and short-lived reconnect control sessions, but the host browser owns all gameplay state. Live direct matches recover after host or guest tab refresh through browser-local recovery plus the reconnect control session. If signaling state is lost, peers must start a new direct match.
+- The compose file remaps `SIGNALING_REDIS_KEY_PREFIX` from the env file to the signaling service's `REDIS_KEY_PREFIX` variable. If you run the signaling image outside Compose, set `REDIS_KEY_PREFIX` directly instead.
 
 ## Recommended public values
 

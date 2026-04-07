@@ -182,6 +182,10 @@ const getCorsHeaders = (
   request: IncomingMessage,
   allowedOrigins: readonly string[]
 ): Record<string, string> => {
+  // Empty `allowedOrigins` is the dev/test fallback (e.g. local mode where no
+  // SIGNALING_ALLOWED_ORIGINS is set). Public deploys are protected one layer up:
+  // env.ts requires an explicit allowlist when DEPLOYMENT_MODE=public, so this
+  // wildcard branch is unreachable in production.
   if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
     return {
       "access-control-allow-origin": "*"
@@ -626,6 +630,10 @@ export const createSignalingHttpHandler = ({
         segments[1] === "sessions" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const session = getSignalingSessionResponseSchema.parse(await service.getSession(sessionId));
         respondWithJson(request, response, 200, session, allowedOrigins);
         return;
@@ -677,6 +685,10 @@ export const createSignalingHttpHandler = ({
         segments[4] === "read" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = getSignalingAnswerRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
         const answerResponse = getSignalingAnswerResponseSchema.parse(
           await service.getAnswer(sessionId, body.hostSecret)
@@ -694,6 +706,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "finalize" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const body = finalizeSignalingSessionRequestSchema.parse(
           await readJsonBody(request, maxPayloadBytes)
         );
@@ -713,6 +729,10 @@ export const createSignalingHttpHandler = ({
         segments[3] === "finalization" &&
         sessionId
       ) {
+        if (!enforceReconnectRateLimit(request, response, ipAddress)) {
+          return;
+        }
+
         const finalizationResponse = getSignalingFinalizationResponseSchema.parse(
           await service.getFinalization(sessionId)
         );

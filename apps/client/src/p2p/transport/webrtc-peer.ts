@@ -212,6 +212,10 @@ export class WebRTCPeer implements WebRTCPeerController {
     this.connection = connection;
     this.channel = null;
 
+    // Listeners attached below close over `connection` and `this`. We never call
+    // removeEventListener: replaceConnection() and disconnect() both .close() the
+    // RTCPeerConnection and overwrite/null `this.connection`, leaving the closed
+    // connection (and its closures) GC-eligible. Same applies to attachChannel().
     connection.addEventListener("datachannel", (event) => {
       this.attachChannel(event.channel);
     });
