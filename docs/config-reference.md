@@ -2,6 +2,8 @@
 
 This file is the operator-facing reference for the current repo configuration surface.
 
+> **Terminology.** "Direct match" is the user-facing product name for the browser-to-browser build. "P2P" (or `p2p`) is the matching technical mode name and the value of `VITE_DEPLOYMENT_MODE`. This doc uses both interchangeably — they refer to the same thing.
+
 Source of truth in code:
 
 - `apps/server/src/app/config/env.ts`
@@ -178,9 +180,18 @@ The client containers accept build-time deployment configuration in `apps/client
 
 The public client container also accepts this runtime env var:
 
-| Variable | Default | What it does |
+| Variable | Dockerfile default | What it does |
 | --- | --- | --- |
-| `CSP_CONNECT_SRC` | `http://localhost:3001 ws://localhost:3001 http://localhost:3002` | Sets the allowed `connect-src` values in the public nginx CSP header. Include the signaling origin for `p2p` deployments. |
+| `CSP_CONNECT_SRC` | `http://localhost:3001 ws://localhost:3001` | Sets the allowed `connect-src` values in the public nginx CSP header. Must include the signaling origin for `p2p` deployments — the Dockerfile default is **server-mode only** and will block signaling requests. |
+
+The value is space-separated and is substituted into `apps/client/nginx.public.conf.template` at container start. The `apps/client/Dockerfile.public` image-level default covers the server flow only. The two Compose overlays override it explicitly:
+
+| Compose overlay | Default `CSP_CONNECT_SRC` | Context |
+| --- | --- | --- |
+| `deploy/container/docker-compose.public.yml` | `http://localhost:3001 ws://localhost:3001 http://localhost:3002` | Covers both hosted server and local signaling in the combined parity/public stack. |
+| `deploy/container/docker-compose.public.p2p.yml` | no default — the env file must set it | Fails fast with `CSP_CONNECT_SRC:?...` so public p2p deploys never ship a broken CSP silently. |
+
+If you `docker build -f apps/client/Dockerfile.public` directly for a `p2p` deployment, you **must** override `CSP_CONNECT_SRC` (or its Docker build-time equivalent) to include the signaling origin, otherwise the browser will block signaling requests with a CSP violation.
 
 The signaling container does not currently define custom Docker build args.
 

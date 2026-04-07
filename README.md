@@ -1,15 +1,20 @@
 # Minesweeper Flags
 
-This is an homage to the MSN Messenger game I used to play with friends back in the day.  A realtime two-player competitive Minesweeper with room-scoped match chat, built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
+This is an homage to the MSN Messenger game I used to play with friends back in the day. A realtime two-player competitive Minesweeper with room-scoped match chat, shipped in two product shapes from the same monorepo:
+
+- a **hosted server** build that talks to a Node WebSocket backend, and
+- a **direct match** build (aka `p2p`) where one browser is the gameplay authority and a small HTTP signaling service brokers WebRTC rendezvous and reconnect.
 
 The game flow is simple:
 
-- player one creates a room
-- player two joins with a private invite link or invite token
+- player one creates a room (or hosts a direct match)
+- player two joins with a private invite link, invite token, or direct-match join URL
 - both players share a 16x16 board with 51 mines
 - first to 26 claimed mines wins
 - each player gets one 5x5 bomb comeback move that unlocks only while trailing by 4 or more
 - room chat stays with the room through reconnects and rematches
+
+> **Terminology.** "Direct match" is the user-facing product name for the browser-to-browser build. "P2P" (or `p2p`) is the matching technical mode name and the value of `VITE_DEPLOYMENT_MODE`. They refer to the same thing.
 
 ## Screenshots
 
@@ -40,6 +45,10 @@ The client ships in two product shapes selected at build time:
 - the server routes websocket input through a transport-neutral command layer before binding direct events and room broadcasts back to sockets
 - the client separates controller behavior, runtime store, transport wiring, and the thin React provider boundary
 - shared protocol modules distinguish commands, direct events, and room-stream events without changing the wire contract
+- in P2P mode the host browser is the gameplay authority: `P2PHostOrchestrator` owns room, match, and chat state, and the same controller/store/transport layers apply to an `RTCDataChannel` transport instead of a `ws` socket
+- the signaling service (`apps/signaling`) stays small and non-authoritative: it brokers offer/answer rendezvous and short-lived reconnect control sessions, and **never** stores gameplay state
+
+See [`docs/p2p-architecture.md`](docs/p2p-architecture.md) for the full P2P design — actors, happy-path handshake, reconnect control session protocol, displacement / duplicate-tab handling, and recovery storage.
 
 ## Quick Start
 
@@ -59,6 +68,14 @@ That starts:
 
 - the server in watch mode
 - the Vite client in watch mode
+
+For the direct-match (P2P) dev flow instead, run:
+
+```bash
+make p2p-dev
+```
+
+That starts the signaling service and the client (in `p2p` mode) in watch mode, with no hosted server. Equivalently, `make dev DEPLOYMENT_STYLE=p2p` dispatches to the same target.
 
 For the convenience local Compose stack:
 
@@ -94,18 +111,31 @@ Then open:
 
 ```bash
 make help
-make dev
+make dev                       # server flow (default); pass DEPLOYMENT_STYLE=p2p to dispatch to p2p-dev
+make p2p-dev                   # direct-match (P2P) flow: signaling + client in watch mode
+make p2p-dev-redis             # same, with Redis-backed signaling for public-shape debugging
 make server-dev
+make signaling-dev
+make client-dev
+make test
 make test-server
+make test-signaling
+make test-client
+make test-shared
+make test-engine
 make build
 make compose-config
-make compose-up
+make compose-up                # local stack: redis + server + signaling + client
+make compose-p2p-up            # local p2p stack: signaling + client
 make compose-down
 make compose-public-config
-make compose-public-up
+make compose-public-up         # parity/public stack: redis + server + signaling + client
+make compose-public-p2p-up     # parity/public p2p stack: redis + signaling + client
 make compose-public-down
 make check
 ```
+
+See [`docs/config-reference.md`](docs/config-reference.md#common-make-targets) for the full list.
 
 ## Configuration
 
@@ -119,6 +149,7 @@ Example env templates:
 - [apps/client/.env.example](apps/client/.env.example)
 - [apps/client/.env.production.example](apps/client/.env.production.example)
 - [deploy/container/public.env.example](deploy/container/public.env.example)
+- [deploy/container/public.p2p.env.example](deploy/container/public.p2p.env.example)
 
 Important behavior:
 
@@ -171,6 +202,7 @@ It is the recommended path before a public deploy. It gives you:
 
 - `redis`
 - `server`
+- `signaling`
 - `client`
 - `DEPLOYMENT_MODE=public`
 - explicit `VITE_SOCKET_URL`
@@ -183,6 +215,28 @@ docker compose --env-file deploy/container/public.env.example -f deploy/containe
 ```
 
 See [deploy/container/README.md](deploy/container/README.md) for the env contract and public-hosting assumptions.
+
+### Direct match (P2P) local stack
+
+Use:
+
+```bash
+make compose-p2p-up
+```
+
+That runs `client + signaling` locally with `VITE_DEPLOYMENT_MODE=p2p` and in-memory signaling state. The host browser is the gameplay authority; signaling only brokers offer/answer rendezvous and reconnect control sessions. Open `http://localhost:8080`, click `Host Direct Match`, share the resulting `/p2p/join/:sessionId` link with the guest.
+
+For the parity/public P2P shape instead:
+
+```bash
+make compose-public-p2p-up
+```
+
+That stack requires explicit `VITE_P2P_SIGNALING_URL`, `SIGNALING_ALLOWED_ORIGINS`, and `CSP_CONNECT_SRC` values — it fails fast rather than shipping a silently broken client. For localhost parity testing, copy `deploy/container/public.p2p.env.example` and point those variables at `http://localhost:3002` / `http://localhost:8080`.
+
+For P2P development without containers, `make p2p-dev` runs the signaling service and the client directly in watch mode. `make p2p-dev-redis` is the same shape but with Redis-backed signaling for closer public-shape debugging.
+
+See [`docs/p2p-architecture.md`](docs/p2p-architecture.md) for the design and [`docs/config-reference.md`](docs/config-reference.md#local-direct-match-stack) for the full recipe list.
 
 ## Testing
 
@@ -228,7 +282,9 @@ The signaling service has coverage around:
 
 ## Health And Realtime Behavior
 
-The backend exposes:
+### Hosted server (`apps/server`)
+
+Exposes:
 
 - `/health` for liveness (also returns `activeRooms` / `maxRooms` slot availability)
 - `/ready` for readiness
@@ -245,6 +301,22 @@ The realtime server includes:
 - optional Redis-backed persistence
 - strict public-mode config validation
 
+### Signaling (`apps/signaling`, P2P flow)
+
+Exposes:
+
+- `/health` for liveness
+
+The signaling service includes:
+
+- offer/answer rendezvous endpoints under `/signaling/sessions/*`
+- short-lived reconnect control sessions under `/signaling/reconnect/*` (register → claim → heartbeat → offer/answer → finalize, with role-aware displacement for duplicate tabs)
+- per-IP rate limit buckets split into create / answer / reconnect families
+- in-memory storage by default, Redis-backed in public mode
+- strict public-mode config validation (Redis required, explicit origin allowlist, `TRUST_PROXY=true`)
+
+Gameplay state never lives on the signaling service — the host browser is the authority. See [`docs/p2p-architecture.md`](docs/p2p-architecture.md) for the endpoint table and the reconnect control session state machine.
+
 ## Repo Layout
 
 ```text
@@ -256,12 +328,19 @@ packages/
   game-engine/    Pure game rules and board logic
   shared/         Shared schemas, DTOs, and protocol definitions
 docs/
-  config-reference.md
+  config-reference.md              Operator env + Compose reference
+  p2p-architecture.md              P2P design, signaling endpoints, reconnect protocol
+  transport-neutral-refactor-plan.md   Historical record of the server-flow refactor
 deploy/
-  container/       parity/public compose overlay and docs
+  container/
+    docker-compose.public.yml      parity/public hosted-server overlay
+    docker-compose.public.p2p.yml  parity/public direct-match overlay (stricter env contract)
+    public.env.example
+    public.p2p.env.example
+    README.md
 Makefile
-docker-compose.yml
-docker-compose.p2p.yml
+docker-compose.yml                 local hosted-server stack
+docker-compose.p2p.yml             local direct-match stack
 ```
 
 ## Notes

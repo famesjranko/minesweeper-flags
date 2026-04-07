@@ -12,10 +12,10 @@ This folder contains the parity-first public deployment overlay.
 
 ## Files
 
-- `docker-compose.public.yml` starts `client`, `server`, and `redis`
-- `public.env.example` shows the environment contract for parity-local and public runs
-- `docker-compose.public.p2p.yml` starts `client`, `signaling`, and `redis`
-- `public.p2p.env.example` shows the explicit env contract for public or parity-local p2p runs
+- `docker-compose.public.yml` starts `client`, `server`, `signaling`, and `redis`. Ships localhost-safe defaults for all browser-facing values so `make compose-public-up` works out of the box.
+- `public.env.example` shows the environment contract for parity-local and public server-flow runs.
+- `docker-compose.public.p2p.yml` starts `client`, `signaling`, and `redis`. **Stricter than the hosted overlay by design**: it fails fast with `:?` if `VITE_P2P_SIGNALING_URL`, `SIGNALING_ALLOWED_ORIGINS`, or `CSP_CONNECT_SRC` are missing. No localhost fallbacks, because a public p2p deploy that silently picks `http://localhost:3002` is worse than a loud failure.
+- `public.p2p.env.example` shows the explicit env contract for public or parity-local p2p runs.
 
 Important:
 
