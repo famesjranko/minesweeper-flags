@@ -1,6 +1,6 @@
 # Minesweeper Flags
 
-Realtime two-player competitive Minesweeper with room-scoped match chat, built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
+This is an homage to the MSN Messenger game I used to play with friends back in the day.  A realtime two-player competitive Minesweeper with room-scoped match chat, built as a small monorepo with a React client, a Node WebSocket server, and shared game/protocol packages.
 
 The game flow is simple:
 
@@ -230,7 +230,7 @@ The signaling service has coverage around:
 
 The backend exposes:
 
-- `/health` for liveness
+- `/health` for liveness (also returns `activeRooms` / `maxRooms` slot availability)
 - `/ready` for readiness
 
 The realtime server includes:
@@ -238,7 +238,9 @@ The realtime server includes:
 - room create/join flows over WebSockets
 - room-scoped live chat with reconnect-safe recent history
 - reconnect support with stored session tokens
+- configurable max concurrent rooms with lobby slot indicator
 - per-IP connection caps and event throttling
+- immediate room cleanup when all players disconnect
 - heartbeat-based stale socket cleanup
 - optional Redis-backed persistence
 - strict public-mode config validation

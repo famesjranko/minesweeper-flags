@@ -91,6 +91,7 @@ Example template:
 | `MAX_WEBSOCKET_MESSAGE_BYTES` | `16384` | positive integer | no | Maximum accepted inbound WebSocket frame size before the connection is closed. |
 | `TRUST_PROXY` | `false` | `true` or `false` | no | When `true`, per-IP abuse controls use the first `X-Forwarded-For` address instead of the direct TCP peer. Only enable this behind a trusted proxy or load balancer. |
 | `MAX_CONNECTIONS_PER_IP` | `6` | positive integer | no | Maximum concurrent WebSocket connections allowed per client IP. |
+| `MAX_CONCURRENT_ROOMS` | `4` | positive integer | no | Maximum number of game rooms that can exist at the same time. New room creation is rejected when this limit is reached. Exposed via `/health` as `activeRooms`/`maxRooms`. |
 | `ROOM_CREATE_RATE_LIMIT_MAX` | `4` | positive integer | no | Number of room-create events allowed per window per client IP. |
 | `ROOM_CREATE_RATE_LIMIT_WINDOW_MS` | `60000` | positive integer | no | Window size in milliseconds for room-create rate limiting. |
 | `ROOM_JOIN_RATE_LIMIT_MAX` | `10` | positive integer | no | Number of room-join events allowed per window per client IP. |
@@ -435,6 +436,7 @@ Example:
 
 ```bash
 MAX_CONNECTIONS_PER_IP=4
+MAX_CONCURRENT_ROOMS=2
 ROOM_CREATE_RATE_LIMIT_MAX=2
 ROOM_CREATE_RATE_LIMIT_WINDOW_MS=60000
 ROOM_JOIN_RATE_LIMIT_MAX=6

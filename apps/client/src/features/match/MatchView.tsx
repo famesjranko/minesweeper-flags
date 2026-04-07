@@ -238,16 +238,16 @@ export const MatchView = ({
               />
             </div>
           </div>
-
-          {match.phase === "finished" ? (
-            <RematchPanel
-              match={match}
-              currentPlayerId={currentPlayerId}
-              onRequestRematch={onRequestRematch}
-              onCancelRematch={onCancelRematch}
-            />
-          ) : null}
         </section>
+
+        {match.phase === "finished" ? (
+          <RematchPanel
+            match={match}
+            currentPlayerId={currentPlayerId}
+            onRequestRematch={onRequestRematch}
+            onCancelRematch={onCancelRematch}
+          />
+        ) : null}
 
         <ChatPanel
           roomCode={roomCode}

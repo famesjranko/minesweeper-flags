@@ -6,7 +6,7 @@ import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 export const LobbyPage = () => {
   const [isReady, setIsReady] = useState(false);
-  const { connectionStatus, error, session, createRoom, joinRoom, openLobby } = useGameClient();
+  const { connectionStatus, error, session, createRoom, joinRoom, openLobby, slotAvailability, refreshSlotCount } = useGameClient();
   const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
 
   useEffect(() => {
@@ -32,6 +32,8 @@ export const LobbyPage = () => {
         connectionStatus={connectionStatus}
         deploymentMode={DEPLOYMENT_MODE}
         error={error}
+        slotAvailability={slotAvailability}
+        onRefreshSlots={refreshSlotCount}
         onCreateRoom={createRoom}
         onJoinRoom={joinRoom}
       />

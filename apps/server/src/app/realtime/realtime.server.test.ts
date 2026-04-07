@@ -140,7 +140,7 @@ describe("realtime server", () => {
 
     expect(healthBeforeReady).toEqual({
       statusCode: 200,
-      payload: { status: "ok" }
+      payload: { status: "ok", activeRooms: 0, maxRooms: 4 }
     });
     expect(readinessBeforeReady).toEqual({
       statusCode: 503,

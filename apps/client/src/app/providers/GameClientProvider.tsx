@@ -1,9 +1,11 @@
 import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
+  useState,
   useSyncExternalStore,
   type PropsWithChildren
 } from "react";
@@ -14,6 +16,12 @@ import {
 } from "./game-client.runtime.js";
 import type { ConnectionStatus } from "./game-client.store.js";
 import type { P2PSetupSnapshot } from "../../p2p/setup/p2p-setup.types.js";
+import { DEPLOYMENT_MODE, SERVER_HEALTH_URL } from "../../lib/config/env.js";
+
+export interface SlotAvailability {
+  activeRooms: number;
+  maxRooms: number;
+}
 
 interface GameClientContextValue {
   connectionStatus: ConnectionStatus;
@@ -25,6 +33,8 @@ interface GameClientContextValue {
   chatError: string | null;
   chatDraft: string;
   chatPending: boolean;
+  slotAvailability: SlotAvailability | null;
+  refreshSlotCount: () => void;
   hasStoredSession: (roomCode: string) => boolean;
   openLobby: () => void;
   createRoom: (displayName: string) => void;
@@ -54,6 +64,7 @@ const getEmptyP2PSnapshot = (): null => null;
 
 export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const runtimeRef = useRef<GameClientRuntime | null>(null);
+  const [slotAvailability, setSlotAvailability] = useState<SlotAvailability | null>(null);
 
   if (!runtimeRef.current) {
     runtimeRef.current = createGameClientRuntime();
@@ -71,13 +82,27 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     runtime.p2p?.getSnapshot ?? getEmptyP2PSnapshot
   );
 
+  const refreshSlotCount = useCallback(() => {
+    fetch(SERVER_HEALTH_URL)
+      .then((res) => res.json())
+      .then((data: { activeRooms?: number; maxRooms?: number }) => {
+        if (typeof data.activeRooms === "number" && typeof data.maxRooms === "number") {
+          setSlotAvailability({ activeRooms: data.activeRooms, maxRooms: data.maxRooms });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     runtime.controller.start();
+    if (DEPLOYMENT_MODE === "server") {
+      refreshSlotCount();
+    }
 
     return () => {
       runtime.controller.dispose();
     };
-  }, [runtime]);
+  }, [runtime, refreshSlotCount]);
 
   return (
     <GameClientContext.Provider
@@ -91,8 +116,15 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         chatError: snapshot.chatError,
         chatDraft: snapshot.chatDraft,
         chatPending: snapshot.chatPendingText !== null,
+        slotAvailability,
+        refreshSlotCount,
         hasStoredSession: runtime.controller.hasStoredSession,
-        openLobby: runtime.controller.openLobby,
+        openLobby: () => {
+          runtime.controller.openLobby();
+          if (DEPLOYMENT_MODE === "server") {
+            setTimeout(refreshSlotCount, 500);
+          }
+        },
         createRoom: runtime.controller.createRoom,
         joinRoom: runtime.controller.joinRoom,
         reconnect: runtime.controller.reconnect,

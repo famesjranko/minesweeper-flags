@@ -109,3 +109,5 @@ export const resolveServerUrl = ({
 export const DEPLOYMENT_MODE = resolveDeploymentMode();
 export const P2P_STUN_URLS = resolveP2PStunUrls();
 export const P2P_SIGNALING_URL = resolveP2PSignalingUrl({ deploymentMode: DEPLOYMENT_MODE });
+
+export const SERVER_HEALTH_URL = "/api/health";
