@@ -1915,7 +1915,7 @@ button {
   }
 
   .classic-match-chat {
-    height: auto;
+    height: 280px;
     min-height: 260px;
   }
 
