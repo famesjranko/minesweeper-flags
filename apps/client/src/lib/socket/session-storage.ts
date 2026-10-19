@@ -17,14 +17,7 @@ const normalizeStoredSession = (value: unknown): StoredSession | null => {
     return null;
   }
 
-  const {
-    roomId,
-    roomCode,
-    inviteToken,
-    playerId,
-    displayName,
-    sessionToken
-  } = value;
+  const { roomId, roomCode, inviteToken, playerId, displayName, sessionToken } = value;
 
   if (
     typeof roomId !== "string" ||
@@ -85,7 +78,10 @@ export const createBrowserSessionPersistence = (): SessionPersistence => ({
     }
   },
   write: (session) => {
-    window.localStorage.setItem(createSessionKey(session.roomCode), serializeStoredSession(session));
+    window.localStorage.setItem(
+      createSessionKey(session.roomCode),
+      serializeStoredSession(session)
+    );
   },
   remove: (roomCode) => {
     window.localStorage.removeItem(createSessionKey(roomCode));

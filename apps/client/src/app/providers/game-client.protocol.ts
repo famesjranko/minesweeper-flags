@@ -1,4 +1,4 @@
-import { serverEventSchema, type ServerEvent } from "@minesweeper-flags/shared";
+import { type ServerEvent, serverEventSchema } from "@minesweeper-flags/shared";
 
 export const decodeServerEvent = (raw: unknown): ServerEvent | null => {
   let parsed = raw;

@@ -4,15 +4,12 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RoomPage } from "../../pages/RoomPage.js";
 import { useGameClient } from "../../features/connection/useGameClient.js";
+import { RoomPage } from "../../pages/RoomPage.js";
 import { GameClientProvider } from "./GameClientProvider.js";
 import type { GameClientRuntime } from "./game-client.runtime.js";
 import { createGameClientRuntime } from "./game-client.runtime.js";
-import {
-  createGameClientSnapshot,
-  type GameClientSnapshot
-} from "./game-client.store.js";
+import { createGameClientSnapshot, type GameClientSnapshot } from "./game-client.store.js";
 
 vi.mock("./game-client.runtime.js", () => ({
   createGameClientRuntime: vi.fn()
@@ -81,12 +78,12 @@ const createFakeRuntime = ({
     clearError: vi.fn()
   };
 
+  // The fake store stands in for GameClientStore structurally, but its private
+  // members differ, so only the runtime handed to the provider is cast.
   return {
+    runtime: { store, controller } as unknown as GameClientRuntime,
     store,
     controller
-  } as unknown as GameClientRuntime & {
-    store: FakeStore;
-    controller: typeof controller;
   };
 };
 
@@ -112,7 +109,7 @@ afterEach(() => {
 
 describe("GameClientProvider", () => {
   it("exposes the runtime snapshot through useGameClient and cleans up controller lifecycle", () => {
-    const runtime = createFakeRuntime({
+    const { runtime, store, controller } = createFakeRuntime({
       snapshot: {
         connectionStatus: "connecting",
         error: "Boom",
@@ -141,13 +138,13 @@ describe("GameClientProvider", () => {
       </GameClientProvider>
     ));
 
-    expect(runtime.controller.start).toHaveBeenCalledTimes(1);
+    expect(controller.start).toHaveBeenCalledTimes(1);
     expect(document.querySelector("[data-testid='connection']")?.textContent).toBe("connecting");
     expect(document.querySelector("[data-testid='error']")?.textContent).toBe("Boom");
     expect(document.querySelector("[data-testid='chat-draft']")?.textContent).toBe("Hello");
 
     act(() => {
-      runtime.store.update({
+      store.update({
         connectionStatus: "connected",
         error: null,
         chatDraft: "Updated"
@@ -162,17 +159,17 @@ describe("GameClientProvider", () => {
       latestClient?.createRoom("Host");
     });
 
-    expect(runtime.controller.createRoom).toHaveBeenCalledWith("Host");
+    expect(controller.createRoom).toHaveBeenCalledWith("Host");
 
     act(() => {
       root?.unmount();
     });
 
-    expect(runtime.controller.dispose).toHaveBeenCalledTimes(1);
+    expect(controller.dispose).toHaveBeenCalledTimes(1);
   });
 
   it("lets RoomPage trigger route bootstrap reconnect through the provider boundary", () => {
-    const runtime = createFakeRuntime({
+    const { runtime, controller } = createFakeRuntime({
       hasStoredSession: true
     });
     vi.mocked(createGameClientRuntime).mockReturnValue(runtime);
@@ -187,7 +184,7 @@ describe("GameClientProvider", () => {
       </GameClientProvider>
     );
 
-    expect(runtime.controller.hasStoredSession).toHaveBeenCalledWith("ABCDE");
-    expect(runtime.controller.reconnect).toHaveBeenCalledWith("ABCDE");
+    expect(controller.hasStoredSession).toHaveBeenCalledWith("ABCDE");
+    expect(controller.reconnect).toHaveBeenCalledWith("ABCDE");
   });
 });

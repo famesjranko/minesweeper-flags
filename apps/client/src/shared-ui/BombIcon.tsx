@@ -43,13 +43,7 @@ export const BombIcon = ({ variant = "idle", className, size = 18 }: BombIconPro
   const palette = PALETTE[variant];
 
   return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-    >
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" width={size} height={size}>
       <path
         d="M13.4 3.8C14.1 2.8 15.1 2.2 16.3 2.2C17.5 2.2 18.4 2.7 19.1 3.6"
         fill="none"

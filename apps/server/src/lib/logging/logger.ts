@@ -22,7 +22,11 @@ const serializeError = (error: unknown): unknown => {
   };
 };
 
-const writeLog = (level: LogLevel, messageOrError: string | Error, metadata: LogMetadata = {}): void => {
+const writeLog = (
+  level: LogLevel,
+  messageOrError: string | Error,
+  metadata: LogMetadata = {}
+): void => {
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),
     level,

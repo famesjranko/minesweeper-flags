@@ -1,0 +1,83 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!**/package-lock.json"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      // Size and complexity limits are advisory: "info" prints but never fails.
+      // make complexity lists them all; make lint hides them.
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "info",
+          "options": { "maxAllowedComplexity": 15 }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "info",
+          "options": { "maxLines": 80, "skipBlankLines": true }
+        },
+        "useMaxParams": { "level": "info", "options": { "max": 4 } }
+      },
+      "style": {
+        "noExcessiveLinesPerFile": {
+          "level": "info",
+          "options": { "maxLines": 500, "skipBlankLines": true }
+        },
+        // noUncheckedIndexedAccess makes every grid lookup possibly undefined; the
+        // engine asserts after its own bounds checks.
+        "noNonNullAssertion": "off",
+        // Reordering selectors in styles.css changes the cascade.
+        "noDescendingSpecificity": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      // A test file is one long describe callback; its length is not a design smell.
+      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "complexity": { "noExcessiveLinesPerFunction": "off" },
+          "style": { "noExcessiveLinesPerFile": "off" }
+        }
+      }
+    },
+    {
+      // styles.css stays one file because reordering selectors changes the cascade.
+      "includes": ["**/*.css"],
+      "linter": { "rules": { "style": { "noExcessiveLinesPerFile": "off" } } }
+    },
+    {
+      // These tests assert Docker Compose interpolation text, not template literals.
+      "includes": ["**/public-compose.test.ts"],
+      "linter": { "rules": { "suspicious": { "noTemplateCurlyInString": "off" } } }
+    }
+  ],
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "none"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

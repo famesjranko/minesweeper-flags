@@ -46,9 +46,7 @@ export class ChatService {
     }
 
     if (normalizedText.length > this.options.messageMaxLength) {
-      throw new Error(
-        `Chat messages can be at most ${this.options.messageMaxLength} characters.`
-      );
+      throw new Error(`Chat messages can be at most ${this.options.messageMaxLength} characters.`);
     }
 
     const message: ChatMessageDto = {

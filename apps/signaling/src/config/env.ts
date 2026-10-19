@@ -1,9 +1,6 @@
 import { parseStateBackend, type StateBackend } from "../state/state-backend.js";
 
-export const DEPLOYMENT_MODES = [
-  "local",
-  "public"
-] as const;
+export const DEPLOYMENT_MODES = ["local", "public"] as const;
 
 export type DeploymentMode = (typeof DEPLOYMENT_MODES)[number];
 
@@ -111,9 +108,7 @@ export interface SignalingEnv {
   SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS: number;
 }
 
-export const parseSignalingEnv = (
-  environment: NodeJS.ProcessEnv = process.env
-): SignalingEnv => {
+export const parseSignalingEnv = (environment: NodeJS.ProcessEnv = process.env): SignalingEnv => {
   const DEPLOYMENT_MODE = parseDeploymentMode(environment.DEPLOYMENT_MODE);
   const HOST = environment.HOST ?? "0.0.0.0";
   const PORT = Number(environment.PORT ?? DEFAULT_SIGNALING_PORT);
@@ -224,10 +219,8 @@ export const PORT = signalingEnv.PORT;
 export const STATE_BACKEND = signalingEnv.STATE_BACKEND;
 export const REDIS_URL = signalingEnv.REDIS_URL;
 export const REDIS_KEY_PREFIX = signalingEnv.REDIS_KEY_PREFIX;
-export const P2P_SIGNALING_SESSION_TTL_SECONDS =
-  signalingEnv.P2P_SIGNALING_SESSION_TTL_SECONDS;
-export const P2P_SIGNALING_MAX_PAYLOAD_BYTES =
-  signalingEnv.P2P_SIGNALING_MAX_PAYLOAD_BYTES;
+export const P2P_SIGNALING_SESSION_TTL_SECONDS = signalingEnv.P2P_SIGNALING_SESSION_TTL_SECONDS;
+export const P2P_SIGNALING_MAX_PAYLOAD_BYTES = signalingEnv.P2P_SIGNALING_MAX_PAYLOAD_BYTES;
 export const TRUST_PROXY = signalingEnv.TRUST_PROXY;
 export const SIGNALING_ALLOWED_ORIGINS = signalingEnv.SIGNALING_ALLOWED_ORIGINS;
 export const SIGNALING_CREATE_RATE_LIMIT_MAX = signalingEnv.SIGNALING_CREATE_RATE_LIMIT_MAX;
@@ -236,7 +229,6 @@ export const SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS =
 export const SIGNALING_ANSWER_RATE_LIMIT_MAX = signalingEnv.SIGNALING_ANSWER_RATE_LIMIT_MAX;
 export const SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS =
   signalingEnv.SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS;
-export const SIGNALING_RECONNECT_RATE_LIMIT_MAX =
-  signalingEnv.SIGNALING_RECONNECT_RATE_LIMIT_MAX;
+export const SIGNALING_RECONNECT_RATE_LIMIT_MAX = signalingEnv.SIGNALING_RECONNECT_RATE_LIMIT_MAX;
 export const SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS =
   signalingEnv.SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS;

@@ -1,11 +1,8 @@
 import { DEFAULT_SERVER_PORT } from "@minesweeper-flags/shared";
-import { parseStateBackend } from "../state/state-backend.js";
 import { parseAllowedOrigins } from "../realtime/websocket-admission.js";
+import { parseStateBackend } from "../state/state-backend.js";
 
-export const DEPLOYMENT_MODES = [
-  "local",
-  "public"
-] as const;
+export const DEPLOYMENT_MODES = ["local", "public"] as const;
 
 export type DeploymentMode = (typeof DEPLOYMENT_MODES)[number];
 
@@ -49,8 +46,7 @@ const parseDeploymentMode = (value: string | undefined): DeploymentMode => {
   );
 };
 
-const isValidPositiveInteger = (value: number): boolean =>
-  Number.isInteger(value) && value > 0;
+const isValidPositiveInteger = (value: number): boolean => Number.isInteger(value) && value > 0;
 
 export interface ServerEnv {
   DEPLOYMENT_MODE: DeploymentMode;
@@ -100,10 +96,7 @@ export const parseServerEnv = (environment: NodeJS.ProcessEnv = process.env): Se
     environment.ROOM_CREATE_RATE_LIMIT_WINDOW_MS,
     60_000
   );
-  const ROOM_JOIN_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.ROOM_JOIN_RATE_LIMIT_MAX,
-    10
-  );
+  const ROOM_JOIN_RATE_LIMIT_MAX = parsePositiveInteger(environment.ROOM_JOIN_RATE_LIMIT_MAX, 10);
   const ROOM_JOIN_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
     environment.ROOM_JOIN_RATE_LIMIT_WINDOW_MS,
     60_000
@@ -116,10 +109,7 @@ export const parseServerEnv = (environment: NodeJS.ProcessEnv = process.env): Se
     environment.INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
     30_000
   );
-  const CHAT_MESSAGE_MAX_LENGTH = parsePositiveInteger(
-    environment.CHAT_MESSAGE_MAX_LENGTH,
-    200
-  );
+  const CHAT_MESSAGE_MAX_LENGTH = parsePositiveInteger(environment.CHAT_MESSAGE_MAX_LENGTH, 200);
   const CHAT_HISTORY_LIMIT = parsePositiveInteger(environment.CHAT_HISTORY_LIMIT, 25);
   const CHAT_MESSAGE_RATE_LIMIT_MAX = parsePositiveInteger(
     environment.CHAT_MESSAGE_RATE_LIMIT_MAX,

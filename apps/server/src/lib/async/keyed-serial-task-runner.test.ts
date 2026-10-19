@@ -25,11 +25,7 @@ describe("keyed serial task runner", () => {
     releaseFirstTask();
     await Promise.all([firstTask, secondTask]);
 
-    expect(executionOrder).toEqual([
-      "first-start",
-      "first-end",
-      "second"
-    ]);
+    expect(executionOrder).toEqual(["first-start", "first-end", "second"]);
   });
 
   it("allows nested work for the same key without deadlocking", async () => {
@@ -46,10 +42,6 @@ describe("keyed serial task runner", () => {
       executionOrder.push("outer-end");
     });
 
-    expect(executionOrder).toEqual([
-      "outer-start",
-      "inner",
-      "outer-end"
-    ]);
+    expect(executionOrder).toEqual(["outer-start", "inner", "outer-end"]);
   });
 });

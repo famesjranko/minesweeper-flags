@@ -1,6 +1,6 @@
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { BoardGrid } from "./BoardGrid.js";
 
 const match = {
@@ -27,7 +27,7 @@ const render = (lastMove?: Parameters<typeof BoardGrid>[0]["lastMove"]) =>
       canAct={false}
       bombArmed={false}
       playerTones={{}}
-      lastMove={lastMove}
+      {...(lastMove ? { lastMove } : {})}
       onSelectCell={() => {}}
     />
   );
@@ -59,7 +59,9 @@ describe("BoardGrid last-move marks", () => {
     // When the board renders
     const html = render({
       cells: [],
-      areas: [{ bounds: { minRow: 0, maxRow: 1, minColumn: 0, maxColumn: 1 }, age: 0, tone: "blue" }]
+      areas: [
+        { bounds: { minRow: 0, maxRow: 1, minColumn: 0, maxColumn: 1 }, age: 0, tone: "blue" }
+      ]
     });
 
     // Then the overlay spans two cells

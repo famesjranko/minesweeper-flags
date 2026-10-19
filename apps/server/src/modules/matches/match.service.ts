@@ -1,13 +1,13 @@
 import {
   clearRematchVotes,
   createMatchState,
-  resolveAction,
+  type MatchAction,
   resignMatch,
-  setPlayerRematchRequested,
+  resolveAction,
   setPlayerConnection,
-  type MatchAction
+  setPlayerRematchRequested
 } from "@minesweeper-flags/game-engine";
-import { toMatchStateDto, type MatchStateDto } from "@minesweeper-flags/shared";
+import { toMatchStateDto } from "@minesweeper-flags/shared";
 import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import type { RoomService } from "../rooms/room.service.js";
 import type { RoomRecord } from "../rooms/room.types.js";
@@ -35,10 +35,7 @@ export class MatchService {
 
       const matchState = createMatchState({
         roomId: room.roomId,
-        players: [
-          firstPlayer,
-          secondPlayer
-        ],
+        players: [firstPlayer, secondPlayer],
         seed: startedAt,
         createdAt: startedAt,
         startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId

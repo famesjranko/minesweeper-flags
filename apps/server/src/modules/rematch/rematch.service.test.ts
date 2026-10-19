@@ -25,10 +25,7 @@ describe("rematch service", () => {
     await matchRepository.save({
       ...createMatchState({
         roomId: room.roomId,
-        players: [
-          host,
-          guest
-        ],
+        players: [host, guest],
         seed: 100,
         createdAt: 100,
         startingPlayerId: host.playerId

@@ -76,7 +76,8 @@ export class WebSocketGameClientTransport implements GameClientTransport {
 
     if (
       activeSocket &&
-      (activeSocket.readyState === WebSocket.OPEN || activeSocket.readyState === WebSocket.CONNECTING)
+      (activeSocket.readyState === WebSocket.OPEN ||
+        activeSocket.readyState === WebSocket.CONNECTING)
     ) {
       activeSocket.close();
     }

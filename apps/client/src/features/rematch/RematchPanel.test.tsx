@@ -1,6 +1,6 @@
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { RematchPanel } from "./RematchPanel.js";
 
 const createFinishedMatch = (
@@ -74,7 +74,9 @@ describe("RematchPanel", () => {
       />
     );
 
-    expect(html).toContain("The other player requested a rematch. Confirm to start the next round.");
+    expect(html).toContain(
+      "The other player requested a rematch. Confirm to start the next round."
+    );
     expect(html).toContain("Accept Rematch");
   });
 });

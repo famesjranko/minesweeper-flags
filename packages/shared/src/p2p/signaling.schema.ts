@@ -2,12 +2,7 @@ import { z } from "zod";
 import { displayNameSchema } from "../schemas/primitives.js";
 
 export const P2P_SIGNALING_PROTOCOL_VERSION = 1;
-export const SIGNALING_SESSION_STATES = [
-  "open",
-  "answered",
-  "finalized",
-  "expired"
-] as const;
+export const SIGNALING_SESSION_STATES = ["open", "answered", "finalized", "expired"] as const;
 export const RECONNECT_CONTROL_ROLES = ["host", "guest"] as const;
 export const RECONNECT_CONTROL_SESSION_STATES = ["open", "finalized", "expired"] as const;
 export const RECONNECT_CLAIM_STATUSES = ["unclaimed", "claimed", "stale"] as const;
@@ -271,7 +266,9 @@ export type SubmitSignalingAnswerResponse = z.infer<typeof submitSignalingAnswer
 export type GetSignalingAnswerRequest = z.infer<typeof getSignalingAnswerRequestSchema>;
 export type GetSignalingAnswerResponse = z.infer<typeof getSignalingAnswerResponseSchema>;
 export type FinalizeSignalingSessionRequest = z.infer<typeof finalizeSignalingSessionRequestSchema>;
-export type FinalizeSignalingSessionResponse = z.infer<typeof finalizeSignalingSessionResponseSchema>;
+export type FinalizeSignalingSessionResponse = z.infer<
+  typeof finalizeSignalingSessionResponseSchema
+>;
 export type GetSignalingFinalizationResponse = z.infer<
   typeof getSignalingFinalizationResponseSchema
 >;

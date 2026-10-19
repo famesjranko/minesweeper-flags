@@ -1,17 +1,17 @@
-import { describe, expect, it } from "vitest";
 import type { MatchState } from "@minesweeper-flags/game-engine";
+import { describe, expect, it } from "vitest";
 import type WebSocket from "ws";
+import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
-import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import { ConnectionRegistry } from "./connection.registry.js";
 import { cleanupInactiveRooms } from "./inactive-room-cleanup.js";
 import { PlayerSessionService } from "./player-session.service.js";
 
 const createSocket = (readyState = 1) =>
-  ({ readyState, close: () => undefined } as unknown as WebSocket);
+  ({ readyState, close: () => undefined }) as unknown as WebSocket;
 
 const createRoom = (updatedAt: number): RoomRecord => ({
   roomId: "room-1",
@@ -142,9 +142,7 @@ describe("inactive room cleanup", () => {
         return true;
       },
       async listAll(): Promise<RoomRecord[]> {
-        return [
-          createRoom(0)
-        ];
+        return [createRoom(0)];
       },
       async delete(roomCode: string): Promise<RoomRecord | undefined> {
         deletedRoomCode = roomCode;

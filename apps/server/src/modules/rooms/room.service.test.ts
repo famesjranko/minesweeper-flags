@@ -42,8 +42,8 @@ describe("room service", () => {
     const roomService = new RoomService(new InMemoryRoomRepository());
     await roomService.createRoom("Host");
 
-    await expect(roomService.joinRoomByInviteToken("AbCdEfGhIjKlMnOpQrStUv", "Guest")).rejects.toThrow(
-      "That invite link is no longer valid."
-    );
+    await expect(
+      roomService.joinRoomByInviteToken("AbCdEfGhIjKlMnOpQrStUv", "Guest")
+    ).rejects.toThrow("That invite link is no longer valid.");
   });
 });

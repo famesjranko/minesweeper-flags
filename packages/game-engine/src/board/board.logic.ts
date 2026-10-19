@@ -1,4 +1,4 @@
-import { BOMB_RADIUS, BOARD_COLUMNS, BOARD_ROWS, TOTAL_MINES } from "./board.constants.js";
+import { BOARD_COLUMNS, BOARD_ROWS, BOMB_RADIUS, TOTAL_MINES } from "./board.constants.js";
 import type { BoardCell, BoardState, Coordinate } from "./board.types.js";
 
 export interface BoardConfig {
@@ -75,10 +75,7 @@ export const cloneBoard = (board: BoardState): BoardState => ({
   cells: board.cells.map((row) => row.map((cell) => ({ ...cell })))
 });
 
-export const createBoard = (
-  seed: number | string,
-  config: BoardConfig = {}
-): BoardState => {
+export const createBoard = (seed: number | string, config: BoardConfig = {}): BoardState => {
   const rows = config.rows ?? BOARD_ROWS;
   const columns = config.columns ?? BOARD_COLUMNS;
   const mineCount = config.mineCount ?? TOTAL_MINES;
@@ -170,7 +167,12 @@ export const revealConnectedSafeCells = (
     }
 
     queue.push(
-      ...getAdjacentCoordinates(coordinate.row, coordinate.column, nextBoard.rows, nextBoard.columns)
+      ...getAdjacentCoordinates(
+        coordinate.row,
+        coordinate.column,
+        nextBoard.rows,
+        nextBoard.columns
+      )
     );
   }
 
@@ -211,7 +213,7 @@ const getBombAxisBounds = (
   position: number,
   radius = BOMB_RADIUS
 ): { min: number; max: number } => {
-  const span = Math.min(axisLength, (radius * 2) + 1);
+  const span = Math.min(axisLength, radius * 2 + 1);
   const maxStart = Math.max(0, axisLength - span);
   const start = Math.min(Math.max(0, position - radius), maxStart);
 
@@ -243,6 +245,7 @@ export const getBombCoordinates = (
 export const countClaimedMines = (board: BoardState): number =>
   board.cells.flat().filter((cell) => cell.hasMine && cell.claimedByPlayerId).length;
 
-export const countRemainingMines = (board: BoardState): number => board.mineCount - countClaimedMines(board);
+export const countRemainingMines = (board: BoardState): number =>
+  board.mineCount - countClaimedMines(board);
 
 export { BOARD_COLUMNS, BOARD_ROWS, BOMB_RADIUS, TOTAL_MINES };

@@ -38,6 +38,10 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	p2p-build-client \
 	build-shared \
 	build-engine \
+	lint \
+	format \
+	complexity \
+	typecheck \
 	test \
 	test-server \
 	test-signaling \
@@ -47,6 +51,7 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	server-start \
 	signaling-start \
 	check \
+	images \
 	compose-config \
 	compose-build \
 	compose-p2p-build \
@@ -118,6 +123,18 @@ build-shared: ## Build the shared package
 build-engine: ## Build the game engine package
 	$(NPM) run build -w $(ENGINE_WORKSPACE)
 
+lint: ## Check formatting, lint rules, and import order
+	$(NPM) run lint
+
+format: ## Apply formatting and safe lint fixes
+	$(NPM) run format
+
+complexity: ## Report advisory size and complexity findings; never fails
+	$(NPM) run complexity
+
+typecheck: ## Type-check all workspaces, including tests
+	$(NPM) run typecheck
+
 test: ## Run all workspace tests
 	$(NPM) run test
 
@@ -143,10 +160,16 @@ signaling-start: build-signaling ## Build and run the compiled signaling service
 	@$(SIGNALING_ENV_PREFIX) $(NPM) run start -w $(SIGNALING_WORKSPACE)
 
 check: ## Run the main local verification flow
+	$(MAKE) lint
+	$(MAKE) typecheck
 	$(MAKE) test
 	$(MAKE) build
 	$(MAKE) compose-config
 	$(MAKE) compose-public-config
+
+images: ## Build every Docker image (server, signaling, client, public client); CI runs this
+	$(DOCKER_COMPOSE) build server signaling client
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) build client
 
 compose-config: ## Validate docker compose configuration
 	@if [ "$(DEPLOYMENT_STYLE)" = "p2p" ]; then \

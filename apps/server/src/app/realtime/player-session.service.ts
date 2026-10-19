@@ -72,7 +72,9 @@ export class RedisPlayerSessionStore implements PlayerSessionStore {
       },
       {
         type: "sRem",
-        key: existingSession ? this.roomSessionsKey(existingSession.roomCode) : this.roomSessionsKey(session.roomCode),
+        key: existingSession
+          ? this.roomSessionsKey(existingSession.roomCode)
+          : this.roomSessionsKey(session.roomCode),
         members:
           existingSession && existingSession.roomCode !== session.roomCode
             ? [session.sessionToken]

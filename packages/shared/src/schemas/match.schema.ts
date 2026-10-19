@@ -54,4 +54,3 @@ export type BoardCellDto = z.infer<typeof boardCellDtoSchema>;
 export type BoardStateDto = z.infer<typeof boardStateDtoSchema>;
 export type MatchStateDto = z.infer<typeof matchStateDtoSchema>;
 export type PlayerMatchDto = z.infer<typeof playerMatchDtoSchema>;
-

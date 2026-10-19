@@ -30,7 +30,8 @@ export const RoomLobby = ({
   const [inviteValue, setInviteValue] = useState(initialInviteValue);
   const trimmedDisplayName = displayName.trim();
   const inviteToken = extractInviteToken(inviteValue);
-  const slotsFull = slotAvailability !== null && slotAvailability.activeRooms >= slotAvailability.maxRooms;
+  const slotsFull =
+    slotAvailability !== null && slotAvailability.activeRooms >= slotAvailability.maxRooms;
   const canCreateRoom = trimmedDisplayName.length > 0 && !slotsFull;
   const canJoinRoom = trimmedDisplayName.length > 0 && inviteToken !== null;
   const isP2PDeployment = deploymentMode === "p2p";
@@ -72,8 +73,8 @@ export const RoomLobby = ({
         <p className="eyebrow">MSN-style competitive minesweeper</p>
         <h1>Minesweeper Flags</h1>
         <p>
-          Pick hidden squares on a shared 16x16 field. Mines are claimed for points,
-          safe squares reveal clues, and the first player to 26 flags wins.
+          Pick hidden squares on a shared 16x16 field. Mines are claimed for points, safe squares
+          reveal clues, and the first player to 26 flags wins.
         </p>
       </div>
 
@@ -124,6 +125,7 @@ export const RoomLobby = ({
                   </div>
 
                   <button
+                    type="submit"
                     className="lobby-action-button lobby-create-button"
                     disabled={!canCreateRoom}
                   >
@@ -138,14 +140,11 @@ export const RoomLobby = ({
                   </div>
 
                   <p className="waiting-room-copy">
-                    Guests join from the host's direct link. Open that shared link in this browser to connect.
+                    Guests join from the host's direct link. Open that shared link in this browser
+                    to connect.
                   </p>
 
-                  <button
-                    className="lobby-action-button lobby-join-button"
-                    disabled
-                    type="button"
-                  >
+                  <button className="lobby-action-button lobby-join-button" disabled type="button">
                     Join Direct Match
                   </button>
                 </div>
@@ -178,10 +177,15 @@ export const RoomLobby = ({
                         </span>
                       )}
                     </div>
-                    <span>{slotsFull ? "All room slots are in use." : "Host a room and share a private invite link."}</span>
+                    <span>
+                      {slotsFull
+                        ? "All room slots are in use."
+                        : "Host a room and share a private invite link."}
+                    </span>
                   </div>
 
                   <button
+                    type="submit"
                     className="lobby-action-button lobby-create-button"
                     disabled={!canCreateRoom}
                   >
@@ -216,6 +220,7 @@ export const RoomLobby = ({
                   </label>
 
                   <button
+                    type="submit"
                     className={[
                       "lobby-action-button",
                       "lobby-join-button",
@@ -235,7 +240,9 @@ export const RoomLobby = ({
       </div>
 
       <div className="status-strip lobby-status-strip">
-        <span className="lobby-status-note">No account needed. Open two tabs or invite a friend.</span>
+        <span className="lobby-status-note">
+          No account needed. Open two tabs or invite a friend.
+        </span>
         {isP2PDeployment ? (
           <span className="lobby-status-note">
             Direct matches stay in the browser. Hosts share one link and guests join from that link.

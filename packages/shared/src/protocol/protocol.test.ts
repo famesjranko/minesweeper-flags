@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
   clientEventSchema,
+  SERVER_EVENT_NAMES,
   serverEventSchema
 } from "../index.js";
 

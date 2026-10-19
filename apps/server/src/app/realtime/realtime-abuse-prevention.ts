@@ -78,11 +78,19 @@ export class RealtimeAbusePrevention {
   }
 
   consumeRoomCreate(ipAddress: string, now = Date.now()): RateLimitResult {
-    return this.consume(`room-create:${this.normalizeIpAddress(ipAddress)}`, this.options.roomCreateLimit, now);
+    return this.consume(
+      `room-create:${this.normalizeIpAddress(ipAddress)}`,
+      this.options.roomCreateLimit,
+      now
+    );
   }
 
   consumeRoomJoin(ipAddress: string, now = Date.now()): RateLimitResult {
-    return this.consume(`room-join:${this.normalizeIpAddress(ipAddress)}`, this.options.roomJoinLimit, now);
+    return this.consume(
+      `room-join:${this.normalizeIpAddress(ipAddress)}`,
+      this.options.roomJoinLimit,
+      now
+    );
   }
 
   consumeChatMessage(playerId: string, now = Date.now()): RateLimitResult {
@@ -104,9 +112,7 @@ export class RealtimeAbusePrevention {
 
     const cutoff = now - limit.windowMs;
     const bucket = this.bucketsByKey.get(bucketKey);
-    const activeTimestamps = (bucket?.timestamps ?? []).filter(
-      (timestamp) => timestamp > cutoff
-    );
+    const activeTimestamps = (bucket?.timestamps ?? []).filter((timestamp) => timestamp > cutoff);
 
     if (activeTimestamps.length >= limit.maxEvents) {
       const oldestTimestamp = activeTimestamps[0] ?? now;

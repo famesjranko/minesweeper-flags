@@ -7,7 +7,7 @@ import {
   WEBSOCKET_CLOSE_REASONS
 } from "@minesweeper-flags/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WebSocket, type RawData } from "ws";
+import { type RawData, WebSocket } from "ws";
 import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
@@ -23,6 +23,7 @@ interface MockResponseResult {
 
 interface SentEvent {
   type: string;
+  // biome-ignore lint/suspicious/noExplicitAny: parsed wire events of many types; the assertions check their shape.
   payload: any;
 }
 
@@ -64,10 +65,7 @@ class RecordingPlayerSessionStore implements PlayerSessionStore {
   }
 }
 
-const sendRequest = async (
-  server: TestRealtimeServer,
-  url: string
-): Promise<MockResponseResult> =>
+const sendRequest = async (server: TestRealtimeServer, url: string): Promise<MockResponseResult> =>
   await new Promise((resolve) => {
     let statusCode = 200;
 
@@ -367,7 +365,9 @@ describe("realtime server", () => {
     hostSocket.emit("close", 1001, Buffer.from(""));
     await flushAsyncWork();
 
-    const guestEventsAfterDisconnect = readSentEvents(guestSocket).slice(guestEventsBeforeDisconnect);
+    const guestEventsAfterDisconnect = readSentEvents(guestSocket).slice(
+      guestEventsBeforeDisconnect
+    );
 
     expect(guestEventsAfterDisconnect[0]?.type).toBe(SERVER_EVENT_NAMES.playerDisconnected);
     expect(guestEventsAfterDisconnect[1]?.type).toBe(SERVER_EVENT_NAMES.matchState);
@@ -440,9 +440,7 @@ describe("realtime server", () => {
 
     expect(chatRejections).toHaveLength(2);
     expect(chatRejections[0]?.payload.message).toBe("Type a message before sending.");
-    expect(chatRejections[1]?.payload.message).toBe(
-      "Chat messages can be at most 200 characters."
-    );
+    expect(chatRejections[1]?.payload.message).toBe("Chat messages can be at most 200 characters.");
     expect(
       readSentEvents(socket).some((event) => event.type === SERVER_EVENT_NAMES.serverError)
     ).toBe(false);

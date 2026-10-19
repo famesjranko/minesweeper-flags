@@ -1,5 +1,5 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
-import { getBombPreviewBounds, type BombPreviewBounds } from "./bomb-preview.js";
+import { type BombPreviewBounds, getBombPreviewBounds } from "./bomb-preview.js";
 
 type ResolvedAction = NonNullable<MatchStateDto["lastAction"]>;
 type Tone = "blue" | "red";

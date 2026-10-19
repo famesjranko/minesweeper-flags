@@ -1,16 +1,20 @@
 import {
-  guestAnswerPayloadSchema,
-  hostOfferPayloadSchema,
-  P2P_SIGNALING_PROTOCOL_VERSION,
   type GuestAnswerPayload,
-  type HostOfferPayload
+  guestAnswerPayloadSchema,
+  type HostOfferPayload,
+  hostOfferPayloadSchema,
+  P2P_SIGNALING_PROTOCOL_VERSION
 } from "@minesweeper-flags/shared";
 import type { ZodType } from "zod";
 
 const EMPTY_PAYLOAD_MESSAGE = "P2P signaling payload is empty.";
 const INVALID_ENCODED_PAYLOAD_MESSAGE = "P2P signaling payload is not valid encoded JSON.";
 
-const encodePayload = <TPayload>(schema: ZodType<TPayload>, payload: TPayload, label: string): string => {
+const encodePayload = <TPayload>(
+  schema: ZodType<TPayload>,
+  payload: TPayload,
+  label: string
+): string => {
   const result = schema.safeParse(payload);
 
   if (!result.success) {
@@ -20,7 +24,11 @@ const encodePayload = <TPayload>(schema: ZodType<TPayload>, payload: TPayload, l
   return encodeURIComponent(JSON.stringify(result.data));
 };
 
-const decodePayload = <TPayload>(schema: ZodType<TPayload>, encodedPayload: string, label: string): TPayload => {
+const decodePayload = <TPayload>(
+  schema: ZodType<TPayload>,
+  encodedPayload: string,
+  label: string
+): TPayload => {
   const trimmedPayload = encodedPayload.trim();
 
   if (!trimmedPayload) {
@@ -41,7 +49,9 @@ const decodePayload = <TPayload>(schema: ZodType<TPayload>, encodedPayload: stri
     "protocolVersion" in decoded &&
     decoded.protocolVersion !== P2P_SIGNALING_PROTOCOL_VERSION
   ) {
-    throw new Error(`Unsupported P2P signaling protocol version: ${String(decoded.protocolVersion)}.`);
+    throw new Error(
+      `Unsupported P2P signaling protocol version: ${String(decoded.protocolVersion)}.`
+    );
   }
 
   const result = schema.safeParse(decoded);

@@ -1,14 +1,10 @@
+import { DEPLOYMENT_MODE, type DeploymentMode, resolveServerUrl } from "../../lib/config/env.js";
 import { createBrowserSessionPersistence } from "../../lib/socket/session-storage.js";
-import {
-  DEPLOYMENT_MODE,
-  resolveServerUrl,
-  type DeploymentMode
-} from "../../lib/config/env.js";
 import { createP2PGameClientRuntime } from "../../p2p/runtime/create-p2p-game-client-runtime.js";
 import type { P2PRuntimeSupport } from "../../p2p/runtime/p2p-runtime.types.js";
 import {
-  GameClientController,
-  createBrowserGameClientScheduler
+  createBrowserGameClientScheduler,
+  GameClientController
 } from "./game-client.controller.js";
 import { GameClientStore } from "./game-client.store.js";
 import { WebSocketGameClientTransport } from "./game-client.transport.js";

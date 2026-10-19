@@ -1,8 +1,8 @@
-import { useState } from "react";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
+import { useState } from "react";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 import { getBombPreviewBounds } from "./bomb-preview.js";
-import { NO_LAST_MOVE_MARKS, type LastMoveMarks } from "./last-move.js";
+import { type LastMoveMarks, NO_LAST_MOVE_MARKS } from "./last-move.js";
 
 interface BoardGridProps {
   match: MatchStateDto;
@@ -20,7 +20,7 @@ const renderCellContent = (
   playerTones: Record<string, "blue" | "red">
 ) => {
   if (status === "claimed") {
-    const tone = claimedByPlayerId ? playerTones[claimedByPlayerId] ?? "blue" : "blue";
+    const tone = claimedByPlayerId ? (playerTones[claimedByPlayerId] ?? "blue") : "blue";
     return <FlagIcon color={tone} size={20} />;
   }
 
@@ -57,12 +57,13 @@ export const BoardGrid = ({
         hoveredCell.column
       )
     : null;
-  const previewRowSpan =
-    previewBounds ? previewBounds.maxRow - previewBounds.minRow + 1 : 0;
-  const previewColumnSpan =
-    previewBounds ? previewBounds.maxColumn - previewBounds.minColumn + 1 : 0;
+  const previewRowSpan = previewBounds ? previewBounds.maxRow - previewBounds.minRow + 1 : 0;
+  const previewColumnSpan = previewBounds
+    ? previewBounds.maxColumn - previewBounds.minColumn + 1
+    : 0;
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: mouse leave only clears the hover preview; the cells are buttons.
     <div
       className={["board-grid", shouldShowBombPreview ? "is-bomb-preview-active" : ""]
         .filter(Boolean)
@@ -111,12 +112,15 @@ export const BoardGrid = ({
 
         return (
           <button
+            type="button"
             key={`${cell.row}-${cell.column}`}
             className={[
               "board-cell",
               `status-${cell.status}`,
               cell.claimedByPlayerId ? "claimed-cell" : "",
-              cell.claimedByPlayerId ? `claimed-${playerTones[cell.claimedByPlayerId] ?? "blue"}` : "",
+              cell.claimedByPlayerId
+                ? `claimed-${playerTones[cell.claimedByPlayerId] ?? "blue"}`
+                : "",
               bombArmed && canAct && cell.status === "hidden" ? "bomb-targetable" : "",
               isPreviewed ? "bomb-preview-cell" : "",
               isPreviewed && hoveredCell?.row === cell.row && hoveredCell?.column === cell.column

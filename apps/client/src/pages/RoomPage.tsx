@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { MatchView } from "../features/match/MatchView.js";
-import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
 import { buildInvitePath } from "../features/room/invite-link.js";
+import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 const formatSetupStage = (stage: string | null | undefined): string => {
@@ -34,13 +34,14 @@ const formatSetupStage = (stage: string | null | undefined): string => {
 };
 
 const isDisplacedError = (error: string | null): boolean =>
-  error !== null && error.includes("active in another tab or window");
+  error?.includes("active in another tab or window") ?? false;
 
 const isRecoveryUnavailableError = (error: string | null): boolean =>
-  error !== null && error.includes("recovery is no longer available");
+  error?.includes("recovery is no longer available") ?? false;
 
 const isClaimVictoryError = (error: string | null): boolean =>
-  error !== null && (error.includes("now have control") || error.includes("now have an active claim"));
+  error !== null &&
+  (error.includes("now have control") || error.includes("now have an active claim"));
 
 const getHostSetupHeadline = (stage: string | null | undefined): string => {
   switch (stage) {
@@ -60,7 +61,10 @@ const getHostSetupHeadline = (stage: string | null | undefined): string => {
   }
 };
 
-const getHostSetupSummary = (stage: string | null | undefined, sessionState: string | null | undefined): string => {
+const getHostSetupSummary = (
+  stage: string | null | undefined,
+  sessionState: string | null | undefined
+): string => {
   if (sessionState === "expired") {
     return "This direct link expired before setup finished. Start a new direct match from the lobby.";
   }
@@ -84,7 +88,10 @@ const getHostSetupSummary = (stage: string | null | undefined, sessionState: str
   }
 };
 
-const getHostSetupDetails = (stage: string | null | undefined, sessionState: string | null | undefined): string => {
+const getHostSetupDetails = (
+  stage: string | null | undefined,
+  sessionState: string | null | undefined
+): string => {
   if (sessionState === "expired") {
     return "Expired setup links cannot be recovered. Live direct matches use separate reconnect recovery after both players connect.";
   }
@@ -174,7 +181,8 @@ export const RoomPage = () => {
               <p className="conflict-message">{error}</p>
               {isDisplacedError(error) && (
                 <p className="conflict-action">
-                  Another tab has claimed control. Close other tabs for this room, or reconnect to reclaim control.
+                  Another tab has claimed control. Close other tabs for this room, or reconnect to
+                  reclaim control.
                 </p>
               )}
               {isRecoveryUnavailableError(error) && (
@@ -199,10 +207,7 @@ export const RoomPage = () => {
           )}
           <div className="waiting-action-row">
             {hasStoredSession(roomCode) && !showClaimVictory && (
-              <button
-                className="primary-button"
-                onClick={() => reconnect(roomCode)}
-              >
+              <button type="button" className="primary-button" onClick={() => reconnect(roomCode)}>
                 Reconnect
               </button>
             )}
@@ -260,7 +265,8 @@ export const RoomPage = () => {
             <p className="eyebrow">Direct browser match</p>
             <h1>Host Direct Match</h1>
             <p>
-              Share one direct link with your guest. The app finishes setup automatically as soon as they join.
+              Share one direct link with your guest. The app finishes setup automatically as soon as
+              they join.
             </p>
           </div>
 
@@ -295,7 +301,8 @@ export const RoomPage = () => {
                 </div>
 
                 <p className="waiting-summary-copy">
-                  Keep this tab open. Live direct matches now recover after refresh, but this host tab still owns the match authority.
+                  Keep this tab open. Live direct matches now recover after refresh, but this host
+                  tab still owns the match authority.
                 </p>
               </div>
 
@@ -320,6 +327,7 @@ export const RoomPage = () => {
 
                   <div className="waiting-action-grid">
                     <button
+                      type="button"
                       className={[
                         "lobby-action-button",
                         "lobby-join-button",
@@ -363,9 +371,7 @@ export const RoomPage = () => {
           </div>
 
           <div className="status-strip lobby-status-strip">
-            <span className="lobby-status-note">
-              {inviteNotice ?? hostSetupSummary}
-            </span>
+            <span className="lobby-status-note">{inviteNotice ?? hostSetupSummary}</span>
             <span className="lobby-status-note">{hostSetupDetails}</span>
             <Link className="lobby-status-link" to="/lobby">
               Back To Lobby
@@ -395,8 +401,8 @@ export const RoomPage = () => {
           <p className="eyebrow">MSN-style competitive minesweeper</p>
           <h1>Minesweeper Flags</h1>
           <p>
-            Room <strong>{roomCode}</strong> is ready. Share the private invite link and the match will begin as soon
-            as player two joins.
+            Room <strong>{roomCode}</strong> is ready. Share the private invite link and the match
+            will begin as soon as player two joins.
           </p>
         </div>
 
@@ -415,7 +421,9 @@ export const RoomPage = () => {
             <div className="lobby-identity-card">
               <div className="lobby-card-heading">
                 <h2>Room Ready</h2>
-                <span className={`lobby-connection-pill is-${connectionStatus}`}>{connectionStatus}</span>
+                <span className={`lobby-connection-pill is-${connectionStatus}`}>
+                  {connectionStatus}
+                </span>
               </div>
 
               <div className="field lobby-field">
@@ -432,12 +440,11 @@ export const RoomPage = () => {
                 </div>
 
                 <button
+                  type="button"
                   className="lobby-action-button lobby-create-button"
                   disabled={!inviteLink}
                   onClick={() =>
-                    inviteLink
-                      ? copyInviteValue(inviteLink, "Invite link copied.")
-                      : undefined
+                    inviteLink ? copyInviteValue(inviteLink, "Invite link copied.") : undefined
                   }
                 >
                   {inviteLink ? "Copy Invite Link" : "Invite Link Unavailable"}
@@ -452,10 +459,13 @@ export const RoomPage = () => {
 
                 <div className="field lobby-field">
                   <span>Invite token</span>
-                  <div className="invite-code-readonly invite-token-readonly">{inviteToken ?? "Unavailable"}</div>
+                  <div className="invite-code-readonly invite-token-readonly">
+                    {inviteToken ?? "Unavailable"}
+                  </div>
                 </div>
 
                 <button
+                  type="button"
                   className={[
                     "lobby-action-button",
                     "lobby-join-button",
@@ -465,9 +475,7 @@ export const RoomPage = () => {
                     .join(" ")}
                   disabled={!inviteToken}
                   onClick={() =>
-                    inviteToken
-                      ? copyInviteValue(inviteToken, "Invite token copied.")
-                      : undefined
+                    inviteToken ? copyInviteValue(inviteToken, "Invite token copied.") : undefined
                   }
                 >
                   {inviteToken ? "Copy Invite Token" : "Invite Token Unavailable"}
@@ -479,10 +487,12 @@ export const RoomPage = () => {
 
         <div className="status-strip lobby-status-strip">
           <span className="lobby-status-note">
-            {inviteNotice ?? (inviteLink ? "Waiting for player two." : "Invite link unavailable on this device.")}
+            {inviteNotice ??
+              (inviteLink ? "Waiting for player two." : "Invite link unavailable on this device.")}
           </span>
           <span className="lobby-status-note">
-            Host: {host?.displayName ?? session.displayName}. {opponent ? `Guest joined as ${opponent.displayName}.` : "Guest slot is open."}
+            Host: {host?.displayName ?? session.displayName}.{" "}
+            {opponent ? `Guest joined as ${opponent.displayName}.` : "Guest slot is open."}
           </span>
           <Link className="lobby-status-link" to="/lobby">
             Back To Lobby

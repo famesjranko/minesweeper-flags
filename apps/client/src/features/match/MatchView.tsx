@@ -1,15 +1,15 @@
 import {
-  MIN_BOMB_DEFICIT,
   type ChatMessageDto,
-  type MatchStateDto
+  type MatchStateDto,
+  MIN_BOMB_DEFICIT
 } from "@minesweeper-flags/shared";
 import { useState } from "react";
+import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import {
   advanceLastMoveTrail,
   getLastMoveMarks,
   type LastMoveTrail
 } from "../../entities/board/last-move.js";
-import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import { BombIcon } from "../../shared-ui/BombIcon.js";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 import { ChatPanel } from "../chat/ChatPanel.js";
@@ -77,9 +77,7 @@ export const MatchView = ({
     [redPlayer.playerId]: "red"
   };
   const activeTone =
-    match.currentTurnPlayerId && playerTones[match.currentTurnPlayerId]
-      ? playerTones[match.currentTurnPlayerId]
-      : "blue";
+    (match.currentTurnPlayerId ? playerTones[match.currentTurnPlayerId] : undefined) ?? "blue";
   const playerSlots = [
     {
       title: "BLUE",
@@ -95,7 +93,7 @@ export const MatchView = ({
       isSelf: redPlayer.playerId === currentPlayerId,
       isTurn: match.currentTurnPlayerId === redPlayer.playerId
     }
-  ];
+  ] as const;
   const renderPlayerSlot = (slot: (typeof playerSlots)[number]) => (
     <section
       key={slot.player.playerId}
@@ -153,6 +151,7 @@ export const MatchView = ({
 
           return (
             <button
+              type="button"
               aria-label={bombLabel}
               className={[
                 "sidebar-pill",
@@ -183,7 +182,7 @@ export const MatchView = ({
               ? "Winner"
               : match.winnerPlayerId
                 ? "Defeated"
-              : "Draw"}
+                : "Draw"}
           </p>
         ) : slot.isSelf ? (
           <p>
@@ -237,6 +236,7 @@ export const MatchView = ({
           {renderPlayerSlot(playerSlots[1])}
 
           <button
+            type="button"
             className="sidebar-resign-button"
             disabled={match.phase !== "live"}
             onClick={() => {

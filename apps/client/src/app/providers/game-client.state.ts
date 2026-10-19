@@ -1,11 +1,11 @@
 import {
-  CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
-  WEBSOCKET_CLOSE_CODES,
   type ChatMessageDto,
+  CLIENT_EVENT_NAMES,
   type ClientEvent,
   type MatchStateDto,
-  type ServerEvent
+  SERVER_EVENT_NAMES,
+  type ServerEvent,
+  WEBSOCKET_CLOSE_CODES
 } from "@minesweeper-flags/shared";
 import type { StoredSession } from "../../lib/socket/session-storage.js";
 
@@ -55,8 +55,9 @@ export const buildSessionFromRoomEvent = (
 ): ClientSession => ({
   roomId: event.payload.roomId,
   roomCode: event.payload.roomCode,
-  inviteToken:
-    event.type === SERVER_EVENT_NAMES.roomCreated ? event.payload.inviteToken : undefined,
+  ...(event.type === SERVER_EVENT_NAMES.roomCreated
+    ? { inviteToken: event.payload.inviteToken }
+    : {}),
   playerId: event.payload.self.playerId,
   displayName: event.payload.self.displayName,
   sessionToken: event.payload.self.sessionToken,
@@ -100,8 +101,7 @@ export const hasDeliveredChatText = (
   messages: ChatMessageDto[],
   playerId: string,
   text: string
-): boolean =>
-  messages.some((message) => message.playerId === playerId && message.text === text);
+): boolean => messages.some((message) => message.playerId === playerId && message.text === text);
 
 export const reconcileRecoveredChatDraft = ({
   currentDraft,
@@ -161,7 +161,10 @@ export const shouldApplyServerEvent = (
   event: ServerEvent,
   activeRoomCode: string | null
 ): boolean => {
-  if (event.type === SERVER_EVENT_NAMES.roomCreated || event.type === SERVER_EVENT_NAMES.roomJoined) {
+  if (
+    event.type === SERVER_EVENT_NAMES.roomCreated ||
+    event.type === SERVER_EVENT_NAMES.roomJoined
+  ) {
     return true;
   }
 

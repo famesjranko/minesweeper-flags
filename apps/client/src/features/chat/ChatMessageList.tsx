@@ -31,10 +31,12 @@ const renderChatText = (text: string) =>
     const emoticon = EMOTICON_SYMBOLS[part];
 
     if (!emoticon) {
+      // biome-ignore lint/suspicious/noArrayIndexKey: words repeat, and the list is rebuilt from the text on each render.
       return <span key={`${part}-${index}`}>{part}</span>;
     }
 
     return (
+      // biome-ignore lint/suspicious/noArrayIndexKey: words repeat, and the list is rebuilt from the text on each render.
       <span key={`${part}-${index}`} className="chat-emoticon" title={part}>
         {emoticon}
       </span>
@@ -57,8 +59,7 @@ export const ChatMessageList = ({
     }
 
     const handleScroll = () => {
-      shouldStickToBottomRef.current =
-        list.scrollHeight - list.scrollTop - list.clientHeight < 28;
+      shouldStickToBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 28;
     };
 
     handleScroll();
@@ -69,6 +70,7 @@ export const ChatMessageList = ({
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new message is what triggers the scroll.
   useEffect(() => {
     const list = listRef.current;
 

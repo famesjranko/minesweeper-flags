@@ -1,27 +1,19 @@
 import { createServer, type ServerResponse } from "node:http";
 import type { Socket as NetSocket } from "node:net";
 import type { Duplex } from "node:stream";
-import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
-  WEBSOCKET_CLOSE_CODES,
-  WEBSOCKET_CLOSE_REASONS,
   clientEventSchema,
+  SERVER_EVENT_NAMES,
+  type ServerEvent,
   serverEventSchema,
-  type ServerEvent
+  WEBSOCKET_CLOSE_CODES,
+  WEBSOCKET_CLOSE_REASONS
 } from "@minesweeper-flags/shared";
-import { logger } from "../../lib/logging/logger.js";
-import { createId } from "../../lib/ids/id.js";
+import { type RawData, WebSocket, WebSocketServer } from "ws";
 import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
-import { ConnectionRegistry } from "./connection.registry.js";
-import { resolveClientAddress } from "./client-address.js";
-import { cleanupInactiveRooms } from "./inactive-room-cleanup.js";
-import { PlayerSessionService, type PlayerSession } from "./player-session.service.js";
-import { createStateStores, type StateStores } from "../state/state-store.js";
-import { RealtimeAbusePrevention } from "./realtime-abuse-prevention.js";
-import { requireAttachedSession } from "./session-auth.js";
-import { SocketHeartbeatMonitor } from "./socket-heartbeat.js";
+import { createId } from "../../lib/ids/id.js";
+import { logger } from "../../lib/logging/logger.js";
 import { ChatService } from "../../modules/chat/chat.service.js";
 import { MatchService } from "../../modules/matches/match.service.js";
 import { RematchService } from "../../modules/rematch/rematch.service.js";
@@ -42,15 +34,20 @@ import {
   ROOM_CREATE_RATE_LIMIT_WINDOW_MS,
   ROOM_JOIN_RATE_LIMIT_MAX,
   ROOM_JOIN_RATE_LIMIT_WINDOW_MS,
-  STATE_BACKEND,
   SOCKET_HEARTBEAT_INTERVAL_MS,
-  WEBSOCKET_ALLOWED_ORIGINS,
-  TRUST_PROXY
+  STATE_BACKEND,
+  TRUST_PROXY,
+  WEBSOCKET_ALLOWED_ORIGINS
 } from "../config/env.js";
-import {
-  getRawMessageByteLength,
-  isAllowedWebSocketOrigin
-} from "./websocket-admission.js";
+import { createStateStores, type StateStores } from "../state/state-store.js";
+import { resolveClientAddress } from "./client-address.js";
+import { ConnectionRegistry } from "./connection.registry.js";
+import { cleanupInactiveRooms } from "./inactive-room-cleanup.js";
+import { type PlayerSession, PlayerSessionService } from "./player-session.service.js";
+import { RealtimeAbusePrevention } from "./realtime-abuse-prevention.js";
+import { requireAttachedSession } from "./session-auth.js";
+import { SocketHeartbeatMonitor } from "./socket-heartbeat.js";
+import { getRawMessageByteLength, isAllowedWebSocketOrigin } from "./websocket-admission.js";
 
 const INACTIVE_ROOM_TTL_MS = 30 * 60 * 1000;
 const INACTIVE_ROOM_SWEEP_INTERVAL_MS = 60 * 1000;
@@ -567,12 +564,14 @@ export const createRealtimeServer = async ({
           });
 
           if (!hasActiveConnection) {
-            const deleteRoomState = activeStateStores.deleteRoomState ?? (async () => {
-              await roomRepository.delete(room.roomCode);
-              await matchRepository.deleteByRoomId(room.roomId);
-              await chatRepository.deleteByRoomCode(room.roomCode);
-              await playerSessionService.revokeRoomSessions(room.roomCode);
-            });
+            const deleteRoomState =
+              activeStateStores.deleteRoomState ??
+              (async () => {
+                await roomRepository.delete(room.roomCode);
+                await matchRepository.deleteByRoomId(room.roomId);
+                await chatRepository.deleteByRoomCode(room.roomCode);
+                await playerSessionService.revokeRoomSessions(room.roomCode);
+              });
 
             await deleteRoomState(room);
 
@@ -680,7 +679,10 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await dispatchExecution(socket, await commandService.createRoom(event.payload.displayName));
+            await dispatchExecution(
+              socket,
+              await commandService.createRoom(event.payload.displayName)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.roomJoin: {
@@ -734,7 +736,10 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await dispatchExecution(socket, await commandService.sendChat(session, event.payload.text));
+            await dispatchExecution(
+              socket,
+              await commandService.sendChat(session, event.payload.text)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.matchAction: {
@@ -747,7 +752,10 @@ export const createRealtimeServer = async ({
               event.payload.sessionToken,
               socket
             );
-            await dispatchExecution(socket, await commandService.applyMatchAction(session, event.payload.action));
+            await dispatchExecution(
+              socket,
+              await commandService.applyMatchAction(session, event.payload.action)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.matchResign: {
@@ -808,7 +816,10 @@ export const createRealtimeServer = async ({
           eventType
         });
 
-        sendServerError(socket, error instanceof Error ? error.message : "Unexpected server error.");
+        sendServerError(
+          socket,
+          error instanceof Error ? error.message : "Unexpected server error."
+        );
       }
     });
   });

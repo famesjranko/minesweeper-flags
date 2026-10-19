@@ -57,6 +57,10 @@ Run these from the repo root:
 - `make p2p-dev-redis` runs the client and signaling service in watch mode with Redis-backed signaling for parity debugging.
 - `make server-dev` runs only the server in watch mode.
 - `make signaling-dev` runs only the signaling service in watch mode.
+- `make format` applies Biome formatting and safe lint fixes.
+- `make lint` checks formatting and lint rules without changing files.
+- `make typecheck` type-checks every workspace, including tests.
+- `make complexity` reports code over the advisory limits in `biome.jsonc`: cognitive complexity, function length, parameter count, and file length. It never fails.
 - `make test-server` runs the server test suite.
 - `make test-signaling` runs the signaling test suite.
 - `make build` builds all workspaces.
@@ -66,7 +70,8 @@ Run these from the repo root:
 - `make compose-public-up` starts the parity/public Docker Compose stack.
 - `make compose-public-p2p-up` starts the parity/public p2p `client + signaling + redis` stack.
 - `make compose-public-down` stops the parity/public Docker Compose stack.
-- `make check` runs tests, builds, and validates the Compose config.
+- `make check` runs lint, type checks, tests, and builds, and validates the Compose config. CI runs it on every pull request.
+- `make images` builds the server, signaling, client, and public client Docker images. CI runs it as a separate job.
 
 Important:
 

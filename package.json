@@ -13,17 +13,25 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "complexity": "biome lint --diagnostic-level=info --max-diagnostics=none .",
     "dev": "concurrently -k -n server,client -c yellow,cyan \"npm run dev -w @minesweeper-flags/server\" \"npm run dev -w @minesweeper-flags/client\"",
-    "test": "npm run test --workspaces --if-present"
+    "format": "biome check --write --diagnostic-level=warn .",
+    "lint": "biome check --error-on-warnings --diagnostic-level=warn .",
+    "prepare": "husky",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
+    "husky": "9.1.7",
     "jsdom": "^29.0.1",
+    "lint-staged": "17.6.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.5",

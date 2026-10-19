@@ -51,11 +51,14 @@ const createRandomString = (alphabet: string, length: number): string => {
     return Array.from(values, (value) => alphabet[value % alphabet.length]).join("");
   }
 
-  return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join(
+    ""
+  );
 };
 
 export const createDefaultP2PHostIdentityFactory = (): P2PHostIdentityFactory => ({
-  createId: () => getCrypto()?.randomUUID() ?? `p2p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+  createId: () =>
+    getCrypto()?.randomUUID() ?? `p2p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
   createRoomCode: () => createRandomString(ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH),
   createInviteToken: () => createRandomString(TOKEN_ALPHABET, INVITE_TOKEN_LENGTH)
 });

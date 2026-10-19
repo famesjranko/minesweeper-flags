@@ -1,17 +1,22 @@
+import type {
+  GuestAnswerPayload,
+  HostOfferPayload,
+  ReconnectAnswerPayload,
+  ReconnectOfferPayload
+} from "@minesweeper-flags/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GameClientScheduler } from "../../app/providers/game-client.controller.js";
+import { P2PRendezvousRequestError } from "../signaling/p2p-rendezvous-client.js";
 import {
   P2P_RECOVERY_STORAGE_VERSION,
   type P2PRecoveryPersistence
 } from "../storage/p2p-recovery-storage.js";
-import type { GuestAnswerPayload, HostOfferPayload, ReconnectAnswerPayload, ReconnectOfferPayload } from "@minesweeper-flags/shared";
-import { createP2PGameClientRuntime } from "./create-p2p-game-client-runtime.js";
-import { P2PRendezvousRequestError } from "../signaling/p2p-rendezvous-client.js";
 import type {
   WebRTCPeerController,
   WebRTCPeerListener,
   WebRTCPeerStatus
 } from "../transport/webrtc-peer.types.js";
+import { createP2PGameClientRuntime } from "./create-p2p-game-client-runtime.js";
 
 class PairedFakePeer implements WebRTCPeerController {
   private status: WebRTCPeerStatus = "idle";
@@ -83,7 +88,9 @@ class PairedFakePeer implements WebRTCPeerController {
     };
   };
 
-  createReconnectAnswer = async (_offerPayload: ReconnectOfferPayload): Promise<ReconnectAnswerPayload> => {
+  createReconnectAnswer = async (
+    _offerPayload: ReconnectOfferPayload
+  ): Promise<ReconnectAnswerPayload> => {
     if (this.reconnectAnswerError) {
       throw this.reconnectAnswerError;
     }
@@ -175,12 +182,14 @@ class FakeRendezvousClient {
   finalizeSessionCalls = 0;
   getSessionCalls = 0;
   reconnectClaims: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> = [];
-  reconnectHeartbeats: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> = [];
+  reconnectHeartbeats: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> =
+    [];
   reconnectOffer: ReconnectOfferPayload | null = null;
   reconnectAnswer: ReconnectAnswerPayload | null = null;
   reconnectFinalizationOutcome: "reconnected" | "aborted" | null = null;
   reconnectFinalizationBy: "host" | "guest" | null = null;
-  reconnectFinalizations: Array<{ role: "host" | "guest"; outcome: "reconnected" | "aborted" }> = [];
+  reconnectFinalizations: Array<{ role: "host" | "guest"; outcome: "reconnected" | "aborted" }> =
+    [];
   registerReconnectControlSessionError: Error | null = null;
   writeReconnectAnswerError: Error | null = null;
   pollForReconnectOfferState: "open" | "expired" = "open";
@@ -210,9 +219,10 @@ class FakeRendezvousClient {
 
     return {
       sessionId,
-      state: this.getSessionCalls > 1 && this.revalidatedSessionState
-        ? this.revalidatedSessionState
-        : this.sessionState,
+      state:
+        this.getSessionCalls > 1 && this.revalidatedSessionState
+          ? this.revalidatedSessionState
+          : this.sessionState,
       offer: this.storedOffer ?? {
         protocolVersion: 1,
         mode: "p2p" as const,
@@ -221,9 +231,10 @@ class FakeRendezvousClient {
         timestamp: 1
       },
       createdAt: 10,
-      expiresAt: this.getSessionCalls > 1 && this.revalidatedExpiresAt !== null
-        ? this.revalidatedExpiresAt
-        : this.expiresAt
+      expiresAt:
+        this.getSessionCalls > 1 && this.revalidatedExpiresAt !== null
+          ? this.revalidatedExpiresAt
+          : this.expiresAt
     };
   };
 
@@ -240,7 +251,11 @@ class FakeRendezvousClient {
     };
   };
 
-  pollForAnswer = async (sessionId: string, _hostSecret: string, options?: { signal?: AbortSignal }) => {
+  pollForAnswer = async (
+    sessionId: string,
+    _hostSecret: string,
+    options?: { signal?: AbortSignal }
+  ) => {
     const answer = await new Promise<GuestAnswerPayload>((resolve, reject) => {
       if (options?.signal?.aborted) {
         reject(createAbortError());
@@ -312,7 +327,11 @@ class FakeRendezvousClient {
     };
   };
 
-  registerReconnectControlSession = async (sessionId: string, _hostSecret: string, _guestSecret: string) => {
+  registerReconnectControlSession = async (
+    sessionId: string,
+    _hostSecret: string,
+    _guestSecret: string
+  ) => {
     if (this.registerReconnectControlSessionError) {
       throw this.registerReconnectControlSessionError;
     }
@@ -324,7 +343,12 @@ class FakeRendezvousClient {
       expiresAt: this.expiresAt,
       host: { claimStatus: "unclaimed" as const, instanceId: null, lastHeartbeatAt: null },
       guest: { claimStatus: "unclaimed" as const, instanceId: null, lastHeartbeatAt: null },
-      attempt: { status: "idle" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+      attempt: {
+        status: "idle" as const,
+        finalizationOutcome: null,
+        finalizedBy: null,
+        finalizedAt: null
+      }
     };
   };
 
@@ -351,7 +375,12 @@ class FakeRendezvousClient {
         instanceId: role === "guest" ? instanceId : null,
         lastHeartbeatAt: 10
       },
-      attempt: { status: "idle" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+      attempt: {
+        status: "idle" as const,
+        finalizationOutcome: null,
+        finalizedBy: null,
+        finalizedAt: null
+      }
     };
   };
 
@@ -370,7 +399,12 @@ class FakeRendezvousClient {
       expiresAt: this.expiresAt,
       host: { claimStatus: "claimed" as const, instanceId: "host-instance-2", lastHeartbeatAt: 10 },
       guest: { claimStatus: "unclaimed" as const, instanceId: null, lastHeartbeatAt: null },
-      attempt: { status: "offer-ready" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+      attempt: {
+        status: "offer-ready" as const,
+        finalizationOutcome: null,
+        finalizedBy: null,
+        finalizedAt: null
+      }
     };
   };
 
@@ -404,7 +438,12 @@ class FakeRendezvousClient {
         instanceId: role === "guest" ? instanceId : "guest-instance-2",
         lastHeartbeatAt: 11
       },
-      attempt: { status: "idle" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+      attempt: {
+        status: "idle" as const,
+        finalizationOutcome: null,
+        finalizedBy: null,
+        finalizedAt: null
+      }
     };
   };
 
@@ -414,7 +453,10 @@ class FakeRendezvousClient {
     _instanceId?: string,
     options?: { signal?: AbortSignal }
   ) => {
-    await waitFor(() => Boolean(this.reconnectOffer || this.reconnectFinalizationOutcome), options?.signal);
+    await waitFor(
+      () => Boolean(this.reconnectOffer || this.reconnectFinalizationOutcome),
+      options?.signal
+    );
 
     return {
       sessionId,
@@ -422,7 +464,11 @@ class FakeRendezvousClient {
       createdAt: 10,
       expiresAt: this.expiresAt,
       host: { claimStatus: "claimed" as const, instanceId: "host-instance-2", lastHeartbeatAt: 10 },
-      guest: { claimStatus: "claimed" as const, instanceId: "guest-instance-2", lastHeartbeatAt: 10 },
+      guest: {
+        claimStatus: "claimed" as const,
+        instanceId: "guest-instance-2",
+        lastHeartbeatAt: 10
+      },
       attempt: this.reconnectFinalizationOutcome
         ? {
             status: "finalized" as const,
@@ -430,7 +476,12 @@ class FakeRendezvousClient {
             finalizedBy: this.reconnectFinalizationBy,
             finalizedAt: 10
           }
-        : { status: "offer-ready" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null },
+        : {
+            status: "offer-ready" as const,
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          },
       offer: this.reconnectOffer
     };
   };
@@ -453,8 +504,17 @@ class FakeRendezvousClient {
       createdAt: 10,
       expiresAt: this.expiresAt,
       host: { claimStatus: "claimed" as const, instanceId: "host-instance-2", lastHeartbeatAt: 10 },
-      guest: { claimStatus: "claimed" as const, instanceId: "guest-instance-2", lastHeartbeatAt: 10 },
-      attempt: { status: "answer-ready" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+      guest: {
+        claimStatus: "claimed" as const,
+        instanceId: "guest-instance-2",
+        lastHeartbeatAt: 10
+      },
+      attempt: {
+        status: "answer-ready" as const,
+        finalizationOutcome: null,
+        finalizedBy: null,
+        finalizedAt: null
+      }
     };
   };
 
@@ -464,7 +524,10 @@ class FakeRendezvousClient {
     _instanceId?: string,
     options?: { signal?: AbortSignal }
   ) => {
-    await waitFor(() => Boolean(this.reconnectAnswer || this.reconnectFinalizationOutcome), options?.signal);
+    await waitFor(
+      () => Boolean(this.reconnectAnswer || this.reconnectFinalizationOutcome),
+      options?.signal
+    );
 
     return {
       sessionId,
@@ -472,7 +535,11 @@ class FakeRendezvousClient {
       createdAt: 10,
       expiresAt: this.expiresAt,
       host: { claimStatus: "claimed" as const, instanceId: "host-instance-2", lastHeartbeatAt: 10 },
-      guest: { claimStatus: "claimed" as const, instanceId: "guest-instance-2", lastHeartbeatAt: 10 },
+      guest: {
+        claimStatus: "claimed" as const,
+        instanceId: "guest-instance-2",
+        lastHeartbeatAt: 10
+      },
       attempt: this.reconnectFinalizationOutcome
         ? {
             status: "finalized" as const,
@@ -480,7 +547,12 @@ class FakeRendezvousClient {
             finalizedBy: this.reconnectFinalizationBy,
             finalizedAt: 10
           }
-        : { status: "answer-ready" as const, finalizationOutcome: null, finalizedBy: null, finalizedAt: null },
+        : {
+            status: "answer-ready" as const,
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          },
       answer: this.reconnectAnswer
     };
   };
@@ -502,8 +574,17 @@ class FakeRendezvousClient {
       createdAt: 10,
       expiresAt: this.expiresAt,
       host: { claimStatus: "claimed" as const, instanceId: "host-instance-2", lastHeartbeatAt: 10 },
-      guest: { claimStatus: "claimed" as const, instanceId: "guest-instance-2", lastHeartbeatAt: 10 },
-      attempt: { status: "finalized" as const, finalizationOutcome: outcome, finalizedBy: role, finalizedAt: 10 }
+      guest: {
+        claimStatus: "claimed" as const,
+        instanceId: "guest-instance-2",
+        lastHeartbeatAt: 10
+      },
+      attempt: {
+        status: "finalized" as const,
+        finalizationOutcome: outcome,
+        finalizedBy: role,
+        finalizedAt: 10
+      }
     };
   };
 
@@ -521,7 +602,11 @@ class FakeRendezvousClient {
       createdAt: 10,
       expiresAt: this.expiresAt,
       host: { claimStatus: "claimed" as const, instanceId: "host-instance-2", lastHeartbeatAt: 10 },
-      guest: { claimStatus: "claimed" as const, instanceId: "guest-instance-2", lastHeartbeatAt: 10 },
+      guest: {
+        claimStatus: "claimed" as const,
+        instanceId: "guest-instance-2",
+        lastHeartbeatAt: 10
+      },
       attempt: {
         status: "finalized" as const,
         finalizationOutcome: this.reconnectFinalizationOutcome,
@@ -535,7 +620,8 @@ class FakeRendezvousClient {
 class MemoryRecoveryPersistence implements P2PRecoveryPersistence {
   private readonly records = new Map<string, unknown>();
 
-  read = (roomCode: string) => (this.records.get(roomCode) as ReturnType<P2PRecoveryPersistence["read"]>) ?? null;
+  read = (roomCode: string) =>
+    (this.records.get(roomCode) as ReturnType<P2PRecoveryPersistence["read"]>) ?? null;
 
   write = (record: Parameters<P2PRecoveryPersistence["write"]>[0]) => {
     const roomCode = record.role === "guest" ? record.roomCode : record.room.roomCode;
@@ -590,7 +676,8 @@ const flushPromises = async (): Promise<void> => {
   await Promise.resolve();
 };
 
-const createAbortError = (): DOMException => new DOMException("The operation was aborted.", "AbortError");
+const createAbortError = (): DOMException =>
+  new DOMException("The operation was aborted.", "AbortError");
 
 const waitFor = async (predicate: () => boolean, signal?: AbortSignal): Promise<void> => {
   while (!predicate()) {
@@ -736,15 +823,21 @@ describe("createP2PGameClientRuntime", () => {
     await flushPromises();
 
     expect(refreshedGuestRuntime.store.getSnapshot().session?.roomCode).toBe(roomCode);
-    expect(refreshedGuestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("before refresh");
-    expect(refreshedGuestRuntime.store.getSnapshot().match).toEqual(hostRuntime.store.getSnapshot().match);
+    expect(refreshedGuestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
+      "before refresh"
+    );
+    expect(refreshedGuestRuntime.store.getSnapshot().match).toEqual(
+      hostRuntime.store.getSnapshot().match
+    );
 
     refreshedGuestRuntime.controller.setChatDraft("after refresh");
     refreshedGuestRuntime.controller.sendChatMessage();
     await flushPromises();
 
     expect(hostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("after refresh");
-    expect(refreshedGuestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("after refresh");
+    expect(refreshedGuestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
+      "after refresh"
+    );
 
     refreshedGuestRuntime.controller.dispose();
     hostRuntime.controller.dispose();
@@ -862,7 +955,7 @@ describe("createP2PGameClientRuntime", () => {
     const persistedRecord = hostRecoveryPersistence.read(roomCode);
     expect(persistedRecord).toMatchObject({ role: "host", room: { roomCode } });
 
-    if (!persistedRecord || persistedRecord.role !== "host") {
+    if (persistedRecord?.role !== "host") {
       throw new Error("Expected a host recovery record.");
     }
 
@@ -879,8 +972,12 @@ describe("createP2PGameClientRuntime", () => {
     refreshedHostRuntime.controller.reconnect(roomCode);
 
     expect(refreshedHostRuntime.store.getSnapshot().session?.roomCode).toBe(roomCode);
-    expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("before host refresh");
-    expect(refreshedHostRuntime.store.getSnapshot().match?.turnNumber).toBe(persistedRecord.match?.turnNumber);
+    expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
+      "before host refresh"
+    );
+    expect(refreshedHostRuntime.store.getSnapshot().match?.turnNumber).toBe(
+      persistedRecord.match?.turnNumber
+    );
 
     const restoredMatch = structuredClone(refreshedHostRuntime.store.getSnapshot().match);
     refreshedHostRuntime.controller.submitCellAction(0, 1);
@@ -896,13 +993,17 @@ describe("createP2PGameClientRuntime", () => {
 
     expect(guestRuntime.store.getSnapshot().session?.roomCode).toBe(roomCode);
     expect(guestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("before host refresh");
-    expect(guestRuntime.store.getSnapshot().match).toEqual(refreshedHostRuntime.store.getSnapshot().match);
+    expect(guestRuntime.store.getSnapshot().match).toEqual(
+      refreshedHostRuntime.store.getSnapshot().match
+    );
 
     guestRuntime.controller.setChatDraft("after host refresh");
     guestRuntime.controller.sendChatMessage();
     await flushPromises();
 
-    expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("after host refresh");
+    expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
+      "after host refresh"
+    );
     expect(guestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("after host refresh");
 
     guestRuntime.controller.dispose();
@@ -1041,7 +1142,10 @@ describe("createP2PGameClientRuntime", () => {
       throw new Error("Expected a room code.");
     }
 
-    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({ role: "host", room: { roomCode } });
+    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({
+      role: "host",
+      room: { roomCode }
+    });
 
     guestRuntime.controller.dispose();
     hostRuntime.controller.openLobby();
@@ -1350,7 +1454,9 @@ describe("createP2PGameClientRuntime", () => {
       role: "host",
       outcome: "aborted"
     });
-    expect(hostRuntime.store.getSnapshot().error).toBe("Guest reconnect expired before the direct match could recover.");
+    expect(hostRuntime.store.getSnapshot().error).toBe(
+      "Guest reconnect expired before the direct match could recover."
+    );
 
     refreshedGuestRuntime.controller.dispose();
     hostRuntime.controller.dispose();
@@ -1467,7 +1573,10 @@ describe("createP2PGameClientRuntime", () => {
 
     expect(guestRecoveryPersistence.read(roomCode)).toMatchObject({ role: "guest", roomCode });
 
-    rendezvousClient.heartbeatErrorByRole.guest = new P2PRendezvousRequestError("Claim displaced.", 403);
+    rendezvousClient.heartbeatErrorByRole.guest = new P2PRendezvousRequestError(
+      "Claim displaced.",
+      403
+    );
 
     await scheduler.runNext();
     await scheduler.runNext();
@@ -1606,14 +1715,23 @@ describe("createP2PGameClientRuntime", () => {
       throw new Error("Expected a room code.");
     }
 
-    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({ role: "host", room: { roomCode } });
+    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({
+      role: "host",
+      room: { roomCode }
+    });
 
-    rendezvousClient.heartbeatErrorByRole.host = new P2PRendezvousRequestError("Claim displaced.", 403);
+    rendezvousClient.heartbeatErrorByRole.host = new P2PRendezvousRequestError(
+      "Claim displaced.",
+      403
+    );
 
     await scheduler.runNext();
     await scheduler.runNext();
 
-    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({ role: "host", room: { roomCode } });
+    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({
+      role: "host",
+      room: { roomCode }
+    });
     expect(hostRuntime.store.getSnapshot().session).toBeNull();
     expect(hostRuntime.store.getSnapshot().match).toBeNull();
     expect(hostRuntime.store.getSnapshot().error).toBe(
@@ -1718,7 +1836,9 @@ describe("createP2PGameClientRuntime", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(hostRuntime.store.getSnapshot().error).toBe("Reconnect recovery could not be registered.");
+    expect(hostRuntime.store.getSnapshot().error).toBe(
+      "Reconnect recovery could not be registered."
+    );
 
     initialHostPeer.disconnect();
     await flushPromises();
@@ -1733,7 +1853,10 @@ describe("createP2PGameClientRuntime", () => {
 
   it.each([
     ["expired", "This direct-match link has expired. Start a new direct match."],
-    ["answered", "This direct-match link was already used by another guest. Ask the host for a new link."],
+    [
+      "answered",
+      "This direct-match link was already used by another guest. Ask the host for a new link."
+    ],
     ["finalized", "This direct-match link has already finished setup. Ask the host for a new link."]
   ] as const)("refuses %s guest links before creating an answer", async (sessionState, message) => {
     const guestPeer = new PairedFakePeer();
@@ -1835,7 +1958,9 @@ describe("createP2PGameClientRuntime", () => {
 
     expect(rendezvousClient.finalizeSessionCalls).toBe(1);
     expect(hostRuntime.p2p?.getSnapshot().host.stage).toBe("failed");
-    expect(hostRuntime.p2p?.getSnapshot().host.error).toBe("Failed to finalize direct-match signaling.");
+    expect(hostRuntime.p2p?.getSnapshot().host.error).toBe(
+      "Failed to finalize direct-match signaling."
+    );
     expect(hostRuntime.store.getSnapshot().match?.phase).not.toBe("live");
     expect(guestRuntime.store.getSnapshot().session?.roomCode).not.toBe(
       hostRuntime.store.getSnapshot().session?.roomCode
@@ -1851,10 +1976,7 @@ describe("createP2PGameClientRuntime", () => {
       "answered",
       "This direct-match link was already used by another guest. Ask the host for a new link."
     ],
-    [
-      "finalized",
-      "This direct-match link has already finished setup. Ask the host for a new link."
-    ]
+    ["finalized", "This direct-match link has already finished setup. Ask the host for a new link."]
   ] as const)(
     "revalidates the guest session before creating an answer and refuses %s links",
     async (revalidatedSessionState, message) => {
@@ -1889,7 +2011,9 @@ describe("createP2PGameClientRuntime", () => {
     const rendezvousClient = new FakeRendezvousClient();
 
     rendezvousClient.getSessionErrorAtCall = 2;
-    rendezvousClient.getSessionError = new Error("This direct-match link could not be revalidated.");
+    rendezvousClient.getSessionError = new Error(
+      "This direct-match link could not be revalidated."
+    );
 
     const guestRuntime = createP2PGameClientRuntime({
       createPeer: () => guestPeer,
@@ -1983,14 +2107,23 @@ describe("createP2PGameClientRuntime", () => {
       throw new Error("Expected a room code.");
     }
 
-    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({ role: "host", room: { roomCode } });
+    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({
+      role: "host",
+      room: { roomCode }
+    });
 
-    rendezvousClient.heartbeatErrorByRole.host = new P2PRendezvousRequestError("Claim displaced.", 403);
+    rendezvousClient.heartbeatErrorByRole.host = new P2PRendezvousRequestError(
+      "Claim displaced.",
+      403
+    );
 
     await scheduler.runNext();
     await scheduler.runNext();
 
-    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({ role: "host", room: { roomCode } });
+    expect(hostRecoveryPersistence.read(roomCode)).toMatchObject({
+      role: "host",
+      room: { roomCode }
+    });
     expect(hostRuntime.store.getSnapshot().error).toBe(
       "This direct match is active in another tab or window. Use that tab, or reconnect here."
     );
@@ -2041,7 +2174,10 @@ describe("createP2PGameClientRuntime", () => {
 
     expect(guestRecoveryPersistence.read(roomCode)).toMatchObject({ role: "guest", roomCode });
 
-    rendezvousClient.heartbeatErrorByRole.guest = new P2PRendezvousRequestError("Claim displaced.", 403);
+    rendezvousClient.heartbeatErrorByRole.guest = new P2PRendezvousRequestError(
+      "Claim displaced.",
+      403
+    );
 
     await scheduler.runNext();
     await scheduler.runNext();
@@ -2096,9 +2232,13 @@ describe("createP2PGameClientRuntime", () => {
 
     const firstRecord = hostRecoveryPersistence.read(roomCode);
 
-    expect(firstRecord).toMatchObject({ role: "host", match: expect.objectContaining({ phase: "live" }) });
+    expect(firstRecord).toMatchObject({
+      role: "host",
+      match: expect.objectContaining({ phase: "live" })
+    });
 
-    const firstMatchCreatedAt = firstRecord?.role === "host" ? firstRecord.match?.createdAt : undefined;
+    const firstMatchCreatedAt =
+      firstRecord?.role === "host" ? firstRecord.match?.createdAt : undefined;
 
     expect(firstMatchCreatedAt).toEqual(expect.any(Number));
 
@@ -2123,7 +2263,8 @@ describe("createP2PGameClientRuntime", () => {
       match: expect.objectContaining({ phase: "live" })
     });
 
-    const rematchCreatedAt = rematchRecord?.role === "host" ? rematchRecord.match?.createdAt : undefined;
+    const rematchCreatedAt =
+      rematchRecord?.role === "host" ? rematchRecord.match?.createdAt : undefined;
 
     expect(rematchCreatedAt).toEqual(expect.any(Number));
     expect(rematchCreatedAt).not.toBe(firstMatchCreatedAt);

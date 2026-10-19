@@ -1,6 +1,10 @@
-import { P2P_SIGNALING_PROTOCOL_VERSION, type HostOfferPayload } from "@minesweeper-flags/shared";
+import { type HostOfferPayload, P2P_SIGNALING_PROTOCOL_VERSION } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
-import { createHostOfferUrlFragment, createP2PJoinUrl, parseHostOfferUrlFragment } from "./p2p-signaling-url.js";
+import {
+  createHostOfferUrlFragment,
+  createP2PJoinUrl,
+  parseHostOfferUrlFragment
+} from "./p2p-signaling-url.js";
 
 const hostOfferPayload: HostOfferPayload = {
   protocolVersion: P2P_SIGNALING_PROTOCOL_VERSION,

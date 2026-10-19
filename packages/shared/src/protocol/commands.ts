@@ -1,9 +1,12 @@
-import { CLIENT_EVENT_NAMES } from "./event-names.js";
 import type { ClientEvent } from "./client-to-server.schema.js";
+import type { CLIENT_EVENT_NAMES } from "./event-names.js";
 
 export type GameCommand = ClientEvent;
 
-export type CreateRoomCommand = Extract<GameCommand, { type: typeof CLIENT_EVENT_NAMES.roomCreate }>;
+export type CreateRoomCommand = Extract<
+  GameCommand,
+  { type: typeof CLIENT_EVENT_NAMES.roomCreate }
+>;
 export type JoinRoomCommand = Extract<GameCommand, { type: typeof CLIENT_EVENT_NAMES.roomJoin }>;
 export type SendChatCommand = Extract<GameCommand, { type: typeof CLIENT_EVENT_NAMES.chatSend }>;
 export type ApplyMatchActionCommand = Extract<

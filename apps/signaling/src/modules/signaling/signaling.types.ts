@@ -1,4 +1,6 @@
 import type {
+  GuestAnswerPayload,
+  HostOfferPayload,
   ReconnectAnswerPayload,
   ReconnectAttemptStatus,
   ReconnectClaimStatus,
@@ -6,8 +8,6 @@ import type {
   ReconnectControlSessionState,
   ReconnectFinalizationOutcome,
   ReconnectOfferPayload,
-  GuestAnswerPayload,
-  HostOfferPayload,
   SignalingSessionState
 } from "@minesweeper-flags/shared";
 

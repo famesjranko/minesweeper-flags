@@ -3,11 +3,11 @@ import type { BoardCell, MatchState } from "../index.js";
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
-  MIN_BOMB_DEFICIT,
-  TOTAL_MINES,
   createMatchState,
+  MIN_BOMB_DEFICIT,
   resignMatch,
-  resolveAction
+  resolveAction,
+  TOTAL_MINES
 } from "../index.js";
 
 const createCustomBoard = (overrides: Partial<BoardCell>[]): MatchState["board"] => {
@@ -49,7 +49,11 @@ describe("resolveAction", () => {
     });
 
     match.board = createCustomBoard([{ row: 0, column: 0, hasMine: true }]);
-    const resolution = resolveAction(match, { type: "select", playerId: "p1", row: 0, column: 0 }, 2);
+    const resolution = resolveAction(
+      match,
+      { type: "select", playerId: "p1", row: 0, column: 0 },
+      2
+    );
 
     expect(resolution.ok).toBe(true);
 
@@ -73,7 +77,11 @@ describe("resolveAction", () => {
     });
 
     match.board = createCustomBoard([{ row: 0, column: 1, adjacentMines: 1 }]);
-    const resolution = resolveAction(match, { type: "select", playerId: "p1", row: 0, column: 1 }, 2);
+    const resolution = resolveAction(
+      match,
+      { type: "select", playerId: "p1", row: 0, column: 1 },
+      2
+    );
 
     expect(resolution.ok).toBe(true);
 
@@ -152,7 +160,11 @@ describe("resolveAction", () => {
     match.players[0].score = 25;
     match.board = createCustomBoard([{ row: 0, column: 0, hasMine: true }]);
 
-    const resolution = resolveAction(match, { type: "select", playerId: "p1", row: 0, column: 0 }, 2);
+    const resolution = resolveAction(
+      match,
+      { type: "select", playerId: "p1", row: 0, column: 0 },
+      2
+    );
 
     expect(resolution.ok).toBe(true);
 

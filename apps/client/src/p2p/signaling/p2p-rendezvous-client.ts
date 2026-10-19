@@ -1,43 +1,43 @@
 import {
+  type ClaimReconnectRoleResponse,
+  type CreateSignalingSessionResponse,
   claimReconnectRoleResponseSchema,
   createSignalingSessionResponseSchema,
+  type FinalizeReconnectAttemptResponse,
+  type FinalizeSignalingSessionResponse,
   finalizeReconnectAttemptResponseSchema,
   finalizeSignalingSessionResponseSchema,
-  getReconnectControlSessionResponseSchema,
-  getReconnectFinalizationResponseSchema,
-  heartbeatReconnectRoleResponseSchema,
-  readReconnectAnswerResponseSchema,
-  readReconnectOfferResponseSchema,
-  registerReconnectControlSessionResponseSchema,
-  writeReconnectAnswerResponseSchema,
-  writeReconnectOfferResponseSchema,
-  getSignalingAnswerRequestSchema,
-  getSignalingAnswerResponseSchema,
-  getSignalingFinalizationResponseSchema,
-  getSignalingSessionResponseSchema,
-  submitSignalingAnswerResponseSchema,
-  type CreateSignalingSessionResponse,
-  type FinalizeSignalingSessionResponse,
-  type FinalizeReconnectAttemptResponse,
+  type GetReconnectControlSessionResponse,
+  type GetReconnectFinalizationResponse,
   type GetSignalingAnswerResponse,
   type GetSignalingFinalizationResponse,
   type GetSignalingSessionResponse,
   type GuestAnswerPayload,
+  getReconnectControlSessionResponseSchema,
+  getReconnectFinalizationResponseSchema,
+  getSignalingAnswerRequestSchema,
+  getSignalingAnswerResponseSchema,
+  getSignalingFinalizationResponseSchema,
+  getSignalingSessionResponseSchema,
   type HeartbeatReconnectRoleResponse,
   type HostOfferPayload,
-  type ClaimReconnectRoleResponse,
-  type GetReconnectControlSessionResponse,
-  type GetReconnectFinalizationResponse,
+  heartbeatReconnectRoleResponseSchema,
   type ReadReconnectAnswerResponse,
   type ReadReconnectOfferResponse,
   type ReconnectAnswerPayload,
   type ReconnectControlRole,
   type ReconnectOfferPayload,
   type RegisterReconnectControlSessionResponse,
-  type SubmitSignalingAnswerResponse
+  readReconnectAnswerResponseSchema,
+  readReconnectOfferResponseSchema,
+  registerReconnectControlSessionResponseSchema,
+  type SubmitSignalingAnswerResponse,
+  submitSignalingAnswerResponseSchema,
+  writeReconnectAnswerResponseSchema,
+  writeReconnectOfferResponseSchema
 } from "@minesweeper-flags/shared";
-import { P2P_SIGNALING_URL } from "../../lib/config/env.js";
 import type { ZodType } from "zod";
+import { P2P_SIGNALING_URL } from "../../lib/config/env.js";
 
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
 
@@ -124,7 +124,10 @@ export class P2PRendezvousClient {
     this.sleepImpl = sleep;
   }
 
-  createSession = (offer: HostOfferPayload, signal?: AbortSignal): Promise<CreateSignalingSessionResponse> =>
+  createSession = (
+    offer: HostOfferPayload,
+    signal?: AbortSignal
+  ): Promise<CreateSignalingSessionResponse> =>
     this.request(
       "/signaling/sessions",
       {
@@ -187,7 +190,10 @@ export class P2PRendezvousClient {
       finalizeSignalingSessionResponseSchema
     );
 
-  getFinalization = (sessionId: string, signal?: AbortSignal): Promise<GetSignalingFinalizationResponse> =>
+  getFinalization = (
+    sessionId: string,
+    signal?: AbortSignal
+  ): Promise<GetSignalingFinalizationResponse> =>
     this.request(
       `/signaling/sessions/${encodeURIComponent(sessionId)}/finalization`,
       { method: "GET", signal },
@@ -400,7 +406,11 @@ export class P2PRendezvousClient {
     while (true) {
       const response = await this.readReconnectOffer(sessionId, secret, instanceId, signal);
 
-      if (response.offer || response.state === "expired" || response.attempt.status === "finalized") {
+      if (
+        response.offer ||
+        response.state === "expired" ||
+        response.attempt.status === "finalized"
+      ) {
         return response;
       }
 
@@ -417,7 +427,11 @@ export class P2PRendezvousClient {
     while (true) {
       const response = await this.readReconnectAnswer(sessionId, secret, instanceId, signal);
 
-      if (response.answer || response.state === "expired" || response.attempt.status === "finalized") {
+      if (
+        response.answer ||
+        response.state === "expired" ||
+        response.attempt.status === "finalized"
+      ) {
         return response;
       }
 

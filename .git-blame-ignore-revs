@@ -1,0 +1,3 @@
+# Formatting-only commits. Enable with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# Format the codebase with Biome
+9ef5c318f0688d7220f88dc9acd269c82c9c6f54

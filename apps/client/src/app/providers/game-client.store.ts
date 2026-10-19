@@ -1,8 +1,8 @@
 import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import {
   appendChatMessage,
-  createLobbyRuntimeState,
-  type ClientSession
+  type ClientSession,
+  createLobbyRuntimeState
 } from "./game-client.state.js";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";

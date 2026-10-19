@@ -1,6 +1,13 @@
-import { P2P_SIGNALING_PROTOCOL_VERSION, type GuestAnswerPayload, type HostOfferPayload } from "@minesweeper-flags/shared";
+import {
+  type GuestAnswerPayload,
+  type HostOfferPayload,
+  P2P_SIGNALING_PROTOCOL_VERSION
+} from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
-import { getGuestDirectJoinUnavailableMessage, P2PSetupController } from "./p2p-setup.controller.js";
+import {
+  getGuestDirectJoinUnavailableMessage,
+  P2PSetupController
+} from "./p2p-setup.controller.js";
 import { P2PSetupStore } from "./p2p-setup.store.js";
 
 const hostOfferPayload: HostOfferPayload = {
@@ -105,7 +112,10 @@ describe("P2PSetupController", () => {
 
   it.each([
     ["expired", "This direct-match link has expired. Start a new direct match."],
-    ["answered", "This direct-match link was already used by another guest. Ask the host for a new link."],
+    [
+      "answered",
+      "This direct-match link was already used by another guest. Ask the host for a new link."
+    ],
     ["finalized", "This direct-match link has already finished setup. Ask the host for a new link."]
   ] as const)("marks %s guest sessions as unavailable during load", (sessionState, message) => {
     const store = new P2PSetupStore();

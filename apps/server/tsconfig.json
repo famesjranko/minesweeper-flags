@@ -5,13 +5,10 @@
     "rootDir": "src",
     "outDir": "dist",
     "composite": true,
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
     "paths": {
-      "@minesweeper-flags/game-engine": [
-        "../../packages/game-engine/dist/index.d.ts"
-      ],
-      "@minesweeper-flags/shared": [
-        "../../packages/shared/dist/index.d.ts"
-      ]
+      "@minesweeper-flags/game-engine": ["../../packages/game-engine/dist/index.d.ts"],
+      "@minesweeper-flags/shared": ["../../packages/shared/dist/index.d.ts"]
     }
   },
   "references": [
@@ -22,7 +19,5 @@
       "path": "../../packages/shared"
     }
   ],
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

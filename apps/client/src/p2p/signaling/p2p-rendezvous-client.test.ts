@@ -1,7 +1,7 @@
 import {
-  P2P_SIGNALING_PROTOCOL_VERSION,
   type GuestAnswerPayload,
   type HostOfferPayload,
+  P2P_SIGNALING_PROTOCOL_VERSION,
   type ReconnectAnswerPayload,
   type ReconnectOfferPayload
 } from "@minesweeper-flags/shared";
@@ -112,7 +112,9 @@ describe("P2PRendezvousClient", () => {
       sleep: sleepMock
     });
 
-    await expect(client.pollForAnswer("session-1", "host-secret", { intervalMs: 5 })).resolves.toMatchObject({
+    await expect(
+      client.pollForAnswer("session-1", "host-secret", { intervalMs: 5 })
+    ).resolves.toMatchObject({
       state: "answered",
       answer
     });
@@ -134,15 +136,23 @@ describe("P2PRendezvousClient", () => {
     const fetchMock = vi
       .fn<() => Promise<Response>>()
       .mockResolvedValueOnce(
-        createJsonResponse({
-          sessionId: "reconnect-1",
-          state: "open",
-          createdAt: 10,
-          expiresAt: 20,
-          host: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
-          guest: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
-          attempt: { status: "idle", finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
-        }, 201)
+        createJsonResponse(
+          {
+            sessionId: "reconnect-1",
+            state: "open",
+            createdAt: 10,
+            expiresAt: 20,
+            host: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
+            guest: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
+            attempt: {
+              status: "idle",
+              finalizationOutcome: null,
+              finalizedBy: null,
+              finalizedAt: null
+            }
+          },
+          201
+        )
       )
       .mockResolvedValueOnce(
         createJsonResponse({
@@ -152,7 +162,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
-          attempt: { status: "idle", finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+          attempt: {
+            status: "idle",
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          }
         })
       )
       .mockResolvedValueOnce(
@@ -163,7 +178,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 12 },
           guest: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
-          attempt: { status: "idle", finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+          attempt: {
+            status: "idle",
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          }
         })
       )
       .mockResolvedValueOnce(
@@ -174,7 +194,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "unclaimed", instanceId: null, lastHeartbeatAt: null },
-          attempt: { status: "offer-ready", finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+          attempt: {
+            status: "offer-ready",
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          }
         })
       )
       .mockResolvedValueOnce(
@@ -185,7 +210,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "claimed", instanceId: "guest-instance-1", lastHeartbeatAt: 12 },
-          attempt: { status: "offer-ready", finalizationOutcome: null, finalizedBy: null, finalizedAt: null },
+          attempt: {
+            status: "offer-ready",
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          },
           offer: reconnectOffer
         })
       )
@@ -197,7 +227,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "claimed", instanceId: "guest-instance-1", lastHeartbeatAt: 12 },
-          attempt: { status: "answer-ready", finalizationOutcome: null, finalizedBy: null, finalizedAt: null }
+          attempt: {
+            status: "answer-ready",
+            finalizationOutcome: null,
+            finalizedBy: null,
+            finalizedAt: null
+          }
         })
       )
       .mockResolvedValueOnce(
@@ -208,7 +243,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "claimed", instanceId: "guest-instance-1", lastHeartbeatAt: 12 },
-          attempt: { status: "finalized", finalizationOutcome: "reconnected", finalizedBy: "host", finalizedAt: 13 },
+          attempt: {
+            status: "finalized",
+            finalizationOutcome: "reconnected",
+            finalizedBy: "host",
+            finalizedAt: 13
+          },
           answer: reconnectAnswer
         })
       )
@@ -220,7 +260,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "claimed", instanceId: "guest-instance-1", lastHeartbeatAt: 12 },
-          attempt: { status: "finalized", finalizationOutcome: "reconnected", finalizedBy: "host", finalizedAt: 13 }
+          attempt: {
+            status: "finalized",
+            finalizationOutcome: "reconnected",
+            finalizedBy: "host",
+            finalizedAt: 13
+          }
         })
       )
       .mockResolvedValueOnce(
@@ -231,7 +276,12 @@ describe("P2PRendezvousClient", () => {
           expiresAt: 20,
           host: { claimStatus: "claimed", instanceId: "host-instance-1", lastHeartbeatAt: 11 },
           guest: { claimStatus: "claimed", instanceId: "guest-instance-1", lastHeartbeatAt: 12 },
-          attempt: { status: "finalized", finalizationOutcome: "reconnected", finalizedBy: "host", finalizedAt: 13 }
+          attempt: {
+            status: "finalized",
+            finalizationOutcome: "reconnected",
+            finalizedBy: "host",
+            finalizedAt: 13
+          }
         })
       );
     const client = new P2PRendezvousClient({
@@ -253,13 +303,22 @@ describe("P2PRendezvousClient", () => {
       client.writeReconnectOffer("reconnect-1", "host-secret", "host-instance-1", reconnectOffer)
     ).resolves.toMatchObject({ attempt: { status: "offer-ready" } });
     await expect(
-      client.pollForReconnectOffer("reconnect-1", "guest-secret", "guest-instance-1", { intervalMs: 5 })
+      client.pollForReconnectOffer("reconnect-1", "guest-secret", "guest-instance-1", {
+        intervalMs: 5
+      })
     ).resolves.toMatchObject({ offer: reconnectOffer });
     await expect(
-      client.writeReconnectAnswer("reconnect-1", "guest-secret", "guest-instance-1", reconnectAnswer)
+      client.writeReconnectAnswer(
+        "reconnect-1",
+        "guest-secret",
+        "guest-instance-1",
+        reconnectAnswer
+      )
     ).resolves.toMatchObject({ attempt: { status: "answer-ready" } });
     await expect(
-      client.pollForReconnectAnswer("reconnect-1", "host-secret", "host-instance-1", { intervalMs: 5 })
+      client.pollForReconnectAnswer("reconnect-1", "host-secret", "host-instance-1", {
+        intervalMs: 5
+      })
     ).resolves.toMatchObject({ answer: reconnectAnswer });
     await expect(
       client.finalizeReconnectAttempt(
@@ -271,21 +330,35 @@ describe("P2PRendezvousClient", () => {
       )
     ).resolves.toMatchObject({ attempt: { finalizationOutcome: "reconnected" } });
     await expect(
-      client.pollForReconnectFinalization("reconnect-1", "guest-secret", "guest-instance-1", { intervalMs: 5 })
+      client.pollForReconnectFinalization("reconnect-1", "guest-secret", "guest-instance-1", {
+        intervalMs: 5
+      })
     ).resolves.toMatchObject({ attempt: { finalizationOutcome: "reconnected" } });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "https://signal.example.com/signaling/reconnect/reconnect-1/register", {
-      method: "POST",
-      signal: undefined,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId: "reconnect-1", hostSecret: "host-secret", guestSecret: "guest-secret" })
-    });
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "https://signal.example.com/signaling/reconnect/reconnect-1/heartbeat", {
-      method: "POST",
-      signal: undefined,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role: "host", secret: "host-secret", instanceId: "host-instance-1" })
-    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://signal.example.com/signaling/reconnect/reconnect-1/register",
+      {
+        method: "POST",
+        signal: undefined,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "reconnect-1",
+          hostSecret: "host-secret",
+          guestSecret: "guest-secret"
+        })
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "https://signal.example.com/signaling/reconnect/reconnect-1/heartbeat",
+      {
+        method: "POST",
+        signal: undefined,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ role: "host", secret: "host-secret", instanceId: "host-instance-1" })
+      }
+    );
   });
 
   it("maps expired responses to a user-facing error", async () => {
@@ -323,9 +396,12 @@ describe("P2PRendezvousClient", () => {
         sessionId: "session-1",
         state: "open"
       });
-      expect(fetchSpy).toHaveBeenCalledWith("https://signal.example.com/signaling/sessions/session-1", {
-        method: "GET"
-      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "https://signal.example.com/signaling/sessions/session-1",
+        {
+          method: "GET"
+        }
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }

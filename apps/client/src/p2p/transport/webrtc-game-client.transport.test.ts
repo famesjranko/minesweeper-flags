@@ -1,13 +1,11 @@
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
   type ClientEvent,
+  SERVER_EVENT_NAMES,
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
-import type {
-  GameClientTransportStatusChange
-} from "../../app/providers/game-client.transport.js";
+import type { GameClientTransportStatusChange } from "../../app/providers/game-client.transport.js";
 import { WebRTCGameClientTransport } from "./webrtc-game-client.transport.js";
 import type {
   WebRTCPeerListener,
@@ -142,7 +140,9 @@ describe("WebRTCGameClientTransport", () => {
       }
     });
 
-    peer.emitMessage(JSON.stringify({ type: "p2p:recovery", payload: { controlSessionId: "a", guestSecret: "b" } }));
+    peer.emitMessage(
+      JSON.stringify({ type: "p2p:recovery", payload: { controlSessionId: "a", guestSecret: "b" } })
+    );
 
     expect(receivedEvents).toEqual([]);
   });
@@ -163,9 +163,6 @@ describe("WebRTCGameClientTransport", () => {
     transport.disconnect();
 
     expect(peer.disconnectCalls).toBe(1);
-    expect(statuses).toEqual([
-      { status: "connected" },
-      { status: "disconnected" }
-    ]);
+    expect(statuses).toEqual([{ status: "connected" }, { status: "disconnected" }]);
   });
 });

@@ -1,10 +1,7 @@
 import { CLIENT_EVENT_NAMES, SERVER_EVENT_NAMES } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import { emitP2PHostFanout } from "./p2p-host-events.js";
-import {
-  P2PHostOrchestrator,
-  type P2PHostOrchestratorOptions
-} from "./p2p-host-orchestrator.js";
+import { P2PHostOrchestrator, type P2PHostOrchestratorOptions } from "./p2p-host-orchestrator.js";
 
 const createIdentityFactory = () => {
   let nextId = 1;

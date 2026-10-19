@@ -43,7 +43,10 @@ export interface WebRTCPeerTransportSource {
 
 export interface WebRTCPeerController extends WebRTCPeerTransportSource {
   createHostOffer: () => Promise<HostOfferPayload>;
-  createGuestAnswer: (offerPayload: HostOfferPayload, displayName: string) => Promise<GuestAnswerPayload>;
+  createGuestAnswer: (
+    offerPayload: HostOfferPayload,
+    displayName: string
+  ) => Promise<GuestAnswerPayload>;
   applyGuestAnswer: (answerPayload: GuestAnswerPayload) => Promise<void>;
   createReconnectOffer: () => Promise<ReconnectOfferPayload>;
   createReconnectAnswer: (offerPayload: ReconnectOfferPayload) => Promise<ReconnectAnswerPayload>;

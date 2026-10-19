@@ -1,33 +1,30 @@
 import { randomBytes } from "node:crypto";
-import {
-  type ClaimReconnectRoleRequest,
-  type ClaimReconnectRoleResponse,
-  type CreateSignalingSessionRequest,
-  type CreateSignalingSessionResponse,
-  type FinalizeReconnectAttemptRequest,
-  type FinalizeReconnectAttemptResponse,
-  type FinalizeSignalingSessionResponse,
-  type GetReconnectControlSessionResponse,
-  type GetReconnectFinalizationResponse,
-  type HeartbeatReconnectRoleRequest,
-  type HeartbeatReconnectRoleResponse,
-  type GetSignalingAnswerResponse,
-  type GetSignalingFinalizationResponse,
-  type GetSignalingSessionResponse,
-  type ReadReconnectAnswerResponse,
-  type ReadReconnectOfferResponse,
-  type ReconnectAnswerPayload,
-  type ReconnectControlRole,
-  type ReconnectFinalizationOutcome,
-  type ReconnectOfferPayload,
-  type RegisterReconnectControlSessionRequest,
-  type RegisterReconnectControlSessionResponse,
-  type SubmitSignalingAnswerRequest,
-  type SubmitSignalingAnswerResponse,
-  type WriteReconnectAnswerRequest,
-  type WriteReconnectAnswerResponse,
-  type WriteReconnectOfferRequest,
-  type WriteReconnectOfferResponse
+import type {
+  ClaimReconnectRoleRequest,
+  ClaimReconnectRoleResponse,
+  CreateSignalingSessionRequest,
+  CreateSignalingSessionResponse,
+  FinalizeReconnectAttemptRequest,
+  FinalizeReconnectAttemptResponse,
+  FinalizeSignalingSessionResponse,
+  GetReconnectControlSessionResponse,
+  GetReconnectFinalizationResponse,
+  GetSignalingAnswerResponse,
+  GetSignalingFinalizationResponse,
+  GetSignalingSessionResponse,
+  HeartbeatReconnectRoleRequest,
+  HeartbeatReconnectRoleResponse,
+  ReadReconnectAnswerResponse,
+  ReadReconnectOfferResponse,
+  ReconnectControlRole,
+  RegisterReconnectControlSessionRequest,
+  RegisterReconnectControlSessionResponse,
+  SubmitSignalingAnswerRequest,
+  SubmitSignalingAnswerResponse,
+  WriteReconnectAnswerRequest,
+  WriteReconnectAnswerResponse,
+  WriteReconnectOfferRequest,
+  WriteReconnectOfferResponse
 } from "@minesweeper-flags/shared";
 import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import type { SignalingRepository } from "./signaling.repository.js";
@@ -142,7 +139,9 @@ export class SignalingService {
         const session = this.assertActiveSession(await this.getSessionOrThrow(sessionId), now);
 
         if (session.answer) {
-          throw new SignalingSessionConflictError("That direct-match link already has a guest answer.");
+          throw new SignalingSessionConflictError(
+            "That direct-match link already has a guest answer."
+          );
         }
 
         if (session.state !== "open") {
@@ -316,9 +315,14 @@ export class SignalingService {
           );
         }
 
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -350,9 +354,14 @@ export class SignalingService {
           ...claim,
           lastHeartbeatAt: now
         });
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -387,9 +396,14 @@ export class SignalingService {
             finalizedAt: null
           }
         };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -443,9 +457,14 @@ export class SignalingService {
             answer: request.answer
           }
         };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -504,9 +523,14 @@ export class SignalingService {
             finalizedAt: now
           }
         };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -570,7 +594,10 @@ export class SignalingService {
     return session;
   }
 
-  private assertActiveSession(session: SignalingSessionRecord, now: number): SignalingSessionRecord {
+  private assertActiveSession(
+    session: SignalingSessionRecord,
+    now: number
+  ): SignalingSessionRecord {
     if (session.expiresAt <= now) {
       throw new SignalingSessionExpiredError("That direct-match link has expired.");
     }

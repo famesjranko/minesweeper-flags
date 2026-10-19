@@ -1,45 +1,44 @@
-import type { SessionPersistence } from "../../lib/socket/session-storage.js";
-import { P2P_STUN_URLS } from "../../lib/config/env.js";
+import type { GuestAnswerPayload } from "@minesweeper-flags/shared";
+import { toMatchStateDto } from "@minesweeper-flags/shared";
 import {
-  GameClientController,
   createBrowserGameClientScheduler,
+  GameClientController,
   type GameClientScheduler
 } from "../../app/providers/game-client.controller.js";
-import { GameClientStore } from "../../app/providers/game-client.store.js";
-import type { StoredSession } from "../../lib/socket/session-storage.js";
 import type {
   GameClientRuntime,
   GameClientRuntimeController
 } from "../../app/providers/game-client.runtime.js";
-import type { GuestAnswerPayload } from "@minesweeper-flags/shared";
-import { toMatchStateDto } from "@minesweeper-flags/shared";
-import { decodeGuestAnswerPayload } from "../signaling/p2p-signaling.codec.js";
-import {
-  P2PRendezvousRequestError,
-  createP2PRendezvousClient,
-  type P2PRendezvousClient
-} from "../signaling/p2p-rendezvous-client.js";
-import { createP2PJoinUrl } from "../signaling/p2p-signaling-url.js";
+import { GameClientStore } from "../../app/providers/game-client.store.js";
+import { P2P_STUN_URLS } from "../../lib/config/env.js";
+import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 import { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
+import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
+import { decodeP2PRecoveryControlMessage } from "../recovery/p2p-recovery-control.js";
 import {
   createP2PSetupController,
   getGuestDirectJoinUnavailableMessage
 } from "../setup/p2p-setup.controller.js";
-import { WebRTCGameClientTransport } from "../transport/webrtc-game-client.transport.js";
-import { WebRTCPeer } from "../transport/webrtc-peer.js";
-import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
-import { P2PHostGameClientTransport } from "./p2p-host-game-client.transport.js";
 import {
-  P2P_RECOVERY_STORAGE_VERSION,
+  createP2PRendezvousClient,
+  type P2PRendezvousClient,
+  P2PRendezvousRequestError
+} from "../signaling/p2p-rendezvous-client.js";
+import { decodeGuestAnswerPayload } from "../signaling/p2p-signaling.codec.js";
+import { createP2PJoinUrl } from "../signaling/p2p-signaling-url.js";
+import {
   createBrowserP2PRecoveryPersistence,
   createHostRecoveryRecord,
   extractHostRecoveryState,
+  P2P_RECOVERY_STORAGE_VERSION,
   type P2PRecoveryGuestRecord,
   type P2PRecoveryHostRecord,
   type P2PRecoveryPersistence
 } from "../storage/p2p-recovery-storage.js";
-import { decodeP2PRecoveryControlMessage } from "../recovery/p2p-recovery-control.js";
-import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
+import { WebRTCGameClientTransport } from "../transport/webrtc-game-client.transport.js";
+import { WebRTCPeer } from "../transport/webrtc-peer.js";
+import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
+import { P2PHostGameClientTransport } from "./p2p-host-game-client.transport.js";
 
 const UNSUPPORTED_MATCH_ACTION_MESSAGE =
   "Direct Match setup is still loading. Start from the direct-match lobby flow.";
@@ -55,8 +54,7 @@ const DIRECT_MATCH_RECOVERY_UNAVAILABLE_MESSAGE =
   "Direct-match recovery is no longer available for this session. Start a new direct match if the connection drops again.";
 const DIRECT_MATCH_AUTHORITATIVE_MESSAGE =
   "You now have control. This direct match is active in this tab.";
-const DIRECT_MATCH_CLAIM_ACTIVE_MESSAGE =
-  "Reconnected. You now have an active claim.";
+const DIRECT_MATCH_CLAIM_ACTIVE_MESSAGE = "Reconnected. You now have an active claim.";
 
 const noopSessionPersistence: SessionPersistence = {
   read: () => null,
@@ -181,12 +179,12 @@ class P2PBootstrapController implements GameClientRuntimeController {
     private readonly rendezvousClient: RendezvousClient,
     private readonly recoveryPersistence: P2PRecoveryPersistence,
     readonly setup = createP2PSetupController()
-    ) {
-      this.store.subscribe(() => {
-        this.flushPendingGuestRecoveryControl();
-        this.persistCurrentHostRecoveryRecord();
-      });
-    }
+  ) {
+    this.store.subscribe(() => {
+      this.flushPendingGuestRecoveryControl();
+      this.persistCurrentHostRecoveryRecord();
+    });
+  }
 
   start = (): void => {
     this.store.setConnectionStatus("disconnected");
@@ -285,11 +283,15 @@ class P2PBootstrapController implements GameClientRuntimeController {
         this.setup.controller.setHostSessionState(answerResponse.state);
 
         if (answerResponse.state === "expired") {
-          throw new Error("This direct-match link expired before a guest connected. Start a new direct match.");
+          throw new Error(
+            "This direct-match link expired before a guest connected. Start a new direct match."
+          );
         }
 
         if (!answerResponse.answer) {
-          throw new Error("This direct-match link expired before a guest connected. Start a new direct match.");
+          throw new Error(
+            "This direct-match link expired before a guest connected. Start a new direct match."
+          );
         }
 
         await this.applyHostGuestAnswerPayload(peer, answerResponse.answer);
@@ -376,7 +378,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
       }
 
       this.teardownFailedRuntime();
-      this.store.setError(error instanceof Error ? error.message : "Failed to restore the direct match.");
+      this.store.setError(
+        error instanceof Error ? error.message : "Failed to restore the direct match."
+      );
     });
   }
 
@@ -403,7 +407,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
       controlSessionId: record.reconnect.controlSessionId,
       hostSecret: record.reconnect.hostSecret,
       guestSecret: record.reconnect.guestSecret,
-      ...(record.reconnect.lastInstanceId ? { lastInstanceId: record.reconnect.lastInstanceId } : {})
+      ...(record.reconnect.lastInstanceId
+        ? { lastInstanceId: record.reconnect.lastInstanceId }
+        : {})
     };
     this.hostReconnectControl = reconnectControl;
     this.hostReconnectNeedsGuestRebind = true;
@@ -423,25 +429,29 @@ class P2PBootstrapController implements GameClientRuntimeController {
       reconnectControl,
       signal: reconnectSignal,
       roomCode: record.room.roomCode
-    }).catch((error: unknown) => {
-      if (!this.isActivePeer(hostPeer, "host") || this.isAbortError(error)) {
-        return;
-      }
+    })
+      .catch((error: unknown) => {
+        if (!this.isActivePeer(hostPeer, "host") || this.isAbortError(error)) {
+          return;
+        }
 
-      this.teardownFailedRuntime();
-      this.store.setSession(null);
-      this.store.clearTransientRoomState();
-      this.store.setError(error instanceof Error ? error.message : "Failed to restore the direct match.");
-    }).finally(() => {
-      // safe vs CLAUDE.md hang bug: runHostReconnectAttempt has already settled (via the .catch above) by the time this .finally runs — no in-flight poll loop to orphan.
-      if (this.hostReconnectAbortController?.signal === reconnectSignal) {
-        this.hostReconnectInFlight = false;
-      }
+        this.teardownFailedRuntime();
+        this.store.setSession(null);
+        this.store.clearTransientRoomState();
+        this.store.setError(
+          error instanceof Error ? error.message : "Failed to restore the direct match."
+        );
+      })
+      .finally(() => {
+        // safe vs CLAUDE.md hang bug: runHostReconnectAttempt has already settled (via the .catch above) by the time this .finally runs — no in-flight poll loop to orphan.
+        if (this.hostReconnectAbortController?.signal === reconnectSignal) {
+          this.hostReconnectInFlight = false;
+        }
 
-      if (this.hostReconnectAbortController?.signal === reconnectSignal) {
-        this.hostReconnectAbortController = null;
-      }
-    });
+        if (this.hostReconnectAbortController?.signal === reconnectSignal) {
+          this.hostReconnectAbortController = null;
+        }
+      });
   }
 
   submitCellAction = (row: number, column: number): void => {
@@ -585,7 +595,10 @@ class P2PBootstrapController implements GameClientRuntimeController {
       return;
     }
 
-    const unavailableMessage = this.getUnavailableGuestSetupMessage(guestSetup.sessionState, guestSetup.expiresAt);
+    const unavailableMessage = this.getUnavailableGuestSetupMessage(
+      guestSetup.sessionState,
+      guestSetup.expiresAt
+    );
 
     if (unavailableMessage) {
       this.setup.controller.failGuestSetup(unavailableMessage);
@@ -634,7 +647,10 @@ class P2PBootstrapController implements GameClientRuntimeController {
         controller.start();
         this.setup.controller.startGuestAnswerCreation(trimmedDisplayName);
 
-        const createdAnswerPayload = await guestPeer.createGuestAnswer(refreshedSession.offer, trimmedDisplayName);
+        const createdAnswerPayload = await guestPeer.createGuestAnswer(
+          refreshedSession.offer,
+          trimmedDisplayName
+        );
 
         if (!this.isActivePeer(guestPeer, "guest")) {
           return;
@@ -669,7 +685,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
         this.setup.controller.setGuestSessionState(finalizedSession.state);
 
         if (finalizedSession.state === "expired") {
-          throw new Error("This direct-match link expired before the host finished setup. Start a new direct match.");
+          throw new Error(
+            "This direct-match link expired before the host finished setup. Start a new direct match."
+          );
         }
 
         if (this.activePeer?.getStatus() !== "connected") {
@@ -707,15 +725,17 @@ class P2PBootstrapController implements GameClientRuntimeController {
     try {
       const answerPayload = decodeGuestAnswerPayload(hostSetup.guestAnswerText);
 
-      void this.applyHostGuestAnswerPayload(this.activePeer, answerPayload).catch((error: unknown) => {
-        if (this.isAbortError(error)) {
-          return;
-        }
+      void this.applyHostGuestAnswerPayload(this.activePeer, answerPayload).catch(
+        (error: unknown) => {
+          if (this.isAbortError(error)) {
+            return;
+          }
 
-        this.setup.controller.failHostSetup(
-          error instanceof Error ? error.message : "Failed to apply the guest answer payload."
-        );
-      });
+          this.setup.controller.failHostSetup(
+            error instanceof Error ? error.message : "Failed to apply the guest answer payload."
+          );
+        }
+      );
 
       return true;
     } catch (error) {
@@ -773,7 +793,11 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
         if (role === "host") {
           if (change.status === "connected") {
-            if (this.hostReconnectNeedsGuestRebind && this.activePeer === peer && this.hostTransport) {
+            if (
+              this.hostReconnectNeedsGuestRebind &&
+              this.activePeer === peer &&
+              this.hostTransport
+            ) {
               this.hostTransport.rebindGuestPeer();
               this.hostReconnectNeedsGuestRebind = false;
             }
@@ -782,9 +806,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
             return;
           }
 
-        if (change.status === "failed" || change.status === "closed") {
-          if (this.hostReconnectControl && this.hostTransport?.hasGuestSession()) {
-            if (!this.hostReconnectInFlight) {
+          if (change.status === "failed" || change.status === "closed") {
+            if (this.hostReconnectControl && this.hostTransport?.hasGuestSession()) {
+              if (!this.hostReconnectInFlight) {
                 void this.handleHostPeerClosed(peer).catch((error: unknown) => {
                   if (this.isAbortError(error)) {
                     return;
@@ -855,7 +879,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
       this.hostReconnectControl = null;
       this.store.setError(
-        error instanceof Error ? error.message : "Direct-match recovery is unavailable for this session."
+        error instanceof Error
+          ? error.message
+          : "Direct-match recovery is unavailable for this session."
       );
     });
   }
@@ -887,7 +913,8 @@ class P2PBootstrapController implements GameClientRuntimeController {
   ): void {
     const existingRecord = this.recoveryPersistence.read(activeSession.roomCode);
     const instanceId =
-      existingRecord?.role === "guest" && existingRecord.reconnect.controlSessionId === control.controlSessionId
+      existingRecord?.role === "guest" &&
+      existingRecord.reconnect.controlSessionId === control.controlSessionId
         ? (existingRecord.reconnect.lastInstanceId ?? createRandomId())
         : createRandomId();
     const recoveryRecord: P2PRecoveryGuestRecord = {
@@ -1051,7 +1078,10 @@ class P2PBootstrapController implements GameClientRuntimeController {
         this.guestSetupAbortController ? { signal: this.guestSetupAbortController.signal } : {}
       );
 
-      if (finalization.state === "expired" || finalization.attempt.finalizationOutcome !== "reconnected") {
+      if (
+        finalization.state === "expired" ||
+        finalization.attempt.finalizationOutcome !== "reconnected"
+      ) {
         throw new Error("This direct match can no longer be restored. Start a new direct match.");
       }
     } catch (error) {
@@ -1102,7 +1132,11 @@ class P2PBootstrapController implements GameClientRuntimeController {
       return;
     }
 
-    if (!this.hostTransport?.hasGuestSession() || !this.hostReconnectControl || this.hostReconnectInFlight) {
+    if (
+      !this.hostTransport?.hasGuestSession() ||
+      !this.hostReconnectControl ||
+      this.hostReconnectInFlight
+    ) {
       this.setup.controller.setHostStage("closed");
       return;
     }
@@ -1275,7 +1309,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
     const record = this.recoveryPersistence.read(roomCode);
 
-    if (!record || record.role !== "guest") {
+    if (record?.role !== "guest") {
       return false;
     }
 
@@ -1500,7 +1534,13 @@ class P2PBootstrapController implements GameClientRuntimeController {
       return;
     }
 
-    await this.rendezvousClient.claimReconnectRole(controlSessionId, role, secret, instanceId, signal);
+    await this.rendezvousClient.claimReconnectRole(
+      controlSessionId,
+      role,
+      secret,
+      instanceId,
+      signal
+    );
     this.startReconnectHeartbeat({
       controlSessionId,
       role,
@@ -1525,14 +1565,18 @@ class P2PBootstrapController implements GameClientRuntimeController {
     }
 
     const wasDisplaced = existingClaim !== null && this.lastClaimWasVictory === false;
-    const isNewClaim = existingClaim === null || existingClaim.controlSessionId !== claim.controlSessionId;
+    const isNewClaim =
+      existingClaim === null || existingClaim.controlSessionId !== claim.controlSessionId;
 
     this.stopReconnectHeartbeat();
     this.activeReconnectClaim = claim;
     this.lastClaimWasVictory = true;
 
     if (wasDisplaced || (isNewClaim && existingClaim !== null)) {
-      const message = claim.role === "host" ? DIRECT_MATCH_AUTHORITATIVE_MESSAGE : DIRECT_MATCH_CLAIM_ACTIVE_MESSAGE;
+      const message =
+        claim.role === "host"
+          ? DIRECT_MATCH_AUTHORITATIVE_MESSAGE
+          : DIRECT_MATCH_CLAIM_ACTIVE_MESSAGE;
       this.store.setError(message);
     }
 
@@ -1602,7 +1646,10 @@ class P2PBootstrapController implements GameClientRuntimeController {
     this.stopReconnectHeartbeat();
     this.lastClaimWasVictory = false;
 
-    if (claim.role === "host" && this.hostReconnectControl?.controlSessionId === claim.controlSessionId) {
+    if (
+      claim.role === "host" &&
+      this.hostReconnectControl?.controlSessionId === claim.controlSessionId
+    ) {
       this.hostReconnectControl = null;
     }
 
@@ -1615,7 +1662,10 @@ class P2PBootstrapController implements GameClientRuntimeController {
     this.stopReconnectHeartbeat();
     this.lastClaimWasVictory = false;
 
-    if (claim.role === "host" && this.hostReconnectControl?.controlSessionId === claim.controlSessionId) {
+    if (
+      claim.role === "host" &&
+      this.hostReconnectControl?.controlSessionId === claim.controlSessionId
+    ) {
       this.hostReconnectControl = null;
     }
 
@@ -1685,7 +1735,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
   }
 
   private isAbortError(error: unknown): boolean {
-    return typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
+    return (
+      typeof error === "object" && error !== null && "name" in error && error.name === "AbortError"
+    );
   }
 
   private isReconnectClaimInactiveError(error: unknown): boolean {
@@ -1693,7 +1745,9 @@ class P2PBootstrapController implements GameClientRuntimeController {
   }
 
   private isReconnectRecoveryUnavailableError(error: unknown): boolean {
-    return error instanceof P2PRendezvousRequestError && (error.status === 404 || error.status === 410);
+    return (
+      error instanceof P2PRendezvousRequestError && (error.status === 404 || error.status === 410)
+    );
   }
 }
 

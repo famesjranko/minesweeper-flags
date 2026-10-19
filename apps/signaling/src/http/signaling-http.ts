@@ -32,13 +32,13 @@ import {
   writeReconnectOfferResponseSchema
 } from "@minesweeper-flags/shared";
 import { resolveClientAddress } from "../lib/http/client-address.js";
+import type { SignalingService } from "../modules/signaling/signaling.service.js";
 import {
   SignalingSessionConflictError,
   SignalingSessionExpiredError,
   SignalingSessionForbiddenError,
   SignalingSessionNotFoundError
 } from "../modules/signaling/signaling.types.js";
-import type { SignalingService } from "../modules/signaling/signaling.service.js";
 
 interface FixedWindowLimit {
   maxEvents: number;
@@ -162,7 +162,10 @@ const getRequestOrigin = (request: IncomingMessage): string | undefined => {
   return Array.isArray(originHeader) ? originHeader[0] : originHeader;
 };
 
-const isAllowedHttpOrigin = (request: IncomingMessage, allowedOrigins: readonly string[]): boolean => {
+const isAllowedHttpOrigin = (
+  request: IncomingMessage,
+  allowedOrigins: readonly string[]
+): boolean => {
   if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
     return true;
   }
@@ -238,7 +241,8 @@ const respondWithEmpty = (
 const getRequestPath = (requestUrl?: string): string =>
   new URL(requestUrl ?? "/", "http://127.0.0.1").pathname;
 
-const parseRequestUrl = (requestUrl?: string): URL => new URL(requestUrl ?? "/", "http://127.0.0.1");
+const parseRequestUrl = (requestUrl?: string): URL =>
+  new URL(requestUrl ?? "/", "http://127.0.0.1");
 
 const readJsonBody = async (
   request: IncomingMessage,
@@ -423,7 +427,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const body = claimReconnectRoleRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
+        const body = claimReconnectRoleRequestSchema.parse(
+          await readJsonBody(request, maxPayloadBytes)
+        );
         const reconnectSession = claimReconnectRoleResponseSchema.parse(
           await service.claimReconnectRole(sessionId, body)
         );
@@ -467,7 +473,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const body = writeReconnectOfferRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
+        const body = writeReconnectOfferRequestSchema.parse(
+          await readJsonBody(request, maxPayloadBytes)
+        );
         const reconnectSession = writeReconnectOfferResponseSchema.parse(
           await service.writeReconnectOffer(sessionId, body)
         );
@@ -489,7 +497,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const body = readReconnectOfferRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
+        const body = readReconnectOfferRequestSchema.parse(
+          await readJsonBody(request, maxPayloadBytes)
+        );
         const reconnectOffer = readReconnectOfferResponseSchema.parse(
           await service.readReconnectOffer(sessionId, body.secret, body.instanceId)
         );
@@ -510,7 +520,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const body = writeReconnectAnswerRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
+        const body = writeReconnectAnswerRequestSchema.parse(
+          await readJsonBody(request, maxPayloadBytes)
+        );
         const reconnectSession = writeReconnectAnswerResponseSchema.parse(
           await service.writeReconnectAnswer(sessionId, body)
         );
@@ -532,7 +544,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const body = readReconnectAnswerRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
+        const body = readReconnectAnswerRequestSchema.parse(
+          await readJsonBody(request, maxPayloadBytes)
+        );
         const reconnectAnswer = readReconnectAnswerResponseSchema.parse(
           await service.readReconnectAnswer(sessionId, body.secret, body.instanceId)
         );
@@ -634,7 +648,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const session = getSignalingSessionResponseSchema.parse(await service.getSession(sessionId));
+        const session = getSignalingSessionResponseSchema.parse(
+          await service.getSession(sessionId)
+        );
         respondWithJson(request, response, 200, session, allowedOrigins);
         return;
       }
@@ -689,7 +705,9 @@ export const createSignalingHttpHandler = ({
           return;
         }
 
-        const body = getSignalingAnswerRequestSchema.parse(await readJsonBody(request, maxPayloadBytes));
+        const body = getSignalingAnswerRequestSchema.parse(
+          await readJsonBody(request, maxPayloadBytes)
+        );
         const answerResponse = getSignalingAnswerResponseSchema.parse(
           await service.getAnswer(sessionId, body.hostSecret)
         );
@@ -775,12 +793,24 @@ export const createSignalingHttpHandler = ({
       }
 
       if (error instanceof Error && error.message === "invalid-json") {
-        respondWithJson(request, response, 400, { error: "Request body must be valid JSON." }, allowedOrigins);
+        respondWithJson(
+          request,
+          response,
+          400,
+          { error: "Request body must be valid JSON." },
+          allowedOrigins
+        );
         return;
       }
 
       if (error instanceof Error && error.name === "ZodError") {
-        respondWithJson(request, response, 400, { error: "Request payload is invalid." }, allowedOrigins);
+        respondWithJson(
+          request,
+          response,
+          400,
+          { error: "Request payload is invalid." },
+          allowedOrigins
+        );
         return;
       }
 

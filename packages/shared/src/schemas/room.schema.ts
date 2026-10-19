@@ -9,8 +9,7 @@ export const playerSummarySchema = z.object({
 export const roomSummarySchema = z.object({
   roomId: z.string().min(1),
   roomCode: roomCodeSchema,
-  players: z.tuple([playerSummarySchema, playerSummarySchema.optional()]).transform((players) =>
-    players.filter(Boolean)
-  )
+  players: z
+    .tuple([playerSummarySchema, playerSummarySchema.optional()])
+    .transform((players) => players.filter(Boolean))
 });
-

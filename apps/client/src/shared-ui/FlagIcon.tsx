@@ -21,13 +21,7 @@ export const FlagIcon = ({ color, className, size = 22 }: FlagIconProps) => {
   const palette = PALETTE[color];
 
   return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-    >
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" width={size} height={size}>
       <rect x="5.5" y="2.5" width="2.2" height="15.5" rx="1" fill={palette.pole} />
       <path d="M8.2 3.2H18.8L15.4 8.1L18.8 13H8.2Z" fill={palette.fill} />
       <path d="M8.2 3.2H18.8L16.5 6.6H8.2Z" fill="rgba(255,255,255,0.28)" />

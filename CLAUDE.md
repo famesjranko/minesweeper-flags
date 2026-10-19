@@ -35,7 +35,13 @@ docs/             User-facing reference docs
 ## How to verify changes
 
 ```bash
-make check          # runs make test then make build (the canonical local verification)
+make check          # lint, typecheck, test, build, compose config (the gate; CI runs it)
+make images         # build all four Docker images (CI runs it as a separate job)
+make format         # fix formatting and safe lint findings (Biome)
+make lint           # check formatting and lint without writing
+make typecheck      # tsc over every workspace, tests included
+make complexity     # advisory report: cognitive complexity > 15, function > 80 lines,
+                    # > 4 params, file > 500 lines (tests exempt from length). Never fails.
 make test           # all workspace tests
 make test-client    # client only (vitest)
 make test-server    # server only
@@ -48,6 +54,15 @@ npx vitest run path/to/file.test.ts -t "name pattern"  # one test
 ```
 
 Always run from the repo root. Do not `cd` into workspaces unless the worktree changes.
+
+Hooks (installed by `npm install` through husky; they live in `.husky/`):
+
+- **pre-commit** runs Biome on staged files with safe fixes. On a lint failure, fix the reported line, or run `make format`, then re-stage.
+- **pre-push** runs `make typecheck test`. It refuses to run with uncommitted or untracked files. To repeat it: `make typecheck test`.
+- A hook that reports missing dependencies needs `npm install` in that worktree.
+- The size and complexity limits are advisory (`info` level). Run `make complexity` to see them; no hook shows them. Avoid growing a function or file that is already over a limit.
+- Biome rule choices and their reasons live in `biome.jsonc`. Suppress a single finding inline with `// biome-ignore <rule>: <reason>`.
+- One-time setup for blame: `git config blame.ignoreRevsFile .git-blame-ignore-revs`. Merge with a merge commit, not a squash, so the recorded SHA stays valid.
 
 ## Non-negotiables (these guide design decisions)
 

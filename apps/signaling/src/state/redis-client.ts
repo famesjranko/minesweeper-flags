@@ -37,9 +37,7 @@ export interface SignalingRedisClient {
   close(): Promise<void>;
 }
 
-export const createSignalingRedisClient = async (
-  url: string
-): Promise<SignalingRedisClient> => {
+export const createSignalingRedisClient = async (url: string): Promise<SignalingRedisClient> => {
   const client = createClient({ url });
 
   client.on("error", (error) => {

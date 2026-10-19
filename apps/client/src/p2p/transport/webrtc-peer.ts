@@ -1,7 +1,7 @@
 import {
-  P2P_SIGNALING_PROTOCOL_VERSION,
   type GuestAnswerPayload,
   type HostOfferPayload,
+  P2P_SIGNALING_PROTOCOL_VERSION,
   type ReconnectAnswerPayload,
   type ReconnectOfferPayload
 } from "@minesweeper-flags/shared";
@@ -84,7 +84,9 @@ export class WebRTCPeer implements WebRTCPeerController {
     });
   };
 
-  createReconnectAnswer = async (offerPayload: ReconnectOfferPayload): Promise<ReconnectAnswerPayload> => {
+  createReconnectAnswer = async (
+    offerPayload: ReconnectOfferPayload
+  ): Promise<ReconnectAnswerPayload> => {
     return this.createAnswerPayload(offerPayload.sdp, {
       protocolVersion: P2P_SIGNALING_PROTOCOL_VERSION,
       mode: "p2p-reconnect",
@@ -100,7 +102,9 @@ export class WebRTCPeer implements WebRTCPeerController {
     await this.applyAnswerPayload(answerPayload.sdp, "Failed to apply reconnect answer.");
   };
 
-  private async createOfferPayload(mode: "p2p" | "p2p-reconnect"): Promise<HostOfferPayload | ReconnectOfferPayload> {
+  private async createOfferPayload(
+    mode: "p2p" | "p2p-reconnect"
+  ): Promise<HostOfferPayload | ReconnectOfferPayload> {
     try {
       this.emitStatus({ status: "creating-offer" });
 
@@ -130,7 +134,7 @@ export class WebRTCPeer implements WebRTCPeerController {
     } catch (error) {
       this.handleFailure(error, "Failed to create host offer.");
     }
-  };
+  }
 
   private async createAnswerPayload<TAnswer extends GuestAnswerPayload | ReconnectAnswerPayload>(
     offerSdp: string,
@@ -166,7 +170,9 @@ export class WebRTCPeer implements WebRTCPeerController {
     } catch (error) {
       this.handleFailure(
         error,
-        answerBase.mode === "p2p-reconnect" ? "Failed to create reconnect answer." : "Failed to create guest answer."
+        answerBase.mode === "p2p-reconnect"
+          ? "Failed to create reconnect answer."
+          : "Failed to create guest answer."
       );
     }
   }
@@ -189,7 +195,7 @@ export class WebRTCPeer implements WebRTCPeerController {
   }
 
   send = (message: string): void => {
-    if (!this.channel || this.channel.readyState !== "open") {
+    if (this.channel?.readyState !== "open") {
       throw new Error("Peer data channel is not open.");
     }
 

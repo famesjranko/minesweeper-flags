@@ -12,7 +12,7 @@ const getAxisBounds = (
   position: number,
   radius = BOMB_RADIUS
 ): { min: number; max: number } => {
-  const span = Math.min(axisLength, (radius * 2) + 1);
+  const span = Math.min(axisLength, radius * 2 + 1);
   const maxStart = Math.max(0, axisLength - span);
   const start = Math.min(Math.max(0, position - radius), maxStart);
 

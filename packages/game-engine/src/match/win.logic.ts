@@ -27,4 +27,3 @@ export const isFinished = (state: MatchState): boolean =>
   countClaimedMines(state.board) === state.board.mineCount;
 
 export { WINNING_SCORE };
-

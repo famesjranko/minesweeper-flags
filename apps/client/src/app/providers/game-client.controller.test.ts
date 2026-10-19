@@ -1,25 +1,19 @@
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
-  WEBSOCKET_CLOSE_CODES,
   type ClientEvent,
-  type ServerEvent
+  SERVER_EVENT_NAMES,
+  type ServerEvent,
+  WEBSOCKET_CLOSE_CODES
 } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
-import {
-  GameClientController,
-  type GameClientScheduler
-} from "./game-client.controller.js";
+import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
+import { GameClientController, type GameClientScheduler } from "./game-client.controller.js";
 import { GameClientStore } from "./game-client.store.js";
 import type {
   GameClientTransport,
   GameClientTransportListener,
   GameClientTransportStatusChange
 } from "./game-client.transport.js";
-import type {
-  SessionPersistence,
-  StoredSession
-} from "../../lib/socket/session-storage.js";
 
 class FakeTransport implements GameClientTransport {
   readonly sentEvents: ClientEvent[] = [];
@@ -136,11 +130,7 @@ const storedSession: StoredSession = {
   sessionToken: "session-1"
 };
 
-const createHarness = ({
-  sessions = []
-}: {
-  sessions?: StoredSession[];
-} = {}) => {
+const createHarness = ({ sessions = [] }: { sessions?: StoredSession[] } = {}) => {
   const transport = new FakeTransport();
   const persistence = new FakeSessionPersistence(sessions);
   const scheduler = new FakeScheduler();
@@ -296,7 +286,7 @@ describe("game client controller", () => {
             }
           ],
           currentTurnPlayerId: "player-1",
-          turnPhase: "awaiting_selection",
+          turnPhase: "awaiting_action",
           turnNumber: 1,
           winnerPlayerId: null,
           lastAction: null

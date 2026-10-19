@@ -8,9 +8,9 @@ import {
   type P2PHostRoomRecord
 } from "../host/p2p-host-state.js";
 import {
-  P2P_RECOVERY_STORAGE_VERSION,
   hostAuthoritySnapshotSchema,
   hostReconnectMetadataSchema,
+  P2P_RECOVERY_STORAGE_VERSION,
   recoveryRecordSchema
 } from "./p2p-recovery-storage.schema.js";
 
@@ -73,9 +73,7 @@ const cloneHostReconnectMetadata = (
   ...(reconnect.lastInstanceId ? { lastInstanceId: reconnect.lastInstanceId } : {})
 });
 
-export const validateHostAuthoritySnapshot = (
-  value: unknown
-): P2PHostAuthoritySnapshot | null => {
+export const validateHostAuthoritySnapshot = (value: unknown): P2PHostAuthoritySnapshot | null => {
   const result = hostAuthoritySnapshotSchema.safeParse(value);
 
   if (!result.success) {
@@ -100,7 +98,7 @@ export const createHostRecoveryRecord = ({
   const snapshot = validateHostAuthoritySnapshot(state);
   const reconnectResult = hostReconnectMetadataSchema.safeParse(reconnect);
 
-  if (!snapshot || !snapshot.room || !snapshot.hostSession || !reconnectResult.success) {
+  if (!snapshot?.room || !snapshot.hostSession || !reconnectResult.success) {
     throw new Error("Invalid host recovery snapshot.");
   }
 
@@ -123,7 +121,7 @@ export const extractHostRecoveryState = (
 ): P2PHostAuthoritySnapshot => {
   const snapshot = validateHostAuthoritySnapshot(record);
 
-  if (!snapshot || !snapshot.room || !snapshot.hostSession) {
+  if (!snapshot?.room || !snapshot.hostSession) {
     throw new Error("Invalid host recovery snapshot.");
   }
 

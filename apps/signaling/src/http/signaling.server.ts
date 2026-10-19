@@ -1,6 +1,9 @@
-import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createSignalingHttpHandler, type CreateSignalingHttpHandlerOptions } from "./signaling-http.js";
+import { createServer } from "node:http";
+import {
+  type CreateSignalingHttpHandlerOptions,
+  createSignalingHttpHandler
+} from "./signaling-http.js";
 
 type LifecycleState = "starting" | "ready" | "shutting_down" | "stopped";
 
@@ -29,7 +32,10 @@ export const createSignalingServer = (
   let lifecycleState: LifecycleState = "starting";
   let shutdownPromise: Promise<void> | undefined;
 
-  const routeRequest = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
+  const routeRequest = async (
+    request: IncomingMessage,
+    response: ServerResponse
+  ): Promise<void> => {
     if (request.method === "GET" && request.url === "/health") {
       respondWithJson(response, 200, { status: "ok" });
       return;

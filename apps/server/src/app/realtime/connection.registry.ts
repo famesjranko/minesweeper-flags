@@ -13,7 +13,9 @@ export class ConnectionRegistry {
   attach(session: PlayerSession, socket: WebSocket): AttachResult {
     const existingSession = this.sessionsBySocket.get(socket);
     const displacedSession =
-      existingSession && existingSession.playerId !== session.playerId ? existingSession : undefined;
+      existingSession && existingSession.playerId !== session.playerId
+        ? existingSession
+        : undefined;
     const replacedSocket = this.socketsByPlayerId.get(session.playerId);
 
     if (displacedSession && this.socketsByPlayerId.get(displacedSession.playerId) === socket) {
