@@ -55,10 +55,24 @@ export interface SessionPersistence {
   remove: (roomCode: string) => void;
 }
 
+// localStorage throws when storage is full or blocked (private mode, policy).
+// A session that cannot be saved must not break the game flow, so failures
+// degrade to "nothing stored" instead of propagating.
+const tryStorage = <T>(action: () => T, fallback: T): T => {
+  try {
+    return action();
+  } catch {
+    return fallback;
+  }
+};
+
 export const createBrowserSessionPersistence = (): SessionPersistence => ({
   read: (roomCode) => {
     const storageKey = createSessionKey(roomCode);
-    const value = window.localStorage.getItem(createSessionKey(roomCode));
+    const removeInvalid = (): void => {
+      tryStorage(() => window.localStorage.removeItem(storageKey), undefined);
+    };
+    const value = tryStorage(() => window.localStorage.getItem(storageKey), null);
 
     if (!value) {
       return null;
@@ -68,23 +82,27 @@ export const createBrowserSessionPersistence = (): SessionPersistence => ({
       const normalized = normalizeStoredSession(JSON.parse(value));
 
       if (!normalized) {
-        window.localStorage.removeItem(storageKey);
+        removeInvalid();
       }
 
       return normalized;
     } catch {
-      window.localStorage.removeItem(storageKey);
+      removeInvalid();
       return null;
     }
   },
   write: (session) => {
-    window.localStorage.setItem(
-      createSessionKey(session.roomCode),
-      serializeStoredSession(session)
+    tryStorage(
+      () =>
+        window.localStorage.setItem(
+          createSessionKey(session.roomCode),
+          serializeStoredSession(session)
+        ),
+      undefined
     );
   },
   remove: (roomCode) => {
-    window.localStorage.removeItem(createSessionKey(roomCode));
+    tryStorage(() => window.localStorage.removeItem(createSessionKey(roomCode)), undefined);
   }
 });
 
