@@ -174,6 +174,29 @@ describe("resolveAction", () => {
       expect(resolution.state.currentTurnPlayerId).toBeNull();
     }
   });
+
+  it.each([
+    ["a select", "select", BOARD_ROWS, 0],
+    ["a bomb", "bomb", 0, BOARD_COLUMNS + 4]
+  ] as const)("rejects %s outside the board instead of throwing", (_label, type, row, column) => {
+    // Given a live match on the active player's turn
+    const match = createMatchState({
+      roomId: "room-1",
+      players: [
+        { playerId: "p1", displayName: "A" },
+        { playerId: "p2", displayName: "B" }
+      ],
+      seed: 1,
+      createdAt: 1,
+      startingPlayerId: "p1"
+    });
+
+    // When the player targets a cell past the board's edge
+    const resolution = resolveAction(match, { type, playerId: "p1", row, column }, 2);
+
+    // Then the action is rejected like any other invalid move
+    expect(resolution).toEqual({ ok: false, error: "That cell is outside the board." });
+  });
 });
 
 describe("resignMatch", () => {
