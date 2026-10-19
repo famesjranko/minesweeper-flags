@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@minesweeper-flags/shared": "*",
-    "redis": "^5.11.0"
+    "redis": "^6.3.0"
   },
   "license": "MIT"
 }
