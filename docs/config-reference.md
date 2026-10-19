@@ -71,7 +71,7 @@ Run these from the repo root:
 - `make compose-public-p2p-up` starts the parity/public p2p `client + signaling + redis` stack.
 - `make compose-public-down` stops the parity/public Docker Compose stack.
 - `make check` runs lint, type checks, tests, and builds, and validates the Compose config. CI runs it on every pull request.
-- `make images` builds the server, signaling, client, and public client Docker images. CI runs it as a separate job.
+- `make images` builds the server, signaling, server-mode client, p2p client, and public client Docker images. CI runs it as a separate job.
 
 Important:
 

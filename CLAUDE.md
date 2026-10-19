@@ -36,7 +36,7 @@ docs/             User-facing reference docs
 
 ```bash
 make check          # lint, typecheck, test, build, compose config (the gate; CI runs it)
-make images         # build all four Docker images (CI runs it as a separate job)
+make images         # build every Docker image, p2p client included (CI runs it as a separate job)
 make format         # fix formatting and safe lint findings (Biome)
 make lint           # check formatting and lint without writing
 make typecheck      # tsc over every workspace, tests included
