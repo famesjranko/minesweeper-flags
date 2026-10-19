@@ -46,27 +46,13 @@ const getDirectLinkReadout = (
   return guestSetup?.offerPayload ? "Loaded from session" : "Loading session";
 };
 
-const getStatusSummary = (
-  guestSetup: GuestSetup,
-  unavailableMessage: UnavailableMessage
-): string => {
-  if (unavailableMessage) {
-    return "This direct match link is no longer joinable.";
-  }
-
+const getStatusSummary = (guestSetup: GuestSetup): string => {
   return guestSetup?.offerPayload
     ? `Direct match ready for ${guestSetup.displayName || "this guest"}.`
     : "Loading the host's direct link.";
 };
 
-const getStatusDetail = (
-  guestSetup: GuestSetup,
-  unavailableMessage: UnavailableMessage
-): string => {
-  if (unavailableMessage) {
-    return "Only open direct-match sessions can create a guest answer.";
-  }
-
+const getStatusDetail = (guestSetup: GuestSetup): string => {
   return guestSetup?.stage === "waiting-for-host-finalize" || guestSetup?.stage === "connecting"
     ? "Waiting for the host to finish setup and open the direct channel."
     : "Pick a display name to unlock Join Direct Match.";
@@ -98,15 +84,14 @@ const JoinDirectMatchCard = ({
       <h2>Join Direct Match</h2>
       <span>
         {unavailableMessage
-          ? "This invite needs a fresh host link."
+          ? "This link can't be used again."
           : "Confirm your display name and connect to the host."}
       </span>
     </div>
 
     <p className="invite-info-copy">
-      {unavailableMessage
-        ? "This invite can no longer create a guest answer. Ask the host to start a new direct match."
-        : "Keep this tab open while the app submits your join request and opens the direct connection."}
+      {unavailableMessage ??
+        "Keep this tab open while the app submits your join request and opens the direct connection."}
     </p>
 
     <button
@@ -169,9 +154,8 @@ export const P2PJoinPage = () => {
     return <Navigate to={`/room/${session.roomCode}`} replace />;
   }
 
-  const setupSummary = unavailableMessage
-    ? unavailableMessage
-    : "This flow creates your WebRTC answer behind the scenes and waits for the host to finish setup.";
+  const setupSummary =
+    "This flow creates your WebRTC answer behind the scenes and waits for the host to finish setup.";
 
   return (
     <main className="page-shell home-page-shell">
@@ -222,7 +206,7 @@ export const P2PJoinPage = () => {
                 />
               </label>
 
-              <p className="invite-info-copy">{setupSummary}</p>
+              {unavailableMessage ? null : <p className="invite-info-copy">{setupSummary}</p>}
             </div>
 
             <JoinDirectMatchCard
@@ -238,13 +222,16 @@ export const P2PJoinPage = () => {
         </div>
 
         <div className="status-strip lobby-status-strip invite-status-strip">
-          <span className="lobby-status-note">
-            {getStatusSummary(guestSetup, unavailableMessage)}
-          </span>
-          <span className="lobby-status-note">
-            {getStatusDetail(guestSetup, unavailableMessage)}
-          </span>
-          {guestSetup?.error ? <span className="error-text">{guestSetup.error}</span> : null}
+          {/* A used or expired link states its reason once, in the join card. */}
+          {unavailableMessage ? null : (
+            <>
+              <span className="lobby-status-note">{getStatusSummary(guestSetup)}</span>
+              <span className="lobby-status-note">{getStatusDetail(guestSetup)}</span>
+            </>
+          )}
+          {guestSetup?.error && guestSetup.error !== unavailableMessage ? (
+            <span className="error-text">{guestSetup.error}</span>
+          ) : null}
           {error ? <span className="error-text">{error}</span> : null}
         </div>
       </section>

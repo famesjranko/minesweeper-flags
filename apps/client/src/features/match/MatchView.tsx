@@ -11,7 +11,7 @@ import {
   type LastMoveTrail
 } from "../../entities/board/last-move.js";
 import { ChatPanel } from "../chat/ChatPanel.js";
-import { RematchPanel } from "../rematch/RematchPanel.js";
+import { MatchResultRibbon } from "./MatchResultRibbon.js";
 import { getPlayerSlots, PlayerPanel, type PlayerSlot } from "./PlayerPanel.js";
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected";
@@ -176,18 +176,18 @@ export const MatchView = ({
                 )}
                 onSelectCell={onCellSelect}
               />
+              {match.phase === "finished" ? (
+                <MatchResultRibbon
+                  match={match}
+                  currentPlayerId={currentPlayerId}
+                  playerTones={playerTones}
+                  onRequestRematch={onRequestRematch}
+                  onCancelRematch={onCancelRematch}
+                />
+              ) : null}
             </div>
           </div>
         </section>
-
-        {match.phase === "finished" ? (
-          <RematchPanel
-            match={match}
-            currentPlayerId={currentPlayerId}
-            onRequestRematch={onRequestRematch}
-            onCancelRematch={onCancelRematch}
-          />
-        ) : null}
 
         <ChatPanel
           roomCode={roomCode}
