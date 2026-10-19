@@ -40,7 +40,6 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	build-engine \
 	lint \
 	format \
-	complexity \
 	typecheck \
 	test \
 	test-server \
@@ -128,9 +127,6 @@ lint: ## Check formatting, lint rules, and import order
 
 format: ## Apply formatting and safe lint fixes
 	$(NPM) run format
-
-complexity: ## Report advisory size and complexity findings; never fails
-	$(NPM) run complexity
 
 typecheck: ## Type-check all workspaces, including tests
 	$(NPM) run typecheck

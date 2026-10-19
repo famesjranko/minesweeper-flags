@@ -78,9 +78,8 @@ To run the full stack in containers, use `make compose-up` (hosted) or `make com
 ```bash
 make help       # list every target
 make format     # apply formatting and safe lint fixes (Biome)
-make lint       # check formatting and lint rules
+make lint       # check formatting, lint rules, and size and complexity limits
 make typecheck  # type-check every workspace, tests included
-make complexity # advisory size and complexity report; never fails
 make test       # all workspace tests (Vitest)
 make check      # all of the above, the build, and Compose config validation; CI runs this
 make images     # build every Docker image, including the p2p client; CI runs this too
