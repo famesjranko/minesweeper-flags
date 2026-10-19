@@ -1,10 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "rootDir": "src",
     "outDir": "dist",
     "composite": true,
+    "types": ["node"],
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
     "paths": {
       "@minesweeper-flags/game-engine": ["../../packages/game-engine/dist/index.d.ts"],
