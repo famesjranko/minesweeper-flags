@@ -18,5 +18,6 @@
   "dependencies": {
     "@minesweeper-flags/game-engine": "*",
     "zod": "^4.1.8"
-  }
+  },
+  "license": "MIT"
 }

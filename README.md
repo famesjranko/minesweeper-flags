@@ -8,6 +8,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vite.dev)
 [![Node](https://img.shields.io/badge/Node-22-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![WebRTC](https://img.shields.io/badge/Direct_match-WebRTC-333333?logo=webrtc&logoColor=white)](docs/p2p-architecture.md)
 
 </div>
@@ -97,3 +98,7 @@ Public mode (`DEPLOYMENT_MODE=public`) fails fast unless Redis, an explicit orig
 - Deployments are single-instance. Cross-instance fanout is not implemented, so horizontal scaling needs more work.
 - Public deployments should use Redis-backed state.
 - Direct matches need the two browsers to reach each other over WebRTC. Configure STUN servers with `VITE_P2P_STUN_URLS`.
+
+## License
+
+The code is released under the [MIT License](LICENSE). Minesweeper Flags was originally a Microsoft game for MSN Messenger. This project is an independent fan rebuild and is not affiliated with or endorsed by Microsoft.
