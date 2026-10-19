@@ -1,13 +1,31 @@
 import { describe, expect, it } from "vitest";
+import { GameClientStore } from "../../app/providers/game-client.store.js";
+import { createP2PSetupController } from "../setup/p2p-setup.controller.js";
+import { P2PRendezvousClient } from "../signaling/p2p-rendezvous-client.js";
 import type { P2PRuntimeDependencies } from "./p2p-runtime-context.js";
 import { P2PRuntimeContext } from "./p2p-runtime-context.js";
 
 function createContext(): P2PRuntimeContext {
-  // Teardown touches only the scheduler's clearTimeout; the other dependencies stay unused.
-  const dependencies = {
-    scheduler: { clearTimeout: () => {} },
-    rendezvousClient: {}
-  } as unknown as P2PRuntimeDependencies;
+  // Teardown reaches no peer, persistence, or network call, so those throw if touched.
+  const unused = (name: string) => (): never => {
+    throw new Error(`${name} must not be reached by teardown`);
+  };
+  const dependencies: P2PRuntimeDependencies = {
+    store: new GameClientStore(),
+    setup: createP2PSetupController(),
+    createPeer: unused("createPeer"),
+    scheduler: {
+      setTimeout: unused("scheduler.setTimeout"),
+      clearTimeout: () => {},
+      random: unused("scheduler.random")
+    },
+    rendezvousClient: new P2PRendezvousClient(),
+    recoveryPersistence: {
+      read: unused("recoveryPersistence.read"),
+      write: unused("recoveryPersistence.write"),
+      remove: unused("recoveryPersistence.remove")
+    }
+  };
   return new P2PRuntimeContext(dependencies);
 }
 

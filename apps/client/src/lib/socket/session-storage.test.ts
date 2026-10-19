@@ -187,13 +187,16 @@ describe("session storage", () => {
       installStorage(localStorage);
 
       // When the session is read
-      const act = () => getStoredSession("ABCDE");
+      let session: ReturnType<typeof getStoredSession> | undefined;
+      const act = () => {
+        session = getStoredSession("ABCDE");
+      };
 
       // Then nothing throws
       expect(act).not.toThrow();
 
       // And the result is null
-      expect(act()).toBeNull();
+      expect(session).toBeNull();
     });
 
     it("does not throw when a session removal fails", () => {
