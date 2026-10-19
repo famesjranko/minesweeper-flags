@@ -38,10 +38,8 @@ docs/             User-facing reference docs
 make check          # lint, typecheck, test, build, compose config (the gate; CI runs it)
 make images         # build every Docker image, p2p client included (CI runs it as a separate job)
 make format         # fix formatting and safe lint findings (Biome)
-make lint           # check formatting and lint without writing
+make lint           # check formatting, lint, and size limits without writing
 make typecheck      # tsc over every workspace, tests included
-make complexity     # advisory report: cognitive complexity > 15, function > 80 lines,
-                    # > 4 params, file > 500 lines (tests exempt from length). Never fails.
 make test           # all workspace tests
 make test-client    # client only (vitest)
 make test-server    # server only
@@ -60,7 +58,7 @@ Hooks (installed by `npm install` through husky; they live in `.husky/`):
 - **pre-commit** runs Biome on staged files with safe fixes. On a lint failure, fix the reported line, or run `make format`, then re-stage.
 - **pre-push** runs `make typecheck test`. It refuses to run with uncommitted or untracked files. To repeat it: `make typecheck test`.
 - A hook that reports missing dependencies needs `npm install` in that worktree.
-- The size and complexity limits are advisory (`info` level). Run `make complexity` to see them; no hook shows them. Avoid growing a function or file that is already over a limit.
+- `make lint` and the pre-commit hook fail on cognitive complexity > 15, functions > 80 lines, > 4 parameters, and files > 500 lines (blank lines skipped; tests exempt from the length limits). Split along real responsibilities; suppress only with a reason when a signature mirrors an external API.
 - Biome rule choices and their reasons live in `biome.jsonc`. Suppress a single finding inline with `// biome-ignore <rule>: <reason>`.
 - One-time setup for blame: `git config blame.ignoreRevsFile .git-blame-ignore-revs`. Merge with a merge commit, not a squash, so the recorded SHA stays valid.
 

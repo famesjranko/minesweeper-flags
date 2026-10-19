@@ -58,9 +58,8 @@ Run these from the repo root:
 - `make server-dev` runs only the server in watch mode.
 - `make signaling-dev` runs only the signaling service in watch mode.
 - `make format` applies Biome formatting and safe lint fixes.
-- `make lint` checks formatting and lint rules without changing files.
+- `make lint` checks formatting, lint rules, and the size and complexity limits in `biome.jsonc` (cognitive complexity, function length, parameter count, file length) without changing files.
 - `make typecheck` type-checks every workspace, including tests.
-- `make complexity` reports code over the advisory limits in `biome.jsonc`: cognitive complexity, function length, parameter count, and file length. It never fails.
 - `make test-server` runs the server test suite.
 - `make test-signaling` runs the signaling test suite.
 - `make build` builds all workspaces.
