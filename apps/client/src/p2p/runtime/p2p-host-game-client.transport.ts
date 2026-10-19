@@ -13,15 +13,12 @@ import type {
 import { emitP2PHostFanout } from "../host/p2p-host-events.js";
 import type { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
 import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
+import { createRandomId } from "../random-id.js";
 import {
   encodeP2PRecoveryControlMessage,
   type P2PRecoveryControlMessage
 } from "../recovery/p2p-recovery-control.js";
 import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
-
-const createBindingId = (): string =>
-  globalThis.crypto?.randomUUID() ??
-  `p2p-binding-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const parseClientEvent = (message: string): ClientEvent | null => {
   let parsed: unknown;
@@ -110,7 +107,7 @@ export class P2PHostGameClientTransport implements GameClientTransport {
       return;
     }
 
-    this.guestBindingId = createBindingId();
+    this.guestBindingId = createRandomId();
     this.emitSteps(
       this.orchestrator.acceptGuest({
         displayName,
@@ -140,7 +137,7 @@ export class P2PHostGameClientTransport implements GameClientTransport {
       return null;
     }
 
-    this.guestBindingId = createBindingId();
+    this.guestBindingId = createRandomId();
     this.orchestrator.rebindGuest(this.guestBindingId);
     return this.guestBindingId;
   };

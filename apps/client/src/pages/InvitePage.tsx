@@ -1,5 +1,5 @@
 import { inviteTokenSchema } from "@minesweeper-flags/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
@@ -10,6 +10,7 @@ export const InvitePage = () => {
   const activeInviteToken = parsedInviteToken.success ? parsedInviteToken.data : null;
   const { connectionStatus, error, session, joinRoom, clearError } = useGameClient();
   const [displayName, setDisplayName] = useState("Captain Sweeper");
+  const joinFormId = useId();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: clear a stale error only when the invite token changes.
   useEffect(() => {
@@ -104,7 +105,9 @@ export const InvitePage = () => {
 
               <label className="field lobby-field">
                 <span>Display name</span>
+                {/* The field sits outside the join form for layout; `form` keeps Enter submitting it. */}
                 <input
+                  form={joinFormId}
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   maxLength={20}
@@ -114,6 +117,7 @@ export const InvitePage = () => {
             </div>
 
             <form
+              id={joinFormId}
               className="lobby-action-card is-join invite-join-card"
               onSubmit={(event) => {
                 event.preventDefault();
