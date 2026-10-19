@@ -206,7 +206,17 @@ export const MatchView = ({
               <span className="star-glyph">★</span>
             </div>
             <div className="room-code-pill">Room {roomCode}</div>
-            <div className={`move-pill move-pill-${activeTone}`}>
+            {/* The hint is shown by the narrow-screen CSS only, where the per-player turn boxes are hidden. */}
+            <div
+              className={`move-pill move-pill-${activeTone}`}
+              data-turn-hint={
+                match.phase === "finished"
+                  ? undefined
+                  : match.currentTurnPlayerId === currentPlayerId
+                    ? "YOU"
+                    : "OPPONENT"
+              }
+            >
               {match.phase === "finished" ? "MATCH OVER" : `${activeTone.toUpperCase()} MOVE`}
             </div>
           </div>

@@ -149,3 +149,50 @@ describe("MatchView bomb availability", () => {
     expect(html).not.toContain("Bomb ready.");
   });
 });
+
+describe("MatchView turn hint", () => {
+  const renderFor = (currentPlayerId: string) =>
+    renderToStaticMarkup(
+      <MatchView
+        roomCode="ABCDE"
+        currentPlayerId={currentPlayerId}
+        match={createMatch({
+          currentPlayerId,
+          currentTurnPlayerId: "player-1",
+          scores: [0, 0]
+        })}
+        bombArmed={false}
+        connectionStatus="connected"
+        chatMessages={[]}
+        chatError={null}
+        chatDraft=""
+        chatPending={false}
+        onToggleBomb={() => {}}
+        onCellSelect={() => {}}
+        onChatDraftChange={() => {}}
+        onSendChatMessage={() => {}}
+        onResign={() => {}}
+        onRequestRematch={() => {}}
+        onCancelRematch={() => {}}
+      />
+    );
+
+  it("tells the player on the narrow layout that it is their move", () => {
+    // Given a live match where player-1 holds the turn
+    // When player-1 views it
+    const html = renderFor("player-1");
+
+    // Then the move pill carries the YOU hint and keeps its desktop text
+    expect(html).toContain('data-turn-hint="YOU"');
+    expect(html).toContain("BLUE MOVE</div>");
+  });
+
+  it("tells the player on the narrow layout that the opponent is moving", () => {
+    // Given a live match where player-1 holds the turn
+    // When player-2 views it
+    const html = renderFor("player-2");
+
+    // Then the move pill carries the OPPONENT hint
+    expect(html).toContain('data-turn-hint="OPPONENT"');
+  });
+});
