@@ -103,6 +103,30 @@ describe("last move trail", () => {
     expect(twice).toBe(once);
   });
 
+  it("starts a fresh trail when a different action arrives at the same turn", () => {
+    // Given an opponent move is marked at turn 6
+    const once = play([[6, action("opp", 1, 1)]]);
+
+    // When a snapshot at turn 6 carries a different action, as after a missed rematch reset
+    const next = advanceLastMoveTrail(once, { turnNumber: 6, lastAction: action("opp", 9, 9) }, "me");
+
+    // Then only the new action is marked
+    expect(next.map((e) => [e.turnNumber, e.action.row, e.action.column])).toEqual([[6, 9, 9]]);
+  });
+
+  it("drops the old trail when a lower turn number arrives", () => {
+    // Given opponent moves are marked up to turn 5
+    // When a snapshot with a lower turn number arrives, as from a new match
+    const trail = play([
+      [4, action("opp", 0, 0)],
+      [5, action("opp", 0, 1)],
+      [2, action("opp", 3, 3)]
+    ]);
+
+    // Then only the new match's move is marked
+    expect(trail.map((e) => [e.turnNumber, e.action.row, e.action.column])).toEqual([[2, 3, 3]]);
+  });
+
   it("marks a corner bomb as the engine's shifted 5x5 area, with the centre cell", () => {
     // Given a corner bomb by the opponent
     const trail = play([[2, action("opp", 0, 0, { type: "bomb", outcome: "bomb_used" })]]);

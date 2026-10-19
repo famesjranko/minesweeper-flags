@@ -36,10 +36,14 @@ export const NO_LAST_MOVE_MARKS: LastMoveMarks = { cells: [], areas: [] };
 
 const EMPTY_TRAIL: LastMoveTrail = [];
 
+const isSameAction = (a: ResolvedAction, b: ResolvedAction): boolean =>
+  a.type === b.type && a.playerId === b.playerId && a.row === b.row && a.column === b.column;
+
 /**
  * Tracks the opponent's actions since the viewer's own last action.
- * Every engine action bumps turnNumber, so it identifies a snapshot's action
- * and makes repeated renders of the same state a no-op.
+ * A snapshot repeating the newest entry's turnNumber and action is a no-op.
+ * The action is compared too: a missed rematch reset can leave a new match's
+ * move at the same turnNumber as the old match's mark.
  */
 export const advanceLastMoveTrail = (
   trail: LastMoveTrail,
@@ -53,12 +57,13 @@ export const advanceLastMoveTrail = (
   }
 
   const newest = trail[trail.length - 1];
-  if (newest && newest.turnNumber === turnNumber) {
+  if (newest && newest.turnNumber === turnNumber && isSameAction(newest.action, lastAction)) {
     return trail;
   }
 
-  // A lower turnNumber means a different match was loaded; drop the old trail.
-  const base = newest && newest.turnNumber > turnNumber ? EMPTY_TRAIL : trail;
+  // A lower turnNumber, or the same one with a different action, means a
+  // different match was loaded; drop the old trail.
+  const base = newest && newest.turnNumber >= turnNumber ? EMPTY_TRAIL : trail;
   return [...base, { turnNumber, action: lastAction }];
 };
 
