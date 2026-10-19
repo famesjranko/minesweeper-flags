@@ -289,48 +289,47 @@ describe("P2PRendezvousClient", () => {
       fetch: fetchMock as typeof fetch,
       sleep: vi.fn(async () => {})
     });
+    const hostCaller = {
+      sessionId: "reconnect-1",
+      secret: "host-secret",
+      instanceId: "host-instance-1"
+    };
+    const guestCaller = {
+      sessionId: "reconnect-1",
+      secret: "guest-secret",
+      instanceId: "guest-instance-1"
+    };
 
     await expect(
       client.registerReconnectControlSession("reconnect-1", "host-secret", "guest-secret")
     ).resolves.toMatchObject({ sessionId: "reconnect-1" });
+    await expect(client.claimReconnectRole({ ...hostCaller, role: "host" })).resolves.toMatchObject(
+      { host: { instanceId: "host-instance-1" } }
+    );
     await expect(
-      client.claimReconnectRole("reconnect-1", "host", "host-secret", "host-instance-1")
-    ).resolves.toMatchObject({ host: { instanceId: "host-instance-1" } });
-    await expect(
-      client.heartbeatReconnectRole("reconnect-1", "host", "host-secret", "host-instance-1")
+      client.heartbeatReconnectRole({ ...hostCaller, role: "host" })
     ).resolves.toMatchObject({ host: { lastHeartbeatAt: 12 } });
+    await expect(client.writeReconnectOffer(hostCaller, reconnectOffer)).resolves.toMatchObject({
+      attempt: { status: "offer-ready" }
+    });
     await expect(
-      client.writeReconnectOffer("reconnect-1", "host-secret", "host-instance-1", reconnectOffer)
-    ).resolves.toMatchObject({ attempt: { status: "offer-ready" } });
-    await expect(
-      client.pollForReconnectOffer("reconnect-1", "guest-secret", "guest-instance-1", {
+      client.pollForReconnectOffer(guestCaller, {
         intervalMs: 5
       })
     ).resolves.toMatchObject({ offer: reconnectOffer });
+    await expect(client.writeReconnectAnswer(guestCaller, reconnectAnswer)).resolves.toMatchObject({
+      attempt: { status: "answer-ready" }
+    });
     await expect(
-      client.writeReconnectAnswer(
-        "reconnect-1",
-        "guest-secret",
-        "guest-instance-1",
-        reconnectAnswer
-      )
-    ).resolves.toMatchObject({ attempt: { status: "answer-ready" } });
-    await expect(
-      client.pollForReconnectAnswer("reconnect-1", "host-secret", "host-instance-1", {
+      client.pollForReconnectAnswer(hostCaller, {
         intervalMs: 5
       })
     ).resolves.toMatchObject({ answer: reconnectAnswer });
     await expect(
-      client.finalizeReconnectAttempt(
-        "reconnect-1",
-        "host",
-        "host-secret",
-        "host-instance-1",
-        "reconnected"
-      )
+      client.finalizeReconnectAttempt({ ...hostCaller, role: "host" }, "reconnected")
     ).resolves.toMatchObject({ attempt: { finalizationOutcome: "reconnected" } });
     await expect(
-      client.pollForReconnectFinalization("reconnect-1", "guest-secret", "guest-instance-1", {
+      client.pollForReconnectFinalization(guestCaller, {
         intervalMs: 5
       })
     ).resolves.toMatchObject({ attempt: { finalizationOutcome: "reconnected" } });

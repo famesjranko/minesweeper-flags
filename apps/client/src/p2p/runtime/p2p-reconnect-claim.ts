@@ -1,5 +1,8 @@
 import type { GameClientScheduler } from "../../app/providers/game-client.controller.js";
-import type { P2PRendezvousClient } from "../signaling/p2p-rendezvous-client.js";
+import type {
+  P2PRendezvousClient,
+  ReconnectRoleCaller
+} from "../signaling/p2p-rendezvous-client.js";
 import {
   isAbortError,
   isReconnectClaimInactiveError,
@@ -28,6 +31,13 @@ export interface ReconnectClaimHeartbeatOptions {
   onRecoveryUnavailable: (claim: ActiveReconnectClaimState) => void;
 }
 
+export const toReconnectCaller = (claim: ActiveReconnectClaimState): ReconnectRoleCaller => ({
+  sessionId: claim.controlSessionId,
+  role: claim.role,
+  secret: claim.secret,
+  instanceId: claim.instanceId
+});
+
 const isSameClaim = (left: ActiveReconnectClaimState, right: ActiveReconnectClaimState): boolean =>
   left.controlSessionId === right.controlSessionId &&
   left.role === right.role &&
@@ -47,13 +57,7 @@ export class ReconnectClaimHeartbeat {
       return;
     }
 
-    await this.options.rendezvousClient.claimReconnectRole(
-      claim.controlSessionId,
-      claim.role,
-      claim.secret,
-      claim.instanceId,
-      signal
-    );
+    await this.options.rendezvousClient.claimReconnectRole(toReconnectCaller(claim), signal);
     this.start(claim);
   }
 
@@ -131,10 +135,7 @@ export class ReconnectClaimHeartbeat {
 
     try {
       const response = await this.options.rendezvousClient.heartbeatReconnectRole(
-        claim.controlSessionId,
-        claim.role,
-        claim.secret,
-        claim.instanceId
+        toReconnectCaller(claim)
       );
 
       if (this.activeClaim !== claim) {

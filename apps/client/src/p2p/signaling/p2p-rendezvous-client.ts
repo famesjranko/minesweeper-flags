@@ -56,6 +56,20 @@ interface RequestOptions {
   signal?: AbortSignal | undefined;
 }
 
+// Identifies one browser instance acting on a reconnect control session.
+export interface ReconnectCaller {
+  sessionId: string;
+  secret: string;
+  instanceId: string;
+}
+
+export interface ReconnectRoleCaller extends ReconnectCaller {
+  role: ReconnectControlRole;
+}
+
+const reconnectPath = (caller: ReconnectCaller, action: string): string =>
+  `/signaling/reconnect/${encodeURIComponent(caller.sessionId)}/${action}`;
+
 export class P2PRendezvousRequestError extends Error {
   readonly status: number;
 
@@ -248,163 +262,140 @@ export class P2PRendezvousClient {
     );
 
   getReconnectControlSession = (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     signal?: AbortSignal
   ): Promise<GetReconnectControlSessionResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/read`,
+      reconnectPath(caller, "read"),
       {
         method: "POST",
-        body: { secret, instanceId },
+        body: { secret: caller.secret, instanceId: caller.instanceId },
         signal
       },
       getReconnectControlSessionResponseSchema
     );
 
   claimReconnectRole = (
-    sessionId: string,
-    role: ReconnectControlRole,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectRoleCaller,
     signal?: AbortSignal
   ): Promise<ClaimReconnectRoleResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/claim`,
+      reconnectPath(caller, "claim"),
       {
         method: "POST",
-        body: { role, secret, instanceId },
+        body: { role: caller.role, secret: caller.secret, instanceId: caller.instanceId },
         signal
       },
       claimReconnectRoleResponseSchema
     );
 
   heartbeatReconnectRole = (
-    sessionId: string,
-    role: ReconnectControlRole,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectRoleCaller,
     signal?: AbortSignal
   ): Promise<HeartbeatReconnectRoleResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/heartbeat`,
+      reconnectPath(caller, "heartbeat"),
       {
         method: "POST",
-        body: { role, secret, instanceId },
+        body: { role: caller.role, secret: caller.secret, instanceId: caller.instanceId },
         signal
       },
       heartbeatReconnectRoleResponseSchema
     );
 
   writeReconnectOffer = (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     offer: ReconnectOfferPayload,
     signal?: AbortSignal
   ) =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/offer`,
+      reconnectPath(caller, "offer"),
       {
         method: "POST",
-        body: { secret, instanceId, offer },
+        body: { secret: caller.secret, instanceId: caller.instanceId, offer },
         signal
       },
       writeReconnectOfferResponseSchema
     );
 
   readReconnectOffer = (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     signal?: AbortSignal
   ): Promise<ReadReconnectOfferResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/offer/read`,
+      reconnectPath(caller, "offer/read"),
       {
         method: "POST",
-        body: { secret, instanceId },
+        body: { secret: caller.secret, instanceId: caller.instanceId },
         signal
       },
       readReconnectOfferResponseSchema
     );
 
   writeReconnectAnswer = (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     answer: ReconnectAnswerPayload,
     signal?: AbortSignal
   ) =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/answer`,
+      reconnectPath(caller, "answer"),
       {
         method: "POST",
-        body: { secret, instanceId, answer },
+        body: { secret: caller.secret, instanceId: caller.instanceId, answer },
         signal
       },
       writeReconnectAnswerResponseSchema
     );
 
   readReconnectAnswer = (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     signal?: AbortSignal
   ): Promise<ReadReconnectAnswerResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/answer/read`,
+      reconnectPath(caller, "answer/read"),
       {
         method: "POST",
-        body: { secret, instanceId },
+        body: { secret: caller.secret, instanceId: caller.instanceId },
         signal
       },
       readReconnectAnswerResponseSchema
     );
 
   finalizeReconnectAttempt = (
-    sessionId: string,
-    role: ReconnectControlRole,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectRoleCaller,
     outcome: "reconnected" | "aborted",
     signal?: AbortSignal
   ): Promise<FinalizeReconnectAttemptResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/finalize`,
+      reconnectPath(caller, "finalize"),
       {
         method: "POST",
-        body: { role, secret, instanceId, outcome },
+        body: { role: caller.role, secret: caller.secret, instanceId: caller.instanceId, outcome },
         signal
       },
       finalizeReconnectAttemptResponseSchema
     );
 
   getReconnectFinalization = (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     signal?: AbortSignal
   ): Promise<GetReconnectFinalizationResponse> =>
     this.request(
-      `/signaling/reconnect/${encodeURIComponent(sessionId)}/finalization/read`,
+      reconnectPath(caller, "finalization/read"),
       {
         method: "POST",
-        body: { secret, instanceId },
+        body: { secret: caller.secret, instanceId: caller.instanceId },
         signal
       },
       getReconnectFinalizationResponseSchema
     );
 
   pollForReconnectOffer = async (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     { intervalMs = DEFAULT_POLL_INTERVAL_MS, signal }: PollOptions = {}
   ): Promise<ReadReconnectOfferResponse> => {
     while (true) {
-      const response = await this.readReconnectOffer(sessionId, secret, instanceId, signal);
+      const response = await this.readReconnectOffer(caller, signal);
 
       if (
         response.offer ||
@@ -419,13 +410,11 @@ export class P2PRendezvousClient {
   };
 
   pollForReconnectAnswer = async (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     { intervalMs = DEFAULT_POLL_INTERVAL_MS, signal }: PollOptions = {}
   ): Promise<ReadReconnectAnswerResponse> => {
     while (true) {
-      const response = await this.readReconnectAnswer(sessionId, secret, instanceId, signal);
+      const response = await this.readReconnectAnswer(caller, signal);
 
       if (
         response.answer ||
@@ -440,13 +429,11 @@ export class P2PRendezvousClient {
   };
 
   pollForReconnectFinalization = async (
-    sessionId: string,
-    secret: string,
-    instanceId: string,
+    caller: ReconnectCaller,
     { intervalMs = DEFAULT_POLL_INTERVAL_MS, signal }: PollOptions = {}
   ): Promise<GetReconnectFinalizationResponse> => {
     while (true) {
-      const response = await this.getReconnectFinalization(sessionId, secret, instanceId, signal);
+      const response = await this.getReconnectFinalization(caller, signal);
 
       if (response.state === "expired" || response.attempt.status === "finalized") {
         return response;

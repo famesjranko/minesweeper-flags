@@ -15,7 +15,7 @@ import type {
   WebRTCPeerStatusChange
 } from "../transport/webrtc-peer.types.js";
 import { P2PHostGameClientTransport } from "./p2p-host-game-client.transport.js";
-import type { ActiveReconnectClaimState } from "./p2p-reconnect-claim.js";
+import { type ActiveReconnectClaimState, toReconnectCaller } from "./p2p-reconnect-claim.js";
 import type { P2PHostReconnectControlState, P2PRuntimeContext } from "./p2p-runtime-context.js";
 import { isAbortError } from "./p2p-runtime-errors.js";
 
@@ -486,37 +486,23 @@ export class P2PHostRuntime {
       roomCode,
       timerId: null
     });
+    const caller = toReconnectCaller(claimFor());
 
     reconnectControl.lastInstanceId = instanceId;
     context.persistCurrentHostRecoveryRecord();
 
     try {
-      await context.rendezvousClient.claimReconnectRole(
-        controlSessionId,
-        "host",
-        hostSecret,
-        instanceId,
-        signal
-      );
+      await context.rendezvousClient.claimReconnectRole(caller, signal);
 
       context.claims.start(claimFor());
 
       const offer = await peer.createReconnectOffer();
 
-      await context.rendezvousClient.writeReconnectOffer(
-        controlSessionId,
-        hostSecret,
-        instanceId,
-        offer,
-        signal
-      );
+      await context.rendezvousClient.writeReconnectOffer(caller, offer, signal);
 
-      const answerResponse = await context.rendezvousClient.pollForReconnectAnswer(
-        controlSessionId,
-        hostSecret,
-        instanceId,
-        { signal }
-      );
+      const answerResponse = await context.rendezvousClient.pollForReconnectAnswer(caller, {
+        signal
+      });
 
       if (answerResponse.state === "expired" || !answerResponse.answer) {
         throw new Error("Guest reconnect expired before the direct match could recover.");
@@ -525,14 +511,7 @@ export class P2PHostRuntime {
       await peer.applyReconnectAnswer(answerResponse.answer);
       await waitForPeerConnected(peer, signal);
 
-      await context.rendezvousClient.finalizeReconnectAttempt(
-        controlSessionId,
-        "host",
-        hostSecret,
-        instanceId,
-        "reconnected",
-        signal
-      );
+      await context.rendezvousClient.finalizeReconnectAttempt(caller, "reconnected", signal);
       context.setup.controller.setHostStage("connected");
     } catch (error) {
       const claimError = context.handleReconnectAttemptClaimError(claimFor(), error);

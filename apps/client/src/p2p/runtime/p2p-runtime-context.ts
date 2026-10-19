@@ -12,7 +12,11 @@ import {
 } from "../storage/p2p-recovery-storage.js";
 import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
 import type { P2PHostGameClientTransport } from "./p2p-host-game-client.transport.js";
-import { type ActiveReconnectClaimState, ReconnectClaimHeartbeat } from "./p2p-reconnect-claim.js";
+import {
+  type ActiveReconnectClaimState,
+  ReconnectClaimHeartbeat,
+  toReconnectCaller
+} from "./p2p-reconnect-claim.js";
 import {
   DIRECT_MATCH_DISPLACED_MESSAGE,
   DIRECT_MATCH_RECOVERY_UNAVAILABLE_MESSAGE,
@@ -209,10 +213,7 @@ export class P2PRuntimeContext {
   ): Promise<void> {
     try {
       await this.rendezvousClient.finalizeReconnectAttempt(
-        claim.controlSessionId,
-        claim.role,
-        claim.secret,
-        claim.instanceId,
+        toReconnectCaller(claim),
         "aborted",
         signal
       );

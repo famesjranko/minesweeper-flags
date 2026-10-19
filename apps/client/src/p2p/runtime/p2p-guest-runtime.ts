@@ -12,7 +12,7 @@ import {
 } from "../storage/p2p-recovery-storage.js";
 import { WebRTCGameClientTransport } from "../transport/webrtc-game-client.transport.js";
 import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
-import type { ActiveReconnectClaimState } from "./p2p-reconnect-claim.js";
+import { type ActiveReconnectClaimState, toReconnectCaller } from "./p2p-reconnect-claim.js";
 import type {
   P2PRuntimeContext,
   PendingGuestRecoveryControlRecord
@@ -447,24 +447,20 @@ export class P2PGuestRuntime {
       roomCode: record.roomCode,
       timerId: null
     });
+    const caller = toReconnectCaller(claimFor());
     const pollOptions = () =>
       context.guestSetupAbortController ? { signal: context.guestSetupAbortController.signal } : {};
 
     try {
       await context.rendezvousClient.claimReconnectRole(
-        controlSessionId,
-        "guest",
-        guestSecret,
-        instanceId,
+        caller,
         context.guestSetupAbortController?.signal
       );
 
       context.claims.start(claimFor());
 
       const reconnectOffer = await context.rendezvousClient.pollForReconnectOffer(
-        controlSessionId,
-        guestSecret,
-        instanceId,
+        caller,
         pollOptions()
       );
 
@@ -479,17 +475,13 @@ export class P2PGuestRuntime {
       }
 
       await context.rendezvousClient.writeReconnectAnswer(
-        controlSessionId,
-        guestSecret,
-        instanceId,
+        caller,
         answer,
         context.guestSetupAbortController?.signal
       );
 
       const finalization = await context.rendezvousClient.pollForReconnectFinalization(
-        controlSessionId,
-        guestSecret,
-        instanceId,
+        caller,
         pollOptions()
       );
 
