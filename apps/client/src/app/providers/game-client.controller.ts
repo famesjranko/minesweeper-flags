@@ -5,12 +5,10 @@ import {
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
+import { ChatDraftRecovery } from "./game-client.chat-recovery.js";
 import {
   buildReconnectEvent,
   buildSessionFromRoomEvent,
-  hasDeliveredChatText,
-  reconcileRecoveredChatDraft,
-  replaceChatHistory,
   shouldApplyServerEvent,
   shouldQueueWhileOffline,
   shouldReconnectAfterClose
@@ -20,6 +18,11 @@ import type {
   GameClientTransport,
   GameClientTransportStatusChange
 } from "./game-client.transport.js";
+
+type ServerEventPayload<TType extends ServerEvent["type"]> = Extract<
+  ServerEvent,
+  { type: TType }
+>["payload"];
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
@@ -53,13 +56,13 @@ export class GameClientController {
   private readonly scheduler: GameClientScheduler;
   private readonly chatDisconnectedMessage: string;
   private readonly actionDisconnectedMessage: string;
+  private readonly chatRecovery: ChatDraftRecovery;
 
   private pendingBootstrapEvent: ClientEvent | null = null;
   private reconnectAttempt: StoredSession | null = null;
   private reconnectAttemptCount = 0;
   private reconnectTimeoutId: number | null = null;
   private shouldReconnect = false;
-  private recoveredChatDraftText: string | null = null;
   private unsubscribeTransport: (() => void) | null = null;
 
   constructor({ store, transport, persistence, scheduler, copy }: GameClientControllerOptions) {
@@ -67,6 +70,7 @@ export class GameClientController {
     this.transport = transport;
     this.persistence = persistence;
     this.scheduler = scheduler;
+    this.chatRecovery = new ChatDraftRecovery(store);
     this.chatDisconnectedMessage =
       copy?.chatDisconnectedMessage ?? DEFAULT_CHAT_DISCONNECTED_MESSAGE;
     this.actionDisconnectedMessage =
@@ -182,7 +186,7 @@ export class GameClientController {
   };
 
   setChatDraft = (value: string): void => {
-    this.recoveredChatDraftText = null;
+    this.chatRecovery.forget();
     this.store.setChatDraft(value);
     this.store.setChatError(null);
   };
@@ -211,7 +215,7 @@ export class GameClientController {
       return;
     }
 
-    this.recoveredChatDraftText = null;
+    this.chatRecovery.forget();
     this.store.setChatPendingText(snapshot.chatDraft);
     this.store.setChatDraft("");
     this.store.setChatError(null);
@@ -308,13 +312,7 @@ export class GameClientController {
   };
 
   private handleTransportClosed(closeCode: number): void {
-    const pendingText = this.store.getSnapshot().chatPendingText;
-
-    if (pendingText) {
-      this.recoveredChatDraftText = pendingText;
-      this.store.setChatDraft(this.store.getSnapshot().chatDraft || pendingText);
-      this.store.setChatPendingText(null);
-    }
+    this.chatRecovery.recoverPendingOnClose();
 
     if (!this.shouldReconnect) {
       return;
@@ -357,102 +355,18 @@ export class GameClientController {
         this.store.setError(null);
         break;
       }
-      case SERVER_EVENT_NAMES.roomState: {
-        const reconnectSession = this.reconnectAttempt;
-
-        if (reconnectSession && reconnectSession.roomCode === event.payload.roomCode) {
-          this.clearReconnectAttempt();
-          const nextSession = {
-            ...reconnectSession,
-            roomId: event.payload.roomId,
-            players: event.payload.players
-          };
-
-          this.store.setSession(nextSession);
-          this.persistence.write(nextSession);
-          this.store.setBombArmed(false);
-          this.store.setError(null);
-          break;
-        }
-
-        const activeSession = this.store.getSnapshot().session;
-
-        if (!activeSession || activeSession.roomCode !== event.payload.roomCode) {
-          break;
-        }
-
-        const nextSession = {
-          ...activeSession,
-          roomId: event.payload.roomId,
-          players: event.payload.players
-        };
-
-        this.store.setSession(nextSession);
-        this.persistence.write(nextSession);
+      case SERVER_EVENT_NAMES.roomState:
+        this.applyRoomState(event.payload);
         break;
-      }
-      case SERVER_EVENT_NAMES.chatHistory: {
-        const snapshot = this.store.getSnapshot();
-        const activeSession = snapshot.session;
-        const nextMessages = replaceChatHistory(event.payload.messages);
-
-        this.store.setChatMessages(nextMessages);
-
-        if (
-          snapshot.chatPendingText &&
-          activeSession &&
-          hasDeliveredChatText(nextMessages, activeSession.playerId, snapshot.chatPendingText)
-        ) {
-          this.store.setChatPendingText(null);
-          this.store.setChatError(null);
-        }
-
-        const recoveredDraft = reconcileRecoveredChatDraft({
-          currentDraft: snapshot.chatDraft,
-          recoveredDraftText: this.recoveredChatDraftText,
-          playerId: activeSession?.playerId ?? null,
-          messages: nextMessages
-        });
-
-        if (recoveredDraft.shouldClearRecoveredDraft) {
-          this.recoveredChatDraftText = null;
-
-          if (recoveredDraft.nextDraft !== snapshot.chatDraft) {
-            this.store.setChatDraft(recoveredDraft.nextDraft);
-          }
-        }
+      case SERVER_EVENT_NAMES.chatHistory:
+        this.chatRecovery.applyHistory(event.payload.messages);
         break;
-      }
-      case SERVER_EVENT_NAMES.chatMessage: {
-        this.store.appendChatMessage(event.payload.message);
-
-        if (this.store.getSnapshot().session?.playerId === event.payload.message.playerId) {
-          this.store.setChatPendingText(null);
-          this.store.setChatError(null);
-
-          if (this.recoveredChatDraftText === event.payload.message.text) {
-            this.recoveredChatDraftText = null;
-
-            if (this.store.getSnapshot().chatDraft === event.payload.message.text) {
-              this.store.setChatDraft("");
-            }
-          }
-        }
+      case SERVER_EVENT_NAMES.chatMessage:
+        this.chatRecovery.applyMessage(event.payload.message);
         break;
-      }
-      case SERVER_EVENT_NAMES.chatMessageRejected: {
-        const pendingText = this.store.getSnapshot().chatPendingText;
-
-        this.recoveredChatDraftText = null;
-
-        if (pendingText) {
-          this.store.setChatDraft(pendingText);
-          this.store.setChatPendingText(null);
-        }
-
-        this.store.setChatError(event.payload.message);
+      case SERVER_EVENT_NAMES.chatMessageRejected:
+        this.chatRecovery.rejectPending(event.payload.message);
         break;
-      }
       case SERVER_EVENT_NAMES.matchStarted:
       case SERVER_EVENT_NAMES.matchState:
       case SERVER_EVENT_NAMES.matchEnded:
@@ -484,6 +398,40 @@ export class GameClientController {
         break;
     }
   };
+
+  private applyRoomState(payload: ServerEventPayload<typeof SERVER_EVENT_NAMES.roomState>): void {
+    const reconnectSession = this.reconnectAttempt;
+
+    if (reconnectSession && reconnectSession.roomCode === payload.roomCode) {
+      this.clearReconnectAttempt();
+      const nextSession = {
+        ...reconnectSession,
+        roomId: payload.roomId,
+        players: payload.players
+      };
+
+      this.store.setSession(nextSession);
+      this.persistence.write(nextSession);
+      this.store.setBombArmed(false);
+      this.store.setError(null);
+      return;
+    }
+
+    const activeSession = this.store.getSnapshot().session;
+
+    if (!activeSession || activeSession.roomCode !== payload.roomCode) {
+      return;
+    }
+
+    const nextSession = {
+      ...activeSession,
+      roomId: payload.roomId,
+      players: payload.players
+    };
+
+    this.store.setSession(nextSession);
+    this.persistence.write(nextSession);
+  }
 
   private invalidateRoomSession(roomCode: string, message: string): void {
     this.persistence.remove(roomCode);

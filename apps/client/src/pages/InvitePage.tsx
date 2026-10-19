@@ -4,6 +4,65 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
 
+type InviteErrorState = "full" | "invalid";
+
+const getInviteErrorState = (
+  activeInviteToken: string | null,
+  error: string | null
+): InviteErrorState | null => {
+  if (activeInviteToken === null) {
+    return "invalid";
+  }
+
+  if (error === "That room is already full.") {
+    return "full";
+  }
+
+  return error === "That invite link is no longer valid." ? "invalid" : null;
+};
+
+const getInviteErrorMessage = (errorState: InviteErrorState, hasInviteToken: boolean): string => {
+  if (errorState === "full") {
+    return "Another player already filled this room. Ask the host for a fresh room if you still want to play.";
+  }
+
+  return hasInviteToken
+    ? "This private invite link has expired or is no longer valid."
+    : "This invite link is malformed or incomplete.";
+};
+
+const InviteErrorPanel = ({
+  errorState,
+  hasInviteToken,
+  error
+}: {
+  errorState: InviteErrorState;
+  hasInviteToken: boolean;
+  error: string | null;
+}) => (
+  <main className="page-shell home-page-shell">
+    <section className="panel hero-panel lobby-panel invite-panel invite-error-panel">
+      <div className="hero-copy invite-hero-copy">
+        <p className="eyebrow">Private invite</p>
+        <h1>{errorState === "full" ? "Match already claimed" : "Invite unavailable"}</h1>
+        <p>{getInviteErrorMessage(errorState, hasInviteToken)}</p>
+      </div>
+
+      <div className="waiting-action-row">
+        <Link className="primary-button link-button" to="/lobby">
+          Back To Lobby
+        </Link>
+      </div>
+
+      <p className="waiting-room-note">
+        Invite links are the only public join path now. Room codes are shown only after you enter
+        the room.
+      </p>
+      {error && hasInviteToken ? <span className="error-text">{error}</span> : null}
+    </section>
+  </main>
+);
+
 export const InvitePage = () => {
   const { inviteToken = "" } = useParams();
   const parsedInviteToken = inviteTokenSchema.safeParse(inviteToken.trim());
@@ -23,46 +82,15 @@ export const InvitePage = () => {
 
   const trimmedDisplayName = displayName.trim();
   const canJoin = trimmedDisplayName.length > 0 && activeInviteToken !== null;
-  const inviteErrorState =
-    activeInviteToken === null
-      ? "invalid"
-      : error === "That room is already full."
-        ? "full"
-        : error === "That invite link is no longer valid."
-          ? "invalid"
-          : null;
+  const inviteErrorState = getInviteErrorState(activeInviteToken, error);
 
   if (inviteErrorState) {
-    const title = inviteErrorState === "full" ? "Match already claimed" : "Invite unavailable";
-    const message =
-      inviteErrorState === "full"
-        ? "Another player already filled this room. Ask the host for a fresh room if you still want to play."
-        : activeInviteToken
-          ? "This private invite link has expired or is no longer valid."
-          : "This invite link is malformed or incomplete.";
-
     return (
-      <main className="page-shell home-page-shell">
-        <section className="panel hero-panel lobby-panel invite-panel invite-error-panel">
-          <div className="hero-copy invite-hero-copy">
-            <p className="eyebrow">Private invite</p>
-            <h1>{title}</h1>
-            <p>{message}</p>
-          </div>
-
-          <div className="waiting-action-row">
-            <Link className="primary-button link-button" to="/lobby">
-              Back To Lobby
-            </Link>
-          </div>
-
-          <p className="waiting-room-note">
-            Invite links are the only public join path now. Room codes are shown only after you
-            enter the room.
-          </p>
-          {error && activeInviteToken ? <span className="error-text">{error}</span> : null}
-        </section>
-      </main>
+      <InviteErrorPanel
+        errorState={inviteErrorState}
+        hasInviteToken={Boolean(activeInviteToken)}
+        error={error}
+      />
     );
   }
 
@@ -160,11 +188,11 @@ export const InvitePage = () => {
 
         <div className="status-strip lobby-status-strip invite-status-strip">
           <span className="lobby-status-note">A private invite link is loaded for this tab.</span>
-          {!canJoin ? (
-            <span className="lobby-status-note">Pick a display name to unlock Join Game.</span>
-          ) : (
-            <span className="lobby-status-note">Ready to join. Press Join Game.</span>
-          )}
+          <span className="lobby-status-note">
+            {canJoin
+              ? "Ready to join. Press Join Game."
+              : "Pick a display name to unlock Join Game."}
+          </span>
           {error ? <span className="error-text">{error}</span> : null}
         </div>
       </section>

@@ -6,7 +6,11 @@ import type {
 } from "@minesweeper-flags/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GameClientScheduler } from "../../app/providers/game-client.controller.js";
-import { P2PRendezvousRequestError } from "../signaling/p2p-rendezvous-client.js";
+import {
+  P2PRendezvousRequestError,
+  type ReconnectCaller,
+  type ReconnectRoleCaller
+} from "../signaling/p2p-rendezvous-client.js";
 import {
   P2P_RECOVERY_STORAGE_VERSION,
   type P2PRecoveryPersistence
@@ -182,6 +186,8 @@ class FakeRendezvousClient {
   finalizeSessionCalls = 0;
   getSessionCalls = 0;
   reconnectClaims: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> = [];
+  // Like signaling, a claim must present the secret registered for its role.
+  registeredSecrets = new Map<string, { host: string; guest: string }>();
   reconnectHeartbeats: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> =
     [];
   reconnectOffer: ReconnectOfferPayload | null = null;
@@ -329,12 +335,14 @@ class FakeRendezvousClient {
 
   registerReconnectControlSession = async (
     sessionId: string,
-    _hostSecret: string,
-    _guestSecret: string
+    hostSecret: string,
+    guestSecret: string
   ) => {
     if (this.registerReconnectControlSessionError) {
       throw this.registerReconnectControlSessionError;
     }
+
+    this.registeredSecrets.set(sessionId, { host: hostSecret, guest: guestSecret });
 
     return {
       sessionId,
@@ -352,12 +360,13 @@ class FakeRendezvousClient {
     };
   };
 
-  claimReconnectRole = async (
-    sessionId: string,
-    role: "host" | "guest",
-    _secret: string,
-    instanceId: string
-  ) => {
+  claimReconnectRole = async ({ sessionId, role, instanceId, secret }: ReconnectRoleCaller) => {
+    const registered = this.registeredSecrets.get(sessionId);
+
+    if (registered && registered[role] !== secret) {
+      throw new P2PRendezvousRequestError("Reconnect secret does not match the role.", 403);
+    }
+
     this.reconnectClaims.push({ sessionId, role, instanceId });
 
     return {
@@ -384,12 +393,7 @@ class FakeRendezvousClient {
     };
   };
 
-  writeReconnectOffer = async (
-    sessionId: string,
-    _secret: string,
-    _instanceId: string,
-    offer: ReconnectOfferPayload
-  ) => {
+  writeReconnectOffer = async ({ sessionId }: ReconnectCaller, offer: ReconnectOfferPayload) => {
     this.reconnectOffer = offer;
 
     return {
@@ -408,12 +412,7 @@ class FakeRendezvousClient {
     };
   };
 
-  heartbeatReconnectRole = async (
-    sessionId: string,
-    role: "host" | "guest",
-    _secret: string,
-    instanceId: string
-  ) => {
+  heartbeatReconnectRole = async ({ sessionId, role, instanceId }: ReconnectRoleCaller) => {
     this.reconnectHeartbeats.push({ sessionId, role, instanceId });
 
     const queuedHeartbeatError = this.heartbeatErrorsByRole[role]?.shift();
@@ -448,9 +447,7 @@ class FakeRendezvousClient {
   };
 
   pollForReconnectOffer = async (
-    sessionId: string,
-    _secret?: string,
-    _instanceId?: string,
+    { sessionId }: ReconnectCaller,
     options?: { signal?: AbortSignal }
   ) => {
     await waitFor(
@@ -486,12 +483,7 @@ class FakeRendezvousClient {
     };
   };
 
-  writeReconnectAnswer = async (
-    sessionId: string,
-    _secret: string,
-    _instanceId: string,
-    answer: ReconnectAnswerPayload
-  ) => {
+  writeReconnectAnswer = async ({ sessionId }: ReconnectCaller, answer: ReconnectAnswerPayload) => {
     if (this.writeReconnectAnswerError) {
       throw this.writeReconnectAnswerError;
     }
@@ -519,9 +511,7 @@ class FakeRendezvousClient {
   };
 
   pollForReconnectAnswer = async (
-    sessionId: string,
-    _secret?: string,
-    _instanceId?: string,
+    { sessionId }: ReconnectCaller,
     options?: { signal?: AbortSignal }
   ) => {
     await waitFor(
@@ -558,10 +548,7 @@ class FakeRendezvousClient {
   };
 
   finalizeReconnectAttempt = async (
-    sessionId: string,
-    role: "host" | "guest",
-    _secret: string,
-    _instanceId: string,
+    { sessionId, role }: ReconnectRoleCaller,
     outcome: "reconnected" | "aborted"
   ) => {
     this.reconnectFinalizationOutcome = outcome;
@@ -589,9 +576,7 @@ class FakeRendezvousClient {
   };
 
   pollForReconnectFinalization = async (
-    sessionId: string,
-    _secret?: string,
-    _instanceId?: string,
+    { sessionId }: ReconnectCaller,
     options?: { signal?: AbortSignal }
   ) => {
     await waitFor(() => this.reconnectFinalizationOutcome !== null, options?.signal);

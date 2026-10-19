@@ -4,6 +4,7 @@ import { useGameClient } from "../../features/connection/useGameClient.js";
 import { LobbyPreviewPanel } from "../../features/room/LobbyPreviewPanel.js";
 import { DEPLOYMENT_MODE } from "../../lib/config/env.js";
 import { getGuestDirectJoinUnavailableMessage } from "../setup/p2p-setup.controller.js";
+import type { P2PGuestSetupState } from "../setup/p2p-setup.types.js";
 
 const getStaleLinkLabel = (sessionState: "expired" | "answered" | "finalized"): string => {
   switch (sessionState) {
@@ -15,6 +16,122 @@ const getStaleLinkLabel = (sessionState: "expired" | "answered" | "finalized"): 
       return "Finalized";
   }
 };
+
+type GuestSetup = P2PGuestSetupState | null;
+type UnavailableMessage = string | null;
+
+const getInviteBannerLabel = (
+  guestSetup: GuestSetup,
+  unavailableMessage: UnavailableMessage
+): string => {
+  if (guestSetup?.stage === "waiting-for-host-finalize") {
+    return "Connecting to host";
+  }
+
+  if (unavailableMessage || guestSetup?.error) {
+    return "Direct link unavailable";
+  }
+
+  return guestSetup?.offerPayload ? "Direct link loaded" : "Loading direct link";
+};
+
+const getDirectLinkReadout = (
+  guestSetup: GuestSetup,
+  unavailableMessage: UnavailableMessage
+): string => {
+  if (unavailableMessage && guestSetup?.sessionState && guestSetup.sessionState !== "open") {
+    return getStaleLinkLabel(guestSetup.sessionState);
+  }
+
+  return guestSetup?.offerPayload ? "Loaded from session" : "Loading session";
+};
+
+const getStatusSummary = (
+  guestSetup: GuestSetup,
+  unavailableMessage: UnavailableMessage
+): string => {
+  if (unavailableMessage) {
+    return "This direct match link is no longer joinable.";
+  }
+
+  return guestSetup?.offerPayload
+    ? `Direct match ready for ${guestSetup.displayName || "this guest"}.`
+    : "Loading the host's direct link.";
+};
+
+const getStatusDetail = (
+  guestSetup: GuestSetup,
+  unavailableMessage: UnavailableMessage
+): string => {
+  if (unavailableMessage) {
+    return "Only open direct-match sessions can create a guest answer.";
+  }
+
+  return guestSetup?.stage === "waiting-for-host-finalize" || guestSetup?.stage === "connecting"
+    ? "Waiting for the host to finish setup and open the direct channel."
+    : "Pick a display name to unlock Join Direct Match.";
+};
+
+const getJoinButtonLabel = (stage: P2PGuestSetupState["stage"] | undefined): string => {
+  if (stage === "creating-answer" || stage === "submitting-answer") {
+    return "Joining Direct Match...";
+  }
+
+  return stage === "waiting-for-host-finalize" ? "Connecting To Host..." : "Join Direct Match";
+};
+
+interface JoinDirectMatchCardProps {
+  guestSetup: GuestSetup;
+  unavailableMessage: UnavailableMessage;
+  canCreateAnswer: boolean;
+  onJoin: () => void;
+}
+
+const JoinDirectMatchCard = ({
+  guestSetup,
+  unavailableMessage,
+  canCreateAnswer,
+  onJoin
+}: JoinDirectMatchCardProps) => (
+  <section className="lobby-action-card is-join invite-join-card">
+    <div className="lobby-card-heading">
+      <h2>Join Direct Match</h2>
+      <span>
+        {unavailableMessage
+          ? "This invite needs a fresh host link."
+          : "Confirm your display name and connect to the host."}
+      </span>
+    </div>
+
+    <p className="invite-info-copy">
+      {unavailableMessage
+        ? "This invite can no longer create a guest answer. Ask the host to start a new direct match."
+        : "Keep this tab open while the app submits your join request and opens the direct connection."}
+    </p>
+
+    <button
+      type="button"
+      className={["lobby-action-button", "lobby-join-button", canCreateAnswer ? "is-ready" : ""]
+        .filter(Boolean)
+        .join(" ")}
+      disabled={
+        !canCreateAnswer ||
+        guestSetup?.stage === "creating-answer" ||
+        guestSetup?.stage === "submitting-answer" ||
+        guestSetup?.stage === "waiting-for-host-finalize"
+      }
+      onClick={onJoin}
+    >
+      {getJoinButtonLabel(guestSetup?.stage)}
+    </button>
+
+    <div className="invite-secondary-actions">
+      <Link className="secondary-button link-button" to="/">
+        Back To Home
+      </Link>
+    </div>
+  </section>
+);
 
 export const P2PJoinPage = () => {
   const { sessionId = "" } = useParams<{ sessionId: string }>();
@@ -52,36 +169,9 @@ export const P2PJoinPage = () => {
     return <Navigate to={`/room/${session.roomCode}`} replace />;
   }
 
-  const inviteBannerLabel =
-    guestSetup?.stage === "waiting-for-host-finalize"
-      ? "Connecting to host"
-      : unavailableMessage || guestSetup?.error
-        ? "Direct link unavailable"
-        : guestSetup?.offerPayload
-          ? "Direct link loaded"
-          : "Loading direct link";
-  const directLinkReadout =
-    unavailableMessage && guestSetup?.sessionState && guestSetup.sessionState !== "open"
-      ? getStaleLinkLabel(guestSetup.sessionState)
-      : guestSetup?.offerPayload
-        ? "Loaded from session"
-        : "Loading session";
   const setupSummary = unavailableMessage
     ? unavailableMessage
     : "This flow creates your WebRTC answer behind the scenes and waits for the host to finish setup.";
-  const joinSummary = unavailableMessage
-    ? "This invite can no longer create a guest answer. Ask the host to start a new direct match."
-    : "Keep this tab open while the app submits your join request and opens the direct connection.";
-  const statusSummary = unavailableMessage
-    ? "This direct match link is no longer joinable."
-    : guestSetup?.offerPayload
-      ? `Direct match ready for ${guestSetup.displayName || "this guest"}.`
-      : "Loading the host's direct link.";
-  const statusDetail = unavailableMessage
-    ? "Only open direct-match sessions can create a guest answer."
-    : guestSetup?.stage === "waiting-for-host-finalize" || guestSetup?.stage === "connecting"
-      ? "Waiting for the host to finish setup and open the direct channel."
-      : "Pick a display name to unlock Join Direct Match.";
 
   return (
     <main className="page-shell home-page-shell">
@@ -90,7 +180,9 @@ export const P2PJoinPage = () => {
           <p className="eyebrow">Direct match invitation</p>
           <h1>Join Direct Match</h1>
           <div className="invite-room-banner">
-            <span className="invite-room-banner-label">{inviteBannerLabel}</span>
+            <span className="invite-room-banner-label">
+              {getInviteBannerLabel(guestSetup, unavailableMessage)}
+            </span>
             <strong>Guest setup</strong>
           </div>
           <p>
@@ -117,7 +209,7 @@ export const P2PJoinPage = () => {
 
               <div className="invite-room-readout invite-private-readout">
                 <span className="invite-room-readout-label">Direct link</span>
-                <strong>{directLinkReadout}</strong>
+                <strong>{getDirectLinkReadout(guestSetup, unavailableMessage)}</strong>
               </div>
 
               <label className="field lobby-field">
@@ -133,59 +225,25 @@ export const P2PJoinPage = () => {
               <p className="invite-info-copy">{setupSummary}</p>
             </div>
 
-            <section className="lobby-action-card is-join invite-join-card">
-              <div className="lobby-card-heading">
-                <h2>Join Direct Match</h2>
-                <span>
-                  {unavailableMessage
-                    ? "This invite needs a fresh host link."
-                    : "Confirm your display name and connect to the host."}
-                </span>
-              </div>
-
-              <p className="invite-info-copy">{joinSummary}</p>
-
-              <button
-                type="button"
-                className={[
-                  "lobby-action-button",
-                  "lobby-join-button",
-                  canCreateAnswer ? "is-ready" : ""
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                disabled={
-                  !canCreateAnswer ||
-                  guestSetup?.stage === "creating-answer" ||
-                  guestSetup?.stage === "submitting-answer" ||
-                  guestSetup?.stage === "waiting-for-host-finalize"
-                }
-                onClick={() => {
-                  clearGuestSetupError();
-                  createGuestAnswer(trimmedDisplayName);
-                }}
-              >
-                {guestSetup?.stage === "creating-answer"
-                  ? "Joining Direct Match..."
-                  : guestSetup?.stage === "submitting-answer"
-                    ? "Joining Direct Match..."
-                    : guestSetup?.stage === "waiting-for-host-finalize"
-                      ? "Connecting To Host..."
-                      : "Join Direct Match"}
-              </button>
-
-              <div className="invite-secondary-actions">
-                <Link className="secondary-button link-button" to="/">
-                  Back To Home
-                </Link>
-              </div>
-            </section>
+            <JoinDirectMatchCard
+              guestSetup={guestSetup}
+              unavailableMessage={unavailableMessage}
+              canCreateAnswer={canCreateAnswer}
+              onJoin={() => {
+                clearGuestSetupError();
+                createGuestAnswer(trimmedDisplayName);
+              }}
+            />
           </section>
         </div>
 
         <div className="status-strip lobby-status-strip invite-status-strip">
-          <span className="lobby-status-note">{statusSummary}</span>
-          <span className="lobby-status-note">{statusDetail}</span>
+          <span className="lobby-status-note">
+            {getStatusSummary(guestSetup, unavailableMessage)}
+          </span>
+          <span className="lobby-status-note">
+            {getStatusDetail(guestSetup, unavailableMessage)}
+          </span>
           {guestSetup?.error ? <span className="error-text">{guestSetup.error}</span> : null}
           {error ? <span className="error-text">{error}</span> : null}
         </div>

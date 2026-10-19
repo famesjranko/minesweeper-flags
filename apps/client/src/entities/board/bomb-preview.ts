@@ -26,11 +26,10 @@ export const getBombPreviewBounds = (
   rows: number,
   columns: number,
   row: number,
-  column: number,
-  radius = BOMB_RADIUS
+  column: number
 ): BombPreviewBounds => {
-  const rowBounds = getAxisBounds(rows, row, radius);
-  const columnBounds = getAxisBounds(columns, column, radius);
+  const rowBounds = getAxisBounds(rows, row);
+  const columnBounds = getAxisBounds(columns, column);
 
   return {
     minRow: rowBounds.min,
