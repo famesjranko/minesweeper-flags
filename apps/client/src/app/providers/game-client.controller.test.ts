@@ -296,7 +296,7 @@ describe("game client controller", () => {
             }
           ],
           currentTurnPlayerId: "player-1",
-          turnPhase: "awaiting_selection",
+          turnPhase: "awaiting_action",
           turnNumber: 1,
           winnerPlayerId: null,
           lastAction: null

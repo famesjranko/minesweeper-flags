@@ -38,6 +38,7 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	p2p-build-client \
 	build-shared \
 	build-engine \
+	typecheck \
 	test \
 	test-server \
 	test-signaling \
@@ -118,6 +119,9 @@ build-shared: ## Build the shared package
 build-engine: ## Build the game engine package
 	$(NPM) run build -w $(ENGINE_WORKSPACE)
 
+typecheck: ## Type-check all workspaces, including tests
+	$(NPM) run typecheck
+
 test: ## Run all workspace tests
 	$(NPM) run test
 
@@ -143,6 +147,7 @@ signaling-start: build-signaling ## Build and run the compiled signaling service
 	@$(SIGNALING_ENV_PREFIX) $(NPM) run start -w $(SIGNALING_WORKSPACE)
 
 check: ## Run the main local verification flow
+	$(MAKE) typecheck
 	$(MAKE) test
 	$(MAKE) build
 	$(MAKE) compose-config

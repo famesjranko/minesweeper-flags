@@ -81,12 +81,12 @@ const createFakeRuntime = ({
     clearError: vi.fn()
   };
 
+  // The fake store stands in for GameClientStore structurally, but its private
+  // members differ, so only the runtime handed to the provider is cast.
   return {
+    runtime: { store, controller } as unknown as GameClientRuntime,
     store,
     controller
-  } as unknown as GameClientRuntime & {
-    store: FakeStore;
-    controller: typeof controller;
   };
 };
 
@@ -112,7 +112,7 @@ afterEach(() => {
 
 describe("GameClientProvider", () => {
   it("exposes the runtime snapshot through useGameClient and cleans up controller lifecycle", () => {
-    const runtime = createFakeRuntime({
+    const { runtime, store, controller } = createFakeRuntime({
       snapshot: {
         connectionStatus: "connecting",
         error: "Boom",
@@ -141,13 +141,13 @@ describe("GameClientProvider", () => {
       </GameClientProvider>
     ));
 
-    expect(runtime.controller.start).toHaveBeenCalledTimes(1);
+    expect(controller.start).toHaveBeenCalledTimes(1);
     expect(document.querySelector("[data-testid='connection']")?.textContent).toBe("connecting");
     expect(document.querySelector("[data-testid='error']")?.textContent).toBe("Boom");
     expect(document.querySelector("[data-testid='chat-draft']")?.textContent).toBe("Hello");
 
     act(() => {
-      runtime.store.update({
+      store.update({
         connectionStatus: "connected",
         error: null,
         chatDraft: "Updated"
@@ -162,17 +162,17 @@ describe("GameClientProvider", () => {
       latestClient?.createRoom("Host");
     });
 
-    expect(runtime.controller.createRoom).toHaveBeenCalledWith("Host");
+    expect(controller.createRoom).toHaveBeenCalledWith("Host");
 
     act(() => {
       root?.unmount();
     });
 
-    expect(runtime.controller.dispose).toHaveBeenCalledTimes(1);
+    expect(controller.dispose).toHaveBeenCalledTimes(1);
   });
 
   it("lets RoomPage trigger route bootstrap reconnect through the provider boundary", () => {
-    const runtime = createFakeRuntime({
+    const { runtime, controller } = createFakeRuntime({
       hasStoredSession: true
     });
     vi.mocked(createGameClientRuntime).mockReturnValue(runtime);
@@ -187,7 +187,7 @@ describe("GameClientProvider", () => {
       </GameClientProvider>
     );
 
-    expect(runtime.controller.hasStoredSession).toHaveBeenCalledWith("ABCDE");
-    expect(runtime.controller.reconnect).toHaveBeenCalledWith("ABCDE");
+    expect(controller.hasStoredSession).toHaveBeenCalledWith("ABCDE");
+    expect(controller.reconnect).toHaveBeenCalledWith("ABCDE");
   });
 });

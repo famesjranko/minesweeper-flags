@@ -27,7 +27,7 @@ const render = (lastMove?: Parameters<typeof BoardGrid>[0]["lastMove"]) =>
       canAct={false}
       bombArmed={false}
       playerTones={{}}
-      lastMove={lastMove}
+      {...(lastMove ? { lastMove } : {})}
       onSelectCell={() => {}}
     />
   );

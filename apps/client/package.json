@@ -6,7 +6,10 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "test": "vitest run --passWithNoTests src"
+    "pretest": "npm run build -w @minesweeper-flags/game-engine -w @minesweeper-flags/shared",
+    "test": "vitest run --passWithNoTests src",
+    "pretypecheck": "npm run build -w @minesweeper-flags/game-engine -w @minesweeper-flags/shared",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@minesweeper-flags/shared": "*",

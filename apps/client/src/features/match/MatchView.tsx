@@ -77,9 +77,7 @@ export const MatchView = ({
     [redPlayer.playerId]: "red"
   };
   const activeTone =
-    match.currentTurnPlayerId && playerTones[match.currentTurnPlayerId]
-      ? playerTones[match.currentTurnPlayerId]
-      : "blue";
+    (match.currentTurnPlayerId ? playerTones[match.currentTurnPlayerId] : undefined) ?? "blue";
   const playerSlots = [
     {
       title: "BLUE",
@@ -95,7 +93,7 @@ export const MatchView = ({
       isSelf: redPlayer.playerId === currentPlayerId,
       isTurn: match.currentTurnPlayerId === redPlayer.playerId
     }
-  ];
+  ] as const;
   const renderPlayerSlot = (slot: (typeof playerSlots)[number]) => (
     <section
       key={slot.player.playerId}

@@ -14,7 +14,8 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "dev": "concurrently -k -n server,client -c yellow,cyan \"npm run dev -w @minesweeper-flags/server\" \"npm run dev -w @minesweeper-flags/client\"",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
