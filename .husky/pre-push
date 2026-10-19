@@ -1,0 +1,29 @@
+# Type-checks and tests the working tree before a push. CI runs the full
+# make check on the pushed commit; this hook only catches failures earlier.
+if [ ! -x node_modules/.bin/tsc ]; then
+  echo "pre-push: dependencies are not installed in this worktree. Run: npm install" >&2
+  exit 1
+fi
+
+head=$(git rev-parse HEAD)
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "$local_sha" in
+    0000000000000000000000000000000000000000) ;;
+    "$head") ;;
+    *)
+      echo "pre-push: skipped local checks, because the pushed commit is not HEAD. CI still runs make check." >&2
+      exit 0
+      ;;
+  esac
+done
+
+if ! git diff --quiet HEAD --; then
+  echo "pre-push: the working tree has uncommitted changes, so it is not the commit you push." >&2
+  echo "pre-push: commit or set them aside, then push again." >&2
+  exit 1
+fi
+
+make typecheck test || {
+  echo "pre-push: fix the failures above. Run them again with: make typecheck test" >&2
+  exit 1
+}

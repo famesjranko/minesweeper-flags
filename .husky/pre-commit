@@ -1,0 +1,8 @@
+# Formats and lints staged files with Biome. lint-staged sets unstaged changes
+# aside while it runs and re-stages only the fixed hunks.
+if [ ! -x node_modules/.bin/lint-staged ]; then
+  echo "pre-commit: lint-staged is not installed in this worktree. Run: npm install" >&2
+  exit 1
+fi
+
+node_modules/.bin/lint-staged

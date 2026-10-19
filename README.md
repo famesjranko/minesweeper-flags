@@ -77,9 +77,14 @@ To run the full stack in containers, use `make compose-up` (hosted) or `make com
 
 ```bash
 make help       # list every target
+make format     # apply formatting and safe lint fixes (Biome)
+make lint       # check formatting and lint rules
+make typecheck  # type-check every workspace, tests included
 make test       # all workspace tests (Vitest)
-make check      # tests, build, and Compose config validation
+make check      # all of the above, the build, and Compose config validation; CI runs this
 ```
+
+`make install` also installs the Git hooks. The pre-commit hook formats and lints the staged files. The pre-push hook runs `make typecheck test`. To hide the formatting commit from `git blame`, run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 There are also per-workspace targets: `make test-client`, `make test-server`, `make test-signaling`, `make test-shared`, and `make test-engine`.
 
