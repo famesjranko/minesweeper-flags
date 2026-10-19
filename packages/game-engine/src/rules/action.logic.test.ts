@@ -174,9 +174,7 @@ describe("resolveAction", () => {
       expect(resolution.state.currentTurnPlayerId).toBeNull();
     }
   });
-});
 
-describe("resignMatch", () => {
   it.each([
     ["a select", "select", BOARD_ROWS, 0],
     ["a bomb", "bomb", 0, BOARD_COLUMNS + 4]
@@ -199,7 +197,9 @@ describe("resignMatch", () => {
     // Then the action is rejected like any other invalid move
     expect(resolution).toEqual({ ok: false, error: "That cell is outside the board." });
   });
+});
 
+describe("resignMatch", () => {
   it("ends the match and awards the win to the opponent", () => {
     const match = createMatchState({
       roomId: "room-1",
