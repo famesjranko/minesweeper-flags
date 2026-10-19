@@ -27,15 +27,15 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/ws": "^8.18.1",
-    "@vitejs/plugin-react": "^5.0.2",
+    "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^9.2.1",
     "husky": "9.1.7",
     "jsdom": "^29.0.1",
     "lint-staged": "17.6.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
-    "vite": "^7.1.5",
-    "vitest": "^3.2.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   },
   "license": "MIT"
 }
