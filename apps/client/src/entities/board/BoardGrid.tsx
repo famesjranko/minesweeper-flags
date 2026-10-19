@@ -2,12 +2,14 @@ import { useState } from "react";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 import { getBombPreviewBounds } from "./bomb-preview.js";
+import { NO_LAST_MOVE_MARKS, type LastMoveMarks } from "./last-move.js";
 
 interface BoardGridProps {
   match: MatchStateDto;
   canAct: boolean;
   bombArmed: boolean;
   playerTones: Record<string, "blue" | "red">;
+  lastMove?: LastMoveMarks;
   onSelectCell: (row: number, column: number) => void;
 }
 
@@ -42,6 +44,7 @@ export const BoardGrid = ({
   canAct,
   bombArmed,
   playerTones,
+  lastMove = NO_LAST_MOVE_MARKS,
   onSelectCell
 }: BoardGridProps) => {
   const [hoveredCell, setHoveredCell] = useState<{ row: number; column: number } | null>(null);
@@ -81,7 +84,23 @@ export const BoardGrid = ({
         />
       ) : null}
 
+      {lastMove.areas.map((area) => (
+        <div
+          key={`last-move-area-${area.bounds.minRow}-${area.bounds.minColumn}-${area.age}`}
+          className={`board-last-move-area last-move-${area.tone} last-move-age-${area.age}`}
+          style={{
+            left: `calc(8px + ${area.bounds.minColumn} * (var(--board-cell-size) + 2px))`,
+            top: `calc(8px + ${area.bounds.minRow} * (var(--board-cell-size) + 2px))`,
+            width: `calc(${area.bounds.maxColumn - area.bounds.minColumn + 1} * var(--board-cell-size) + ${area.bounds.maxColumn - area.bounds.minColumn} * 2px)`,
+            height: `calc(${area.bounds.maxRow - area.bounds.minRow + 1} * var(--board-cell-size) + ${area.bounds.maxRow - area.bounds.minRow} * 2px)`
+          }}
+        />
+      ))}
+
       {match.board.cells.flat().map((cell) => {
+        const lastMoveCell = lastMove.cells.find(
+          (mark) => mark.row === cell.row && mark.column === cell.column
+        );
         const isPreviewed =
           shouldShowBombPreview &&
           previewBounds &&
@@ -102,6 +121,9 @@ export const BoardGrid = ({
               isPreviewed ? "bomb-preview-cell" : "",
               isPreviewed && hoveredCell?.row === cell.row && hoveredCell?.column === cell.column
                 ? "bomb-preview-center"
+                : "",
+              lastMoveCell
+                ? `is-last-move last-move-${lastMoveCell.tone} last-move-age-${lastMoveCell.age}`
                 : ""
             ]
               .filter(Boolean)

@@ -3,6 +3,12 @@ import {
   type ChatMessageDto,
   type MatchStateDto
 } from "@minesweeper-flags/shared";
+import { useState } from "react";
+import {
+  advanceLastMoveTrail,
+  getLastMoveMarks,
+  type LastMoveTrail
+} from "../../entities/board/last-move.js";
 import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import { BombIcon } from "../../shared-ui/BombIcon.js";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
@@ -49,6 +55,13 @@ export const MatchView = ({
   onCancelRematch
 }: MatchViewProps) => {
   const [bluePlayer, redPlayer] = match.players;
+  // Derive the trail during render so a refresh falls back to lastAction alone
+  // and the marks never lag one render behind the snapshot.
+  const [storedTrail, setStoredTrail] = useState<LastMoveTrail>([]);
+  const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
+  if (lastMoveTrail !== storedTrail) {
+    setStoredTrail(lastMoveTrail);
+  }
   const currentPlayer = match.players.find((player) => player.playerId === currentPlayerId) ?? null;
   const opponent = match.players.find((player) => player.playerId !== currentPlayerId) ?? null;
   const canAct = match.phase === "live" && match.currentTurnPlayerId === currentPlayerId;
@@ -244,6 +257,12 @@ export const MatchView = ({
                 canAct={canAct}
                 bombArmed={bombArmed}
                 playerTones={playerTones}
+                lastMove={getLastMoveMarks(
+                  lastMoveTrail,
+                  match.board.rows,
+                  match.board.columns,
+                  playerTones
+                )}
                 onSelectCell={onCellSelect}
               />
             </div>
