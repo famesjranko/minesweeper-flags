@@ -76,6 +76,67 @@ interface CreateRedisStateClientOptions {
   url: string;
 }
 
+type RedisTransaction = ReturnType<ReturnType<typeof createClient>["multi"]>;
+
+// Redis rejects variadic commands with an empty argument list, so commands
+// with nothing to write are dropped from the transaction instead of queued.
+const isNoOpTransactionCommand = (command: RedisTransactionCommand): boolean => {
+  switch (command.type) {
+    case "del":
+      return command.keys.length === 0;
+    case "rPush":
+      return command.values.length === 0;
+    case "hSet":
+      return Object.keys(command.values).length === 0;
+    case "hDel":
+      return command.fields.length === 0;
+    case "sAdd":
+    case "sRem":
+      return command.members.length === 0;
+    default:
+      return false;
+  }
+};
+
+const queueTransactionCommand = (
+  transaction: RedisTransaction,
+  command: RedisTransactionCommand
+): void => {
+  switch (command.type) {
+    case "set":
+      if (command.options?.expireInSeconds) {
+        transaction.set(command.key, command.value, { EX: command.options.expireInSeconds });
+      } else {
+        transaction.set(command.key, command.value);
+      }
+      break;
+    case "del":
+      transaction.del(command.keys);
+      break;
+    case "lTrim":
+      transaction.lTrim(command.key, command.start, command.stop);
+      break;
+    case "rPush":
+      transaction.rPush(command.key, command.values);
+      break;
+    case "hSet":
+      transaction.hSet(command.key, command.values);
+      break;
+    case "hDel":
+      transaction.hDel(command.key, command.fields);
+      break;
+    case "sAdd":
+      transaction.sAdd(command.key, command.members);
+      break;
+    case "sRem":
+      transaction.sRem(command.key, command.members);
+      break;
+    case "expire":
+      transaction.expire(command.key, command.seconds);
+      break;
+  }
+};
+
 export const createRedisStateClient = async ({
   url
 }: CreateRedisStateClientOptions): Promise<RedisStateClient> => {
@@ -135,50 +196,8 @@ export const createRedisStateClient = async ({
       const transaction = client.multi();
 
       for (const command of commands) {
-        switch (command.type) {
-          case "set":
-            if (command.options?.expireInSeconds) {
-              transaction.set(command.key, command.value, { EX: command.options.expireInSeconds });
-            } else {
-              transaction.set(command.key, command.value);
-            }
-            break;
-          case "del":
-            if (command.keys.length > 0) {
-              transaction.del(command.keys);
-            }
-            break;
-          case "lTrim":
-            transaction.lTrim(command.key, command.start, command.stop);
-            break;
-          case "rPush":
-            if (command.values.length > 0) {
-              transaction.rPush(command.key, command.values);
-            }
-            break;
-          case "hSet":
-            if (Object.keys(command.values).length > 0) {
-              transaction.hSet(command.key, command.values);
-            }
-            break;
-          case "hDel":
-            if (command.fields.length > 0) {
-              transaction.hDel(command.key, command.fields);
-            }
-            break;
-          case "sAdd":
-            if (command.members.length > 0) {
-              transaction.sAdd(command.key, command.members);
-            }
-            break;
-          case "sRem":
-            if (command.members.length > 0) {
-              transaction.sRem(command.key, command.members);
-            }
-            break;
-          case "expire":
-            transaction.expire(command.key, command.seconds);
-            break;
+        if (!isNoOpTransactionCommand(command)) {
+          queueTransactionCommand(transaction, command);
         }
       }
 

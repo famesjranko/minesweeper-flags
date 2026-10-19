@@ -11,8 +11,7 @@ describe("default P2P host identity factory", () => {
   it("creates ids on a plain-HTTP origin, where crypto.randomUUID does not exist", () => {
     // Given a browser crypto without randomUUID, as on http://192.168.x.x
     vi.stubGlobal("crypto", {
-      getRandomValues: <T extends ArrayBufferView>(array: T): T =>
-        realCrypto.getRandomValues(array as unknown as Uint8Array) as unknown as T
+      getRandomValues: realCrypto.getRandomValues.bind(realCrypto)
     });
     const factory = createDefaultP2PHostIdentityFactory();
 

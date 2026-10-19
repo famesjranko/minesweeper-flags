@@ -108,107 +108,94 @@ export interface SignalingEnv {
   SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS: number;
 }
 
+const getPublicModeConfigurationErrors = (
+  env: SignalingEnv,
+  rawPort: string | number
+): string[] => {
+  const configurationErrors: string[] = [];
+
+  if (env.STATE_BACKEND !== "redis") {
+    configurationErrors.push("DEPLOYMENT_MODE=public requires STATE_BACKEND=redis.");
+  }
+
+  if (!env.REDIS_URL) {
+    configurationErrors.push("DEPLOYMENT_MODE=public requires REDIS_URL to be set.");
+  }
+
+  if (env.SIGNALING_ALLOWED_ORIGINS.length === 0 || env.SIGNALING_ALLOWED_ORIGINS.includes("*")) {
+    configurationErrors.push(
+      "DEPLOYMENT_MODE=public requires SIGNALING_ALLOWED_ORIGINS to be set to an explicit allowlist."
+    );
+  }
+
+  if (!env.TRUST_PROXY) {
+    configurationErrors.push("DEPLOYMENT_MODE=public requires TRUST_PROXY=true.");
+  }
+
+  if (!isValidPositiveInteger(env.PORT)) {
+    configurationErrors.push(
+      `DEPLOYMENT_MODE=public requires PORT to be a positive integer. Received "${rawPort}".`
+    );
+  }
+
+  return configurationErrors;
+};
+
 export const parseSignalingEnv = (environment: NodeJS.ProcessEnv = process.env): SignalingEnv => {
-  const DEPLOYMENT_MODE = parseDeploymentMode(environment.DEPLOYMENT_MODE);
-  const HOST = environment.HOST ?? "0.0.0.0";
-  const PORT = Number(environment.PORT ?? DEFAULT_SIGNALING_PORT);
-  const STATE_BACKEND = parseStateBackend(environment.STATE_BACKEND);
-  const REDIS_URL = environment.REDIS_URL;
-  const REDIS_KEY_PREFIX = environment.REDIS_KEY_PREFIX ?? "minesweeper-flags:signaling";
-  const P2P_SIGNALING_SESSION_TTL_SECONDS = parsePositiveInteger(
-    environment.P2P_SIGNALING_SESSION_TTL_SECONDS,
-    15 * 60
-  );
-  const P2P_SIGNALING_MAX_PAYLOAD_BYTES = parsePositiveInteger(
-    environment.P2P_SIGNALING_MAX_PAYLOAD_BYTES,
-    16 * 1024
-  );
-  const TRUST_PROXY = parseBoolean(environment.TRUST_PROXY, false);
-  const SIGNALING_ALLOWED_ORIGINS = parseAllowedOrigins(environment.SIGNALING_ALLOWED_ORIGINS);
-  const SIGNALING_CREATE_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.SIGNALING_CREATE_RATE_LIMIT_MAX,
-    6
-  );
-  const SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS,
-    60_000
-  );
-  const SIGNALING_ANSWER_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.SIGNALING_ANSWER_RATE_LIMIT_MAX,
-    12
-  );
-  const SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS,
-    60_000
-  );
-  // Despite the "RECONNECT" name this bucket is shared across every
-  // post-create signaling operation: register/claim/heartbeat, offer and
-  // answer reads/writes, finalization, and the GET reads on
-  // /signaling/sessions/{id}. The high default (240/min) reflects the
-  // polling cadence of those routes, not just reconnect heartbeats.
-  const SIGNALING_RECONNECT_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.SIGNALING_RECONNECT_RATE_LIMIT_MAX,
-    240
-  );
-  const SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS,
-    60_000
-  );
+  const rawPort = environment.PORT ?? DEFAULT_SIGNALING_PORT;
+  const positiveInteger = (name: string, fallback: number): number =>
+    parsePositiveInteger(environment[name], fallback);
+  const env: SignalingEnv = {
+    DEPLOYMENT_MODE: parseDeploymentMode(environment.DEPLOYMENT_MODE),
+    HOST: environment.HOST ?? "0.0.0.0",
+    PORT: Number(rawPort),
+    STATE_BACKEND: parseStateBackend(environment.STATE_BACKEND),
+    REDIS_URL: environment.REDIS_URL,
+    REDIS_KEY_PREFIX: environment.REDIS_KEY_PREFIX ?? "minesweeper-flags:signaling",
+    P2P_SIGNALING_SESSION_TTL_SECONDS: positiveInteger(
+      "P2P_SIGNALING_SESSION_TTL_SECONDS",
+      15 * 60
+    ),
+    P2P_SIGNALING_MAX_PAYLOAD_BYTES: positiveInteger("P2P_SIGNALING_MAX_PAYLOAD_BYTES", 16 * 1024),
+    TRUST_PROXY: parseBoolean(environment.TRUST_PROXY, false),
+    SIGNALING_ALLOWED_ORIGINS: parseAllowedOrigins(environment.SIGNALING_ALLOWED_ORIGINS),
+    SIGNALING_CREATE_RATE_LIMIT_MAX: positiveInteger("SIGNALING_CREATE_RATE_LIMIT_MAX", 6),
+    SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS: positiveInteger(
+      "SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS",
+      60_000
+    ),
+    SIGNALING_ANSWER_RATE_LIMIT_MAX: positiveInteger("SIGNALING_ANSWER_RATE_LIMIT_MAX", 12),
+    SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS: positiveInteger(
+      "SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS",
+      60_000
+    ),
+    // Despite the "RECONNECT" name this bucket is shared across every
+    // post-create signaling operation: register/claim/heartbeat, offer and
+    // answer reads/writes, finalization, and the GET reads on
+    // /signaling/sessions/{id}. The high default (240/min) reflects the
+    // polling cadence of those routes, not just reconnect heartbeats.
+    SIGNALING_RECONNECT_RATE_LIMIT_MAX: positiveInteger("SIGNALING_RECONNECT_RATE_LIMIT_MAX", 240),
+    SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS: positiveInteger(
+      "SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS",
+      60_000
+    )
+  };
 
   const configurationErrors: string[] = [];
 
-  if (STATE_BACKEND === "redis" && !REDIS_URL) {
+  if (env.STATE_BACKEND === "redis" && !env.REDIS_URL) {
     configurationErrors.push("STATE_BACKEND=redis requires REDIS_URL to be set.");
   }
 
-  if (DEPLOYMENT_MODE === "public") {
-    if (STATE_BACKEND !== "redis") {
-      configurationErrors.push("DEPLOYMENT_MODE=public requires STATE_BACKEND=redis.");
-    }
-
-    if (!REDIS_URL) {
-      configurationErrors.push("DEPLOYMENT_MODE=public requires REDIS_URL to be set.");
-    }
-
-    if (SIGNALING_ALLOWED_ORIGINS.length === 0 || SIGNALING_ALLOWED_ORIGINS.includes("*")) {
-      configurationErrors.push(
-        "DEPLOYMENT_MODE=public requires SIGNALING_ALLOWED_ORIGINS to be set to an explicit allowlist."
-      );
-    }
-
-    if (!TRUST_PROXY) {
-      configurationErrors.push("DEPLOYMENT_MODE=public requires TRUST_PROXY=true.");
-    }
-
-    if (!isValidPositiveInteger(PORT)) {
-      configurationErrors.push(
-        `DEPLOYMENT_MODE=public requires PORT to be a positive integer. Received "${environment.PORT ?? DEFAULT_SIGNALING_PORT}".`
-      );
-    }
+  if (env.DEPLOYMENT_MODE === "public") {
+    configurationErrors.push(...getPublicModeConfigurationErrors(env, rawPort));
   }
 
   if (configurationErrors.length > 0) {
     throw new Error(configurationErrors.join(" "));
   }
 
-  return {
-    DEPLOYMENT_MODE,
-    HOST,
-    PORT,
-    STATE_BACKEND,
-    REDIS_URL,
-    REDIS_KEY_PREFIX,
-    P2P_SIGNALING_SESSION_TTL_SECONDS,
-    P2P_SIGNALING_MAX_PAYLOAD_BYTES,
-    TRUST_PROXY,
-    SIGNALING_ALLOWED_ORIGINS,
-    SIGNALING_CREATE_RATE_LIMIT_MAX,
-    SIGNALING_CREATE_RATE_LIMIT_WINDOW_MS,
-    SIGNALING_ANSWER_RATE_LIMIT_MAX,
-    SIGNALING_ANSWER_RATE_LIMIT_WINDOW_MS,
-    SIGNALING_RECONNECT_RATE_LIMIT_MAX,
-    SIGNALING_RECONNECT_RATE_LIMIT_WINDOW_MS
-  };
+  return env;
 };
 
 const signalingEnv = parseSignalingEnv(process.env);
