@@ -2,6 +2,16 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="Minesweeper Flags: the word FLAGS dug out of a blue Minesweeper board. Two players, one 16×16 board, first to 26 mines wins.">
 </p>
 
+<div align="center">
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vite.dev)
+[![Node](https://img.shields.io/badge/Node-22-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![WebRTC](https://img.shields.io/badge/Direct_match-WebRTC-333333?logo=webrtc&logoColor=white)](docs/p2p-architecture.md)
+
+</div>
+
 This is an homage to the MSN Messenger game I used to play with friends back in the day. It is realtime two-player competitive Minesweeper with room chat, and it runs in the browser.
 
 ## How to play
