@@ -157,6 +157,48 @@ describe("RoomPage", () => {
     });
   });
 
+  it("reconnects once on open and not again after another tab displaces it", () => {
+    // Given a tab that opens the room with only a stored recovery record
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+    const { root } = renderRoomPage();
+    const rerender = () => {
+      act(() => {
+        root.render(
+          <MemoryRouter initialEntries={["/room/DIRECT"]}>
+            <Routes>
+              <Route path="/room/:roomCode" element={<RoomPage />} />
+            </Routes>
+          </MemoryRouter>
+        );
+      });
+    };
+
+    // And its bootstrap reconnect restores the session
+    mockState.current.session = {
+      roomId: "room-1",
+      roomCode: "DIRECT",
+      playerId: "host-1",
+      displayName: "Host",
+      sessionToken: "host-token",
+      players: [{ playerId: "host-1", displayName: "Host" }]
+    };
+    rerender();
+
+    // When another tab takes the claim and the runtime clears this tab's session
+    mockState.current.session = null;
+    mockState.current.error =
+      "This direct match is active in another tab or window. Use that tab, or reconnect here.";
+    rerender();
+
+    // Then the tab reconnected only on open, and leaves reclaiming to the user
+    expect(mockState.current.reconnect).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it("shows recovery-unavailable guidance without a reconnect button", () => {
     mockState.current.session = null;
     mockState.current.error =
