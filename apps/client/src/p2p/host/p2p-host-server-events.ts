@@ -160,6 +160,25 @@ export const buildRematchUpdatedEvent = (
   };
 };
 
+// A reconnecting player receives the match event that matches its phase, as on first join.
+export const buildMatchReplayEvent = (roomCode: string, match: MatchState): ServerEvent => {
+  if (match.phase === "finished") {
+    return buildMatchEndedEvent(roomCode, match);
+  }
+
+  return match.lastAction === null
+    ? buildMatchStartedEvent(roomCode, match)
+    : buildMatchStateEvent(roomCode, match);
+};
+
+export const buildPlayerDisconnectedEvent = (roomCode: string, playerId: string): ServerEvent => ({
+  type: SERVER_EVENT_NAMES.playerDisconnected,
+  payload: {
+    roomCode,
+    playerId
+  }
+});
+
 export const buildPlayerReconnectedEvent = (roomCode: string, playerId: string): ServerEvent => {
   return {
     type: SERVER_EVENT_NAMES.playerReconnected,

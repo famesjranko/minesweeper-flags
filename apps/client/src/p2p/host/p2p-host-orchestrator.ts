@@ -23,6 +23,7 @@ import {
   createHostLocalFanoutStep,
   type P2PHostFanoutStep
 } from "./p2p-host-events.js";
+import { disconnectGuest, reconnectGuest } from "./p2p-host-guest-connection.js";
 import {
   buildChatHistoryEvent,
   buildChatMessageEvent,
@@ -31,7 +32,6 @@ import {
   buildMatchEndedEvent,
   buildMatchStartedEvent,
   buildMatchStateEvent,
-  buildPlayerReconnectedEvent,
   buildRematchUpdatedEvent,
   buildRoomCreatedEvent,
   buildRoomJoinedEvent,
@@ -217,19 +217,19 @@ export class P2PHostOrchestrator {
   }
 
   requestHostRematch(): P2PHostCommandResult {
-    return this.requestRematch(this.requireHostSession());
+    return this.setRematchRequest(this.requireHostSession(), true);
   }
 
   requestGuestRematch(): P2PHostCommandResult {
-    return this.requestRematch(this.requireGuestSession());
+    return this.setRematchRequest(this.requireGuestSession(), true);
   }
 
   cancelHostRematch(): P2PHostCommandResult {
-    return this.cancelRematch(this.requireHostSession());
+    return this.setRematchRequest(this.requireHostSession(), false);
   }
 
   cancelGuestRematch(): P2PHostCommandResult {
-    return this.cancelRematch(this.requireGuestSession());
+    return this.setRematchRequest(this.requireGuestSession(), false);
   }
 
   applyRemoteGuestCommand({ bindingId, event }: P2PRemoteGuestCommand): P2PHostCommandResult {
@@ -414,7 +414,10 @@ export class P2PHostOrchestrator {
     }
   }
 
-  private requestRematch(session: P2PBaseSessionRecord): P2PHostCommandResult {
+  private setRematchRequest(
+    session: P2PBaseSessionRecord,
+    requested: boolean
+  ): P2PHostCommandResult {
     const room = this.requireRoom();
     const match = this.requireMatch();
 
@@ -422,10 +425,10 @@ export class P2PHostOrchestrator {
       return this.rejectRematchBeforeMatchEnd(session);
     }
 
-    const current = setPlayerRematchRequested(match, session.playerId, true);
+    const current = setPlayerRematchRequested(match, session.playerId, requested);
     const readyCount = current.players.filter((player) => player.rematchRequested).length;
 
-    if (readyCount === 2) {
+    if (requested && readyCount === 2) {
       const nextStarterIndex = room.nextStarterIndex === 0 ? 1 : 0;
       const updatedRoom: P2PHostRoomRecord = {
         ...room,
@@ -457,51 +460,23 @@ export class P2PHostOrchestrator {
     };
   }
 
-  private cancelRematch(session: P2PBaseSessionRecord): P2PHostCommandResult {
-    const room = this.requireRoom();
-    const match = this.requireMatch();
+  disconnectGuest(): P2PHostCommandResult {
+    const change = disconnectGuest(this.state);
 
-    if (match.phase !== "finished") {
-      return this.rejectRematchBeforeMatchEnd(session);
-    }
-
-    const current = setPlayerRematchRequested(match, session.playerId, false);
-    const readyCount = current.players.filter((player) => player.rematchRequested).length;
-
-    this.storeMatch(room, current, this.now());
-
-    return {
-      steps: [
-        createBroadcastFanoutStep(buildRematchUpdatedEvent(room.roomCode, current, readyCount))
-      ]
-    };
+    this.state = change.state;
+    return { steps: change.steps };
   }
 
   private replayGuestReconnect({ bindingId }: P2PGuestReconnectOptions): P2PHostCommandResult {
-    const room = this.requireRoom();
-    const guestSession = this.requireGuestSession();
+    const change = reconnectGuest(
+      this.state,
+      this.requireRoom(),
+      this.requireGuestSession(),
+      bindingId
+    );
 
-    this.rebindGuest(bindingId);
-
-    const steps: P2PHostFanoutStep[] = [
-      createGuestFanoutStep(buildRoomJoinedEvent(room, { ...guestSession, bindingId })),
-      createGuestFanoutStep(buildChatHistoryEvent(room.roomCode, this.state.chatMessages)),
-      createBroadcastFanoutStep(buildPlayerReconnectedEvent(room.roomCode, guestSession.playerId))
-    ];
-
-    if (this.state.match) {
-      steps.push(
-        createGuestFanoutStep(
-          this.state.match.phase === "finished"
-            ? buildMatchEndedEvent(room.roomCode, this.state.match)
-            : this.state.match.lastAction === null
-              ? buildMatchStartedEvent(room.roomCode, this.state.match)
-              : buildMatchStateEvent(room.roomCode, this.state.match)
-        )
-      );
-    }
-
-    return { steps };
+    this.state = change.state;
+    return { steps: change.steps };
   }
 
   private storeMatch(room: P2PHostRoomRecord, match: MatchState, updatedAt: number): void {

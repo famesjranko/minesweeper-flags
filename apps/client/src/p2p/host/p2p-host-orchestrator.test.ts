@@ -318,6 +318,64 @@ describe("P2PHostOrchestrator", () => {
     expect(orchestrator.getState().guestSession?.bindingId).toBe("peer-2");
   });
 
+  it("marks the guest disconnected once when its connection drops", () => {
+    // Given a live match with a connected guest
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host");
+    orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
+    const guestId = orchestrator.getState().guestSession?.playerId;
+
+    // When the guest's connection drops, and the drop is reported twice
+    const first = orchestrator.disconnectGuest();
+    const second = orchestrator.disconnectGuest();
+
+    // Then only the host hears about it, once, with the guest marked offline
+    expect(first.steps.map((step) => `${step.target}:${step.event.type}`)).toEqual([
+      "host-local:player:disconnected",
+      "host-local:match:state"
+    ]);
+    expect(
+      orchestrator.getState().match?.players.find((player) => player.playerId === guestId)
+        ?.connected
+    ).toBe(false);
+
+    // And the repeated report changes nothing
+    expect(second.steps).toEqual([]);
+  });
+
+  it("marks the guest connected again when it reconnects", () => {
+    // Given a guest whose connection dropped
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host");
+    orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
+    orchestrator.disconnectGuest();
+    const guestSession = orchestrator.getState().guestSession;
+
+    if (!guestSession) {
+      throw new Error("Expected a guest session.");
+    }
+
+    // When the guest reconnects on a new binding
+    orchestrator.rebindGuest("peer-2");
+    const result = orchestrator.applyRemoteGuestCommand({
+      bindingId: "peer-2",
+      event: {
+        type: CLIENT_EVENT_NAMES.playerReconnect,
+        payload: { roomCode: guestSession.roomCode, sessionToken: guestSession.sessionToken }
+      }
+    });
+
+    // Then the guest is connected in the match state the host sees
+    expect(
+      orchestrator
+        .getState()
+        .match?.players.find((player) => player.playerId === guestSession.playerId)?.connected
+    ).toBe(true);
+    expect(result.steps.map((step) => `${step.target}:${step.event.type}`)).toContain(
+      "host-local:match:state"
+    );
+  });
+
   it("hydrates host authority state and continues serving commands", () => {
     const source = createOrchestrator();
 
