@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Node's type definitions follow the Node 22 runtime (CI and Dockerfiles); move them
+      # with the runtime, not ahead of it.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # One PR for routine bumps; majors arrive separately so they get their own review.
       minor-and-patch:
