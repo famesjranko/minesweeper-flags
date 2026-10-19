@@ -1,4 +1,5 @@
 import { INVITE_TOKEN_LENGTH, ROOM_CODE_LENGTH } from "@minesweeper-flags/shared";
+import { createRandomId } from "../random-id.js";
 import type { P2PHostRoomRecord, P2PRoomPlayerRecord } from "./p2p-host-state.js";
 
 const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -57,8 +58,7 @@ const createRandomString = (alphabet: string, length: number): string => {
 };
 
 export const createDefaultP2PHostIdentityFactory = (): P2PHostIdentityFactory => ({
-  createId: () =>
-    getCrypto()?.randomUUID() ?? `p2p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+  createId: createRandomId,
   createRoomCode: () => createRandomString(ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH),
   createInviteToken: () => createRandomString(TOKEN_ALPHABET, INVITE_TOKEN_LENGTH)
 });
