@@ -72,6 +72,7 @@ export const LobbyPreviewPanel = ({
 
       <div className="lobby-preview-board">
         {previewCells.map((cell, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a fixed decorative grid that never reorders.
           <div key={`${cell}-${index}`} className={["lobby-preview-cell", `is-${cell}`].join(" ")}>
             {cell === "number-1" ? "1" : cell === "number-2" ? "2" : cell === "number-3" ? "3" : ""}
             {cell === "flag-blue" ? "⚑" : ""}

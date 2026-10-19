@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
+import { describe, expect, it } from "vitest";
 import { advanceLastMoveTrail, getLastMoveMarks, type LastMoveTrail } from "./last-move.js";
 
 type Action = NonNullable<MatchStateDto["lastAction"]>;

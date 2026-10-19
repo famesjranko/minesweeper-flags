@@ -1,14 +1,12 @@
+import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { MIN_BOMB_DEFICIT, type MatchStateDto } from "@minesweeper-flags/shared";
 import { MatchView } from "./MatchView.js";
 
 const createMatch = ({
-  currentPlayerId,
   currentTurnPlayerId,
   scores
 }: {
-  currentPlayerId: string;
   currentTurnPlayerId: string;
   scores: [number, number];
 }): MatchStateDto => ({
@@ -61,7 +59,6 @@ describe("MatchView bomb availability", () => {
         roomCode="ABCDE"
         currentPlayerId="player-1"
         match={createMatch({
-          currentPlayerId: "player-1",
           currentTurnPlayerId: "player-1",
           scores: [2, 2 + MIN_BOMB_DEFICIT]
         })}
@@ -94,7 +91,6 @@ describe("MatchView bomb availability", () => {
         roomCode="ABCDE"
         currentPlayerId="player-1"
         match={createMatch({
-          currentPlayerId: "player-1",
           currentTurnPlayerId: "player-1",
           scores: [8, 8 + (MIN_BOMB_DEFICIT - 1)]
         })}
@@ -125,7 +121,6 @@ describe("MatchView bomb availability", () => {
         roomCode="ABCDE"
         currentPlayerId="player-2"
         match={createMatch({
-          currentPlayerId: "player-2",
           currentTurnPlayerId: "player-2",
           scores: [2, 2 + MIN_BOMB_DEFICIT]
         })}
@@ -157,7 +152,6 @@ describe("MatchView turn hint", () => {
         roomCode="ABCDE"
         currentPlayerId={currentPlayerId}
         match={createMatch({
-          currentPlayerId,
           currentTurnPlayerId: "player-1",
           scores: [0, 0]
         })}
@@ -200,7 +194,6 @@ describe("MatchView turn hint", () => {
 describe("MatchView last-move marks", () => {
   const sized = (size: number, lastAction: MatchStateDto["lastAction"]): MatchStateDto => {
     const base = createMatch({
-      currentPlayerId: "player-1",
       currentTurnPlayerId: "player-1",
       scores: [0, 0]
     });

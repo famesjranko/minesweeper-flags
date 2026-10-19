@@ -1,11 +1,11 @@
 import {
-  CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
-  WEBSOCKET_CLOSE_CODES,
   type ChatMessageDto,
+  CLIENT_EVENT_NAMES,
   type ClientEvent,
   type MatchStateDto,
-  type ServerEvent
+  SERVER_EVENT_NAMES,
+  type ServerEvent,
+  WEBSOCKET_CLOSE_CODES
 } from "@minesweeper-flags/shared";
 import type { StoredSession } from "../../lib/socket/session-storage.js";
 

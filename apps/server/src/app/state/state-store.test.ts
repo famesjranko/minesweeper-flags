@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createStateStores } from "./state-store.js";
 import { PlayerSessionService } from "../realtime/player-session.service.js";
 import type {
   RedisSetOptions,
   RedisStateClient,
   RedisTransactionCommand
 } from "./redis-state-client.js";
+import { createStateStores } from "./state-store.js";
 
 class FakeRedisStateClient implements RedisStateClient {
   readonly expiryByKey = new Map<string, number>();

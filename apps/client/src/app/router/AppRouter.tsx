@@ -1,10 +1,10 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { DEPLOYMENT_MODE } from "../../lib/config/env.js";
+import { P2PJoinPage } from "../../p2p/pages/P2PJoinPage.js";
 import { HomePage } from "../../pages/HomePage.js";
 import { InvitePage } from "../../pages/InvitePage.js";
 import { LobbyPage } from "../../pages/LobbyPage.js";
 import { RoomPage } from "../../pages/RoomPage.js";
-import { P2PJoinPage } from "../../p2p/pages/P2PJoinPage.js";
 
 export const AppRouter = () => (
   <BrowserRouter>

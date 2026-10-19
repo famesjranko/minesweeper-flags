@@ -1,11 +1,12 @@
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
-  WEBSOCKET_CLOSE_CODES,
   type ClientEvent,
-  type ServerEvent
+  SERVER_EVENT_NAMES,
+  type ServerEvent,
+  WEBSOCKET_CLOSE_CODES
 } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
+import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 import { GameClientController, type GameClientScheduler } from "./game-client.controller.js";
 import { GameClientStore } from "./game-client.store.js";
 import type {
@@ -13,7 +14,6 @@ import type {
   GameClientTransportListener,
   GameClientTransportStatusChange
 } from "./game-client.transport.js";
-import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 
 class FakeTransport implements GameClientTransport {
   readonly sentEvents: ClientEvent[] = [];

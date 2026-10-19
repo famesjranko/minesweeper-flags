@@ -125,6 +125,7 @@ export const RoomLobby = ({
                   </div>
 
                   <button
+                    type="submit"
                     className="lobby-action-button lobby-create-button"
                     disabled={!canCreateRoom}
                   >
@@ -184,6 +185,7 @@ export const RoomLobby = ({
                   </div>
 
                   <button
+                    type="submit"
                     className="lobby-action-button lobby-create-button"
                     disabled={!canCreateRoom}
                   >
@@ -218,6 +220,7 @@ export const RoomLobby = ({
                   </label>
 
                   <button
+                    type="submit"
                     className={[
                       "lobby-action-button",
                       "lobby-join-button",

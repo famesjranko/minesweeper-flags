@@ -1,6 +1,6 @@
 import { DEFAULT_SERVER_PORT } from "@minesweeper-flags/shared";
-import { parseStateBackend } from "../state/state-backend.js";
 import { parseAllowedOrigins } from "../realtime/websocket-admission.js";
+import { parseStateBackend } from "../state/state-backend.js";
 
 export const DEPLOYMENT_MODES = ["local", "public"] as const;
 

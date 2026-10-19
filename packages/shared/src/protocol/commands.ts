@@ -1,5 +1,5 @@
-import { CLIENT_EVENT_NAMES } from "./event-names.js";
 import type { ClientEvent } from "./client-to-server.schema.js";
+import type { CLIENT_EVENT_NAMES } from "./event-names.js";
 
 export type GameCommand = ClientEvent;
 

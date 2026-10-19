@@ -1,19 +1,19 @@
-import { describe, expect, it } from "vitest";
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
-  WEBSOCKET_CLOSE_CODES,
-  type ServerEvent
+  type ServerEvent,
+  WEBSOCKET_CLOSE_CODES
 } from "@minesweeper-flags/shared";
+import { describe, expect, it } from "vitest";
 import {
-  buildReconnectEvent,
   appendChatMessage,
+  buildReconnectEvent,
   buildSessionFromRoomEvent,
   reconcileRecoveredChatDraft,
   replaceChatHistory,
-  shouldReconnectAfterClose,
   shouldApplyServerEvent,
-  shouldQueueWhileOffline
+  shouldQueueWhileOffline,
+  shouldReconnectAfterClose
 } from "./game-client.state.js";
 
 describe("game client state helpers", () => {

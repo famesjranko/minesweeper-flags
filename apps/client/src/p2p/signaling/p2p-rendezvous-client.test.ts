@@ -1,7 +1,7 @@
 import {
-  P2P_SIGNALING_PROTOCOL_VERSION,
   type GuestAnswerPayload,
   type HostOfferPayload,
+  P2P_SIGNALING_PROTOCOL_VERSION,
   type ReconnectAnswerPayload,
   type ReconnectOfferPayload
 } from "@minesweeper-flags/shared";

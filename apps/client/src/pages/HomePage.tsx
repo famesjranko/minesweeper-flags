@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
-import { RoomLobby } from "../features/room/RoomLobby.js";
 import { useGameClient } from "../features/connection/useGameClient.js";
+import { RoomLobby } from "../features/room/RoomLobby.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 export const HomePage = () => {

@@ -1,23 +1,23 @@
 import {
-  SERVER_EVENT_NAMES,
+  type actionSchema,
   type ChatMessageDto,
   type MatchStateDto,
-  type ServerEvent,
   type RoomStreamEvent,
-  type actionSchema
+  SERVER_EVENT_NAMES,
+  type ServerEvent
 } from "@minesweeper-flags/shared";
 import type { z } from "zod";
 import { logger } from "../../lib/logging/logger.js";
 import type { ChatService } from "../../modules/chat/chat.service.js";
 import type { MatchService } from "../../modules/matches/match.service.js";
 import type { RematchService } from "../../modules/rematch/rematch.service.js";
-import type { RoomRecord } from "../../modules/rooms/room.types.js";
 import type { RoomService } from "../../modules/rooms/room.service.js";
-import { PlayerSessionService, type PlayerSession } from "../realtime/player-session.service.js";
+import type { RoomRecord } from "../../modules/rooms/room.types.js";
+import type { PlayerSession, PlayerSessionService } from "../realtime/player-session.service.js";
 import {
+  type CommandExecution,
   createBroadcastStep,
-  createDirectStep,
-  type CommandExecution
+  createDirectStep
 } from "./game-command.types.js";
 
 type MatchActionPayload = z.infer<typeof actionSchema>;

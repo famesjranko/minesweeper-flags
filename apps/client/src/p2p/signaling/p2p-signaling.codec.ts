@@ -1,9 +1,9 @@
 import {
-  guestAnswerPayloadSchema,
-  hostOfferPayloadSchema,
-  P2P_SIGNALING_PROTOCOL_VERSION,
   type GuestAnswerPayload,
-  type HostOfferPayload
+  guestAnswerPayloadSchema,
+  type HostOfferPayload,
+  hostOfferPayloadSchema,
+  P2P_SIGNALING_PROTOCOL_VERSION
 } from "@minesweeper-flags/shared";
 import type { ZodType } from "zod";
 

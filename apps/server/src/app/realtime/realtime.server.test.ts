@@ -7,7 +7,7 @@ import {
   WEBSOCKET_CLOSE_REASONS
 } from "@minesweeper-flags/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WebSocket, type RawData } from "ws";
+import { type RawData, WebSocket } from "ws";
 import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
@@ -23,6 +23,7 @@ interface MockResponseResult {
 
 interface SentEvent {
   type: string;
+  // biome-ignore lint/suspicious/noExplicitAny: parsed wire events of many types; the assertions check their shape.
   payload: any;
 }
 

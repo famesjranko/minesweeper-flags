@@ -1,22 +1,22 @@
 import {
   CLIENT_EVENT_NAMES,
-  clientEventSchema,
   type ClientEvent,
+  clientEventSchema,
   type ServerEvent
 } from "@minesweeper-flags/shared";
+import type { ConnectionStatus } from "../../app/providers/game-client.store.js";
 import type {
   GameClientTransport,
   GameClientTransportListener,
   GameClientTransportStatusChange
 } from "../../app/providers/game-client.transport.js";
-import type { ConnectionStatus } from "../../app/providers/game-client.store.js";
 import { emitP2PHostFanout } from "../host/p2p-host-events.js";
-import { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
+import type { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
+import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
 import {
   encodeP2PRecoveryControlMessage,
   type P2PRecoveryControlMessage
 } from "../recovery/p2p-recovery-control.js";
-import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
 import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
 
 const createBindingId = (): string =>

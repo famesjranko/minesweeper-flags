@@ -1,8 +1,8 @@
-import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createServer } from "node:http";
 import {
-  createSignalingHttpHandler,
-  type CreateSignalingHttpHandlerOptions
+  type CreateSignalingHttpHandlerOptions,
+  createSignalingHttpHandler
 } from "./signaling-http.js";
 
 type LifecycleState = "starting" | "ready" | "shutting_down" | "stopped";

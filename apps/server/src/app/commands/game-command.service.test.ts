@@ -1,13 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { SERVER_EVENT_NAMES } from "@minesweeper-flags/shared";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { logger } from "../../lib/logging/logger.js";
 import { InMemoryChatRepository } from "../../modules/chat/chat.repository.js";
 import { ChatService } from "../../modules/chat/chat.service.js";
 import { InMemoryMatchRepository } from "../../modules/matches/match.repository.js";
 import { MatchService } from "../../modules/matches/match.service.js";
+import { RematchService } from "../../modules/rematch/rematch.service.js";
 import { InMemoryRoomRepository } from "../../modules/rooms/room.repository.js";
 import { RoomService } from "../../modules/rooms/room.service.js";
-import { RematchService } from "../../modules/rematch/rematch.service.js";
-import { logger } from "../../lib/logging/logger.js";
 import {
   InMemoryPlayerSessionStore,
   PlayerSessionService

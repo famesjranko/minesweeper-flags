@@ -1,5 +1,5 @@
-import type { ChatMessageRecord } from "../../modules/chat/chat.types.js";
 import type { MatchState } from "@minesweeper-flags/game-engine";
+import type { ChatMessageRecord } from "../../modules/chat/chat.types.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
 import type { PlayerSession } from "../realtime/player-session.service.js";
 

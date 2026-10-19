@@ -1,16 +1,16 @@
-import { P2P_SIGNALING_PROTOCOL_VERSION, type HostOfferPayload } from "@minesweeper-flags/shared";
+import { type HostOfferPayload, P2P_SIGNALING_PROTOCOL_VERSION } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import { WebRTCPeer } from "./webrtc-peer.js";
 import type { WebRTCPeerStatusChange } from "./webrtc-peer.types.js";
 
-type ListenerMap = Map<string, Set<(event?: any) => void>>;
+type ListenerMap = Map<string, Set<(event?: unknown) => void>>;
 
 const addListener = (
   listeners: ListenerMap,
   type: string,
-  listener: (event?: any) => void
+  listener: (event?: unknown) => void
 ): void => {
-  const bucket = listeners.get(type) ?? new Set<(event?: any) => void>();
+  const bucket = listeners.get(type) ?? new Set<(event?: unknown) => void>();
   bucket.add(listener);
   listeners.set(type, bucket);
 };
@@ -18,12 +18,12 @@ const addListener = (
 const removeListener = (
   listeners: ListenerMap,
   type: string,
-  listener: (event?: any) => void
+  listener: (event?: unknown) => void
 ): void => {
   listeners.get(type)?.delete(listener);
 };
 
-const emitEvent = (listeners: ListenerMap, type: string, event?: any): void => {
+const emitEvent = (listeners: ListenerMap, type: string, event?: unknown): void => {
   for (const listener of listeners.get(type) ?? []) {
     listener(event);
   }
@@ -36,11 +36,11 @@ class FakeRTCDataChannel {
 
   constructor(readonly label: string) {}
 
-  addEventListener(type: string, listener: (event?: any) => void): void {
+  addEventListener(type: string, listener: (event?: unknown) => void): void {
     addListener(this.listeners, type, listener);
   }
 
-  removeEventListener(type: string, listener: (event?: any) => void): void {
+  removeEventListener(type: string, listener: (event?: unknown) => void): void {
     removeListener(this.listeners, type, listener);
   }
 
@@ -76,11 +76,11 @@ class FakeRTCPeerConnection {
   };
   private readonly listeners: ListenerMap = new Map();
 
-  addEventListener(type: string, listener: (event?: any) => void): void {
+  addEventListener(type: string, listener: (event?: unknown) => void): void {
     addListener(this.listeners, type, listener);
   }
 
-  removeEventListener(type: string, listener: (event?: any) => void): void {
+  removeEventListener(type: string, listener: (event?: unknown) => void): void {
     removeListener(this.listeners, type, listener);
   }
 

@@ -1,8 +1,8 @@
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSignalingServer, type SignalingServerController } from "./signaling.server.js";
 import { InMemorySignalingRepository } from "../modules/signaling/signaling.repository.js";
 import { SignalingService } from "../modules/signaling/signaling.service.js";
+import { createSignalingServer, type SignalingServerController } from "./signaling.server.js";
 
 const offer = {
   protocolVersion: 1 as const,
@@ -95,7 +95,7 @@ const requestJson = async (
   baseUrl: string,
   path: string,
   init?: RequestInit
-): Promise<{ status: number; body: any; headers: Headers }> => {
+): Promise<{ status: number; body: Record<string, unknown>; headers: Headers }> => {
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
@@ -108,7 +108,7 @@ const requestJson = async (
 
   return {
     status: response.status,
-    body: bodyText ? (JSON.parse(bodyText) as unknown) : {},
+    body: bodyText ? (JSON.parse(bodyText) as Record<string, unknown>) : {},
     headers: response.headers
   };
 };

@@ -1,19 +1,19 @@
 import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import {
   createContext,
+  type PropsWithChildren,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
-  type PropsWithChildren
+  useSyncExternalStore
 } from "react";
-import type { ClientSession } from "./game-client.state.js";
-import { createGameClientRuntime, type GameClientRuntime } from "./game-client.runtime.js";
-import type { ConnectionStatus } from "./game-client.store.js";
-import type { P2PSetupSnapshot } from "../../p2p/setup/p2p-setup.types.js";
 import { DEPLOYMENT_MODE, SERVER_HEALTH_URL } from "../../lib/config/env.js";
+import type { P2PSetupSnapshot } from "../../p2p/setup/p2p-setup.types.js";
+import { createGameClientRuntime, type GameClientRuntime } from "./game-client.runtime.js";
+import type { ClientSession } from "./game-client.state.js";
+import type { ConnectionStatus } from "./game-client.store.js";
 
 export interface SlotAvailability {
   activeRooms: number;

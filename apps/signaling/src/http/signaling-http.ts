@@ -32,13 +32,13 @@ import {
   writeReconnectOfferResponseSchema
 } from "@minesweeper-flags/shared";
 import { resolveClientAddress } from "../lib/http/client-address.js";
+import type { SignalingService } from "../modules/signaling/signaling.service.js";
 import {
   SignalingSessionConflictError,
   SignalingSessionExpiredError,
   SignalingSessionForbiddenError,
   SignalingSessionNotFoundError
 } from "../modules/signaling/signaling.types.js";
-import type { SignalingService } from "../modules/signaling/signaling.service.js";
 
 interface FixedWindowLimit {
   maxEvents: number;

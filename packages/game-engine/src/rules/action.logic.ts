@@ -4,14 +4,14 @@ import {
   revealBombArea,
   revealConnectedSafeCells
 } from "../board/board.logic.js";
+import type { MatchState, PlayerMatchState } from "../match/match.types.js";
 import {
-  MIN_BOMB_DEFICIT,
   clearRematchVotes,
   incrementPlayerScore,
   isPlayerTrailingByAtLeast,
+  MIN_BOMB_DEFICIT,
   useBomb
 } from "../match/scoring.logic.js";
-import type { MatchState, PlayerMatchState } from "../match/match.types.js";
 import { keepTurn, switchTurn } from "../match/turn.logic.js";
 import { findWinnerPlayerId, isFinished } from "../match/win.logic.js";
 import type { ActionResolution, MatchAction } from "./action.types.js";

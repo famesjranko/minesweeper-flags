@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { MatchState } from "@minesweeper-flags/game-engine";
+import { describe, expect, it } from "vitest";
 import {
   deserializeMatchState,
   deserializePlayerSession,

@@ -1,4 +1,4 @@
-import { SERVER_EVENT_NAMES } from "./event-names.js";
+import type { SERVER_EVENT_NAMES } from "./event-names.js";
 import type { ServerEvent } from "./server-to-client.schema.js";
 
 export type BootstrapServerEvent = Extract<

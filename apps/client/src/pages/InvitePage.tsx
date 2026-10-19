@@ -11,6 +11,7 @@ export const InvitePage = () => {
   const { connectionStatus, error, session, joinRoom, clearError } = useGameClient();
   const [displayName, setDisplayName] = useState("Captain Sweeper");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: clear a stale error only when the invite token changes.
   useEffect(() => {
     clearError();
   }, [activeInviteToken]);
@@ -135,6 +136,7 @@ export const InvitePage = () => {
               </p>
 
               <button
+                type="submit"
                 className={["lobby-action-button", "lobby-join-button", canJoin ? "is-ready" : ""]
                   .filter(Boolean)
                   .join(" ")}

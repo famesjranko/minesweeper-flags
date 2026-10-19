@@ -1,5 +1,5 @@
-import { clearRematchVotes } from "./scoring.logic.js";
 import type { MatchState } from "./match.types.js";
+import { clearRematchVotes } from "./scoring.logic.js";
 import { getOpponentPlayerId, getPlayerIndex } from "./turn.logic.js";
 
 export const resignMatch = (state: MatchState, playerId: string, updatedAt: number): MatchState => {

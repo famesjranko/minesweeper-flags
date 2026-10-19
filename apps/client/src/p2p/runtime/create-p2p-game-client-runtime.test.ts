@@ -1,22 +1,22 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GameClientScheduler } from "../../app/providers/game-client.controller.js";
-import {
-  P2P_RECOVERY_STORAGE_VERSION,
-  type P2PRecoveryPersistence
-} from "../storage/p2p-recovery-storage.js";
 import type {
   GuestAnswerPayload,
   HostOfferPayload,
   ReconnectAnswerPayload,
   ReconnectOfferPayload
 } from "@minesweeper-flags/shared";
-import { createP2PGameClientRuntime } from "./create-p2p-game-client-runtime.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { GameClientScheduler } from "../../app/providers/game-client.controller.js";
 import { P2PRendezvousRequestError } from "../signaling/p2p-rendezvous-client.js";
+import {
+  P2P_RECOVERY_STORAGE_VERSION,
+  type P2PRecoveryPersistence
+} from "../storage/p2p-recovery-storage.js";
 import type {
   WebRTCPeerController,
   WebRTCPeerListener,
   WebRTCPeerStatus
 } from "../transport/webrtc-peer.types.js";
+import { createP2PGameClientRuntime } from "./create-p2p-game-client-runtime.js";
 
 class PairedFakePeer implements WebRTCPeerController {
   private status: WebRTCPeerStatus = "idle";
@@ -955,7 +955,7 @@ describe("createP2PGameClientRuntime", () => {
     const persistedRecord = hostRecoveryPersistence.read(roomCode);
     expect(persistedRecord).toMatchObject({ role: "host", room: { roomCode } });
 
-    if (!persistedRecord || persistedRecord.role !== "host") {
+    if (persistedRecord?.role !== "host") {
       throw new Error("Expected a host recovery record.");
     }
 

@@ -3,11 +3,11 @@ import type { BoardCell, MatchState } from "../index.js";
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
-  MIN_BOMB_DEFICIT,
-  TOTAL_MINES,
   createMatchState,
+  MIN_BOMB_DEFICIT,
   resignMatch,
-  resolveAction
+  resolveAction,
+  TOTAL_MINES
 } from "../index.js";
 
 const createCustomBoard = (overrides: Partial<BoardCell>[]): MatchState["board"] => {

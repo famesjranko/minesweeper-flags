@@ -1,22 +1,23 @@
 import {
   createMatchState,
+  type MatchAction,
+  type MatchState,
   resignMatch,
   resolveAction,
-  setPlayerRematchRequested,
-  type MatchAction,
-  type MatchState
+  setPlayerRematchRequested
 } from "@minesweeper-flags/game-engine";
 import {
-  CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
-  displayNameSchema,
-  toMatchStateDto,
-  type ClientEvent,
+  type actionSchema,
   type ChatMessageDto,
+  CLIENT_EVENT_NAMES,
+  type ClientEvent,
+  displayNameSchema,
+  SERVER_EVENT_NAMES,
   type ServerEvent,
-  type actionSchema
+  toMatchStateDto
 } from "@minesweeper-flags/shared";
 import type { z } from "zod";
+import { validateHostAuthoritySnapshot } from "../storage/p2p-recovery-storage.js";
 import {
   createBroadcastFanoutStep,
   createGuestFanoutStep,
@@ -43,7 +44,6 @@ import {
   type P2PHostRuntimeState,
   type P2PRoomPlayerRecord
 } from "./p2p-host-state.js";
-import { validateHostAuthoritySnapshot } from "../storage/p2p-recovery-storage.js";
 
 type MatchActionPayload = z.infer<typeof actionSchema>;
 

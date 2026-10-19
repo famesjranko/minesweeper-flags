@@ -48,9 +48,7 @@ export const resolveDeploymentMode = ({
     return explicitMode;
   }
 
-  throw new Error(
-    `VITE_DEPLOYMENT_MODE must be \"server\" or \"p2p\". Received \"${explicitMode}\".`
-  );
+  throw new Error(`VITE_DEPLOYMENT_MODE must be "server" or "p2p". Received "${explicitMode}".`);
 };
 
 export const resolveP2PStunUrls = ({

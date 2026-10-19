@@ -1,16 +1,12 @@
 import type { ClientEvent } from "@minesweeper-flags/shared";
 import { decodeServerEvent } from "../../app/providers/game-client.protocol.js";
+import type { ConnectionStatus } from "../../app/providers/game-client.store.js";
 import type {
   GameClientTransport,
   GameClientTransportListener,
   GameClientTransportStatusChange
 } from "../../app/providers/game-client.transport.js";
-import type { ConnectionStatus } from "../../app/providers/game-client.store.js";
-import type {
-  WebRTCPeerStatus,
-  WebRTCPeerStatusChange,
-  WebRTCPeerTransportSource
-} from "./webrtc-peer.types.js";
+import type { WebRTCPeerStatus, WebRTCPeerTransportSource } from "./webrtc-peer.types.js";
 
 const mapWebRTCPeerStatusToConnectionStatus = (status: WebRTCPeerStatus): ConnectionStatus => {
   switch (status) {

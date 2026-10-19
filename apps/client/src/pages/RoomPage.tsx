@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { MatchView } from "../features/match/MatchView.js";
-import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
 import { buildInvitePath } from "../features/room/invite-link.js";
+import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 const formatSetupStage = (stage: string | null | undefined): string => {
@@ -34,10 +34,10 @@ const formatSetupStage = (stage: string | null | undefined): string => {
 };
 
 const isDisplacedError = (error: string | null): boolean =>
-  error !== null && error.includes("active in another tab or window");
+  error?.includes("active in another tab or window") ?? false;
 
 const isRecoveryUnavailableError = (error: string | null): boolean =>
-  error !== null && error.includes("recovery is no longer available");
+  error?.includes("recovery is no longer available") ?? false;
 
 const isClaimVictoryError = (error: string | null): boolean =>
   error !== null &&
@@ -207,7 +207,7 @@ export const RoomPage = () => {
           )}
           <div className="waiting-action-row">
             {hasStoredSession(roomCode) && !showClaimVictory && (
-              <button className="primary-button" onClick={() => reconnect(roomCode)}>
+              <button type="button" className="primary-button" onClick={() => reconnect(roomCode)}>
                 Reconnect
               </button>
             )}
@@ -327,6 +327,7 @@ export const RoomPage = () => {
 
                   <div className="waiting-action-grid">
                     <button
+                      type="button"
                       className={[
                         "lobby-action-button",
                         "lobby-join-button",
@@ -439,6 +440,7 @@ export const RoomPage = () => {
                 </div>
 
                 <button
+                  type="button"
                   className="lobby-action-button lobby-create-button"
                   disabled={!inviteLink}
                   onClick={() =>
@@ -463,6 +465,7 @@ export const RoomPage = () => {
                 </div>
 
                 <button
+                  type="button"
                   className={[
                     "lobby-action-button",
                     "lobby-join-button",

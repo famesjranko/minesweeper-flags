@@ -1,4 +1,4 @@
-import { BOMB_RADIUS, BOARD_COLUMNS, BOARD_ROWS, TOTAL_MINES } from "./board.constants.js";
+import { BOARD_COLUMNS, BOARD_ROWS, BOMB_RADIUS, TOTAL_MINES } from "./board.constants.js";
 import type { BoardCell, BoardState, Coordinate } from "./board.types.js";
 
 export interface BoardConfig {

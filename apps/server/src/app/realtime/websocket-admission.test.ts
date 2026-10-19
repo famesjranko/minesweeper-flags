@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import type { RawData } from "ws";
 import { describe, expect, it } from "vitest";
+import type { RawData } from "ws";
 import {
   getRawMessageByteLength,
   isAllowedWebSocketOrigin,

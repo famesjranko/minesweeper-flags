@@ -1,7 +1,7 @@
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
   type ClientEvent,
+  SERVER_EVENT_NAMES,
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";

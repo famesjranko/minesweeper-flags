@@ -1,7 +1,7 @@
 import {
   CLIENT_EVENT_NAMES,
-  SERVER_EVENT_NAMES,
   type ClientEvent,
+  SERVER_EVENT_NAMES,
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
@@ -12,10 +12,10 @@ import {
   reconcileRecoveredChatDraft,
   replaceChatHistory,
   shouldApplyServerEvent,
-  shouldReconnectAfterClose,
-  shouldQueueWhileOffline
+  shouldQueueWhileOffline,
+  shouldReconnectAfterClose
 } from "./game-client.state.js";
-import { type GameClientStore } from "./game-client.store.js";
+import type { GameClientStore } from "./game-client.store.js";
 import type {
   GameClientTransport,
   GameClientTransportStatusChange

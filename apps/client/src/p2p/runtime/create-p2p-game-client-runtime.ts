@@ -1,45 +1,44 @@
-import type { SessionPersistence } from "../../lib/socket/session-storage.js";
-import { P2P_STUN_URLS } from "../../lib/config/env.js";
+import type { GuestAnswerPayload } from "@minesweeper-flags/shared";
+import { toMatchStateDto } from "@minesweeper-flags/shared";
 import {
-  GameClientController,
   createBrowserGameClientScheduler,
+  GameClientController,
   type GameClientScheduler
 } from "../../app/providers/game-client.controller.js";
-import { GameClientStore } from "../../app/providers/game-client.store.js";
-import type { StoredSession } from "../../lib/socket/session-storage.js";
 import type {
   GameClientRuntime,
   GameClientRuntimeController
 } from "../../app/providers/game-client.runtime.js";
-import type { GuestAnswerPayload } from "@minesweeper-flags/shared";
-import { toMatchStateDto } from "@minesweeper-flags/shared";
-import { decodeGuestAnswerPayload } from "../signaling/p2p-signaling.codec.js";
-import {
-  P2PRendezvousRequestError,
-  createP2PRendezvousClient,
-  type P2PRendezvousClient
-} from "../signaling/p2p-rendezvous-client.js";
-import { createP2PJoinUrl } from "../signaling/p2p-signaling-url.js";
+import { GameClientStore } from "../../app/providers/game-client.store.js";
+import { P2P_STUN_URLS } from "../../lib/config/env.js";
+import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 import { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
+import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
+import { decodeP2PRecoveryControlMessage } from "../recovery/p2p-recovery-control.js";
 import {
   createP2PSetupController,
   getGuestDirectJoinUnavailableMessage
 } from "../setup/p2p-setup.controller.js";
-import { WebRTCGameClientTransport } from "../transport/webrtc-game-client.transport.js";
-import { WebRTCPeer } from "../transport/webrtc-peer.js";
-import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
-import { P2PHostGameClientTransport } from "./p2p-host-game-client.transport.js";
 import {
-  P2P_RECOVERY_STORAGE_VERSION,
+  createP2PRendezvousClient,
+  type P2PRendezvousClient,
+  P2PRendezvousRequestError
+} from "../signaling/p2p-rendezvous-client.js";
+import { decodeGuestAnswerPayload } from "../signaling/p2p-signaling.codec.js";
+import { createP2PJoinUrl } from "../signaling/p2p-signaling-url.js";
+import {
   createBrowserP2PRecoveryPersistence,
   createHostRecoveryRecord,
   extractHostRecoveryState,
+  P2P_RECOVERY_STORAGE_VERSION,
   type P2PRecoveryGuestRecord,
   type P2PRecoveryHostRecord,
   type P2PRecoveryPersistence
 } from "../storage/p2p-recovery-storage.js";
-import { decodeP2PRecoveryControlMessage } from "../recovery/p2p-recovery-control.js";
-import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
+import { WebRTCGameClientTransport } from "../transport/webrtc-game-client.transport.js";
+import { WebRTCPeer } from "../transport/webrtc-peer.js";
+import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
+import { P2PHostGameClientTransport } from "./p2p-host-game-client.transport.js";
 
 const UNSUPPORTED_MATCH_ACTION_MESSAGE =
   "Direct Match setup is still loading. Start from the direct-match lobby flow.";
@@ -1310,7 +1309,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
     const record = this.recoveryPersistence.read(roomCode);
 
-    if (!record || record.role !== "guest") {
+    if (record?.role !== "guest") {
       return false;
     }
 

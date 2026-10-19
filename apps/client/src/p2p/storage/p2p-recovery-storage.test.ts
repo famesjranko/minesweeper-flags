@@ -1,16 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
 import { createMatchState } from "@minesweeper-flags/game-engine";
+import { afterEach, describe, expect, it } from "vitest";
 import { storeSession } from "../../lib/socket/session-storage.js";
 import {
-  P2P_RECOVERY_STORAGE_VERSION,
   createBrowserP2PRecoveryPersistence,
   createHostRecoveryRecord,
   extractHostRecoveryState,
   getStoredP2PRecoveryRecord,
-  removeStoredP2PRecoveryRecord,
-  storeP2PRecoveryRecord,
+  P2P_RECOVERY_STORAGE_VERSION,
   type P2PRecoveryGuestRecord,
-  type P2PRecoveryHostRecord
+  type P2PRecoveryHostRecord,
+  removeStoredP2PRecoveryRecord,
+  storeP2PRecoveryRecord
 } from "./p2p-recovery-storage.js";
 
 class MemoryStorage {

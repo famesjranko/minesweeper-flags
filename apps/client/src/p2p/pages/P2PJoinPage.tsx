@@ -146,6 +146,7 @@ export const P2PJoinPage = () => {
               <p className="invite-info-copy">{joinSummary}</p>
 
               <button
+                type="button"
                 className={[
                   "lobby-action-button",
                   "lobby-join-button",

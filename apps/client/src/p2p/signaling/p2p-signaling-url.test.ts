@@ -1,4 +1,4 @@
-import { P2P_SIGNALING_PROTOCOL_VERSION, type HostOfferPayload } from "@minesweeper-flags/shared";
+import { type HostOfferPayload, P2P_SIGNALING_PROTOCOL_VERSION } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import {
   createHostOfferUrlFragment,

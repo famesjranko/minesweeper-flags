@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { SERVER_EVENT_NAMES } from "@minesweeper-flags/shared";
+import { describe, expect, it } from "vitest";
 import { decodeServerEvent } from "./game-client.protocol.js";
 
 describe("game client protocol", () => {

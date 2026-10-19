@@ -39,11 +39,11 @@ export const RematchPanel = ({
       <p>{rematchMessage}</p>
       <div className="action-row">
         {isWaitingForOpponent ? (
-          <button className="secondary-button" onClick={onCancelRematch}>
+          <button type="button" className="secondary-button" onClick={onCancelRematch}>
             {rematchActionLabel}
           </button>
         ) : (
-          <button className="primary-button" onClick={onRequestRematch}>
+          <button type="button" className="primary-button" onClick={onRequestRematch}>
             {rematchActionLabel}
           </button>
         )}

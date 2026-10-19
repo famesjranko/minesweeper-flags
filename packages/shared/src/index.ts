@@ -1,6 +1,6 @@
+export * from "./adapters/to-match-state-dto.js";
 export * from "./constants/game.constants.js";
 export * from "./constants/realtime.constants.js";
-export * from "./adapters/to-match-state-dto.js";
 export * from "./p2p/signaling.schema.js";
 export * from "./protocol/bootstrap-events.js";
 export * from "./protocol/client-to-server.schema.js";
