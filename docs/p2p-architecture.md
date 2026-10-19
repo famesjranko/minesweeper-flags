@@ -111,7 +111,7 @@ The host browser runs a **game client runtime** that is indistinguishable from t
 
 - **Host-local commands** are applied directly to the `P2PHostOrchestrator`, which emits `P2PHostFanoutStep`s (broadcast / host-local / guest) that are then delivered to the host's own store and to the guest via the data channel.
 - **Guest commands** flow over the data channel as `{ bindingId, event: ClientEvent }`. The host's transport adapter routes them through `P2PHostOrchestrator.applyRemoteGuestCommand`, which re-dispatches them as host-side commands against the same orchestrator. Out-of-scope commands (wrong binding, wrong room) get a `SERVER_EVENT_NAMES.serverError` back to the guest rather than being applied.
-- **Server-side events** are the same shapes the hosted `apps/server` emits (`roomCreated`, `roomJoined`, `roomState`, `chatHistory`, `chatMessage`, `matchStarted`, `matchState`, `matchEnded`, `matchRematchUpdated`, `playerReconnected`). The guest's store does not know whether they came from a socket or a data channel.
+- **Server-side events** are the same shapes the hosted `apps/server` emits (`roomCreated`, `roomJoined`, `roomState`, `chatHistory`, `chatMessage`, `matchStarted`, `matchState`, `matchEnded`, `matchRematchUpdated`, `playerDisconnected`, `playerReconnected`). When the guest's peer drops, the host marks the guest offline in the match state and shows it locally, as the server does for a dropped socket. The guest's store does not know whether they came from a socket or a data channel.
 
 This is non-negotiable #4 in practice: reconnect, rematch, chat history replay, and refresh recovery reuse the same events as the hosted flow.
 

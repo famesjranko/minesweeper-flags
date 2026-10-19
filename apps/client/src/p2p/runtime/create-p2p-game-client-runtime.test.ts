@@ -744,6 +744,48 @@ describe("createP2PGameClientRuntime", () => {
     hostRuntime.controller.dispose();
   });
 
+  it("shows the guest offline on the host when the guest's connection drops", async () => {
+    // Given a host and guest in a live direct match
+    const hostPeer = new PairedFakePeer();
+    const guestPeer = new PairedFakePeer();
+    const rendezvousClient = new FakeRendezvousClient();
+    hostPeer.setPartner(guestPeer);
+    guestPeer.setPartner(hostPeer);
+    const hostRuntime = createP2PGameClientRuntime({
+      createPeer: () => hostPeer,
+      rendezvousClient
+    });
+    const guestRuntime = createP2PGameClientRuntime({
+      createPeer: () => guestPeer,
+      rendezvousClient
+    });
+    hostRuntime.controller.start();
+    guestRuntime.controller.start();
+    hostRuntime.controller.createRoom("Host Player");
+    await flushPromises();
+    guestRuntime.p2p?.controller.openGuestSetupSession("session-1");
+    await flushPromises();
+    guestRuntime.p2p?.controller.createGuestAnswer("Guest Player");
+    await flushPromises();
+    await flushPromises();
+    const guestPlayerId = guestRuntime.store.getSnapshot().session?.playerId;
+    const guestOnHost = () =>
+      hostRuntime.store
+        .getSnapshot()
+        .match?.players.find((player) => player.playerId === guestPlayerId);
+    expect(guestOnHost()?.connected).toBe(true);
+
+    // When the host's connection to the guest closes
+    hostPeer.disconnect();
+    await flushPromises();
+
+    // Then the host shows the guest as offline
+    expect(guestOnHost()?.connected).toBe(false);
+
+    guestRuntime.controller.dispose();
+    hostRuntime.controller.dispose();
+  });
+
   it("restores a refreshed guest through the reconnect control session while the host tab stays open", async () => {
     const hostPeers = [new PairedFakePeer(), new PairedFakePeer()];
     const guestPeers = [new PairedFakePeer(), new PairedFakePeer()];

@@ -184,6 +184,7 @@ export class P2PHostGameClientTransport implements GameClientTransport {
         }
 
         if (status === "failed" || status === "closed") {
+          this.emitSteps(this.orchestrator.disconnectGuest().steps);
           this.emitStatus({ status: "disconnected" });
         }
       }
