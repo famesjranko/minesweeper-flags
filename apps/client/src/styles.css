@@ -1696,6 +1696,59 @@ button {
     inset 0 0 22px rgba(255, 255, 255, 0.32);
 }
 
+/* Opponent's recent moves: inset double ring in the opponent's tone, fainter when older. */
+.last-move-blue {
+  --last-move-tone: #1d6fe0;
+}
+
+.last-move-red {
+  --last-move-tone: #e0283c;
+}
+
+.last-move-age-0 {
+  --last-move-strength: 1;
+}
+
+.last-move-age-1 {
+  --last-move-strength: 0.65;
+}
+
+.last-move-age-2 {
+  --last-move-strength: 0.35;
+}
+
+/* The ring sits outside the tile, in the 2px grid gap, so it never covers the tile's number or flag. */
+.board-cell.is-last-move {
+  /* Cells are stacking contexts; lift the marked one so later neighbours do not paint over its ring. */
+  z-index: 2;
+}
+
+.board-cell.is-last-move::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: var(--last-move-strength, 1);
+  box-shadow:
+    0 0 0 1px #fff,
+    0 0 0 2px #12121c,
+    0 0 0 3.5px var(--last-move-tone);
+}
+
+/* The overlay spans the 5x5 cells exactly, so the outline is drawn outside its edge, around the outer cells. */
+.board-last-move-area {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 3px;
+  opacity: var(--last-move-strength, 1);
+  box-shadow:
+    0 0 0 1px #12121c,
+    0 0 0 3px var(--last-move-tone),
+    0 0 0 4px #fff;
+}
+
 .cell-number {
   font-size: 1.28rem;
   line-height: 1;
@@ -1780,6 +1833,12 @@ button {
 }
 
 @media (max-width: 720px) {
+  .board-cell.is-last-move::after {
+    box-shadow:
+      0 0 0 1px #12121c,
+      0 0 0 3px var(--last-move-tone);
+  }
+
   :root {
     --board-cell-size: min(5.3vw, 28px);
   }
@@ -1856,11 +1915,152 @@ button {
   }
 
   .classic-match-chat {
-    height: 276px;
-    min-height: 276px;
+    height: 280px;
+    min-height: 260px;
   }
 
   .classic-main-shell {
     width: 100%;
+  }
+
+  /* Score strip layout: player panels shrink to one compact row each so the
+     whole board fits above the fold on a phone. */
+  :root {
+    --board-cell-size: min(calc((100vw - 106px) / 16), 28px);
+  }
+
+  .board-cell svg {
+    width: 80%;
+    height: 80%;
+  }
+
+  .cell-number {
+    font-size: calc(var(--board-cell-size) * 0.72);
+  }
+
+  .classic-match-chat .chat-panel-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .chat-empty-state {
+    min-height: 96px;
+    padding: 12px 8px;
+  }
+
+  .classic-sidebar-frame {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "blue red"
+      "strip strip"
+      "resign resign";
+  }
+
+  .sidebar-player-panel-blue {
+    grid-area: blue;
+  }
+
+  .sidebar-player-panel-red {
+    grid-area: red;
+  }
+
+  .sidebar-resign-button {
+    grid-area: resign;
+    min-height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .classic-sidebar-frame > .sidebar-center-strip {
+    grid-area: strip;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 3px;
+  }
+
+  .sidebar-player-panel {
+    grid-template-rows: none;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 3px 4px;
+    gap: 4px;
+  }
+
+  .sidebar-player-avatar,
+  .sidebar-player-name,
+  .sidebar-player-connection,
+  .sidebar-turn-box {
+    display: none;
+  }
+
+  .sidebar-player-header {
+    display: grid;
+    gap: 0;
+    padding: 0 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .sidebar-player-title {
+    font-size: 0.72rem;
+    line-height: 1.1;
+  }
+
+  .sidebar-player-role {
+    font-size: 0.5rem;
+    line-height: 1.1;
+  }
+
+  .sidebar-score-strip {
+    display: contents;
+  }
+
+  .sidebar-pill {
+    min-height: 28px;
+  }
+
+  .sidebar-score-pill {
+    font-size: 1rem;
+    gap: 3px;
+  }
+
+  .sidebar-bomb-pill {
+    width: 28px;
+  }
+
+  .sidebar-center-strip .star-meter {
+    margin: 0;
+    padding: 2px 8px;
+    gap: 5px;
+    font-size: 0.85rem;
+  }
+
+  .sidebar-center-strip .room-code-pill {
+    margin: 0;
+    padding: 3px 4px;
+    display: grid;
+    place-items: center;
+    letter-spacing: 0.04em;
+    font-size: 0.52rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-center-strip .move-pill {
+    margin: 0;
+    padding: 4px 6px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4em;
+    letter-spacing: 0.05em;
+    font-size: 0.58rem;
+    white-space: nowrap;
+  }
+
+  .move-pill[data-turn-hint]::after {
+    content: "\00b7  " attr(data-turn-hint);
   }
 }
