@@ -1,5 +1,5 @@
 import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import type { DeploymentMode } from "../../lib/config/env.js";
 import { extractInviteToken } from "./invite-link.js";
@@ -48,6 +48,16 @@ export const RoomLobby = ({
   const isP2PDeployment = deploymentMode === "p2p";
 
   const [refreshing, setRefreshing] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (refreshTimerRef.current !== null) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    },
+    []
+  );
 
   const handleCreateRoom = () => {
     if (!canCreateRoom) {
@@ -61,7 +71,10 @@ export const RoomLobby = ({
   const handleRefreshSlots = () => {
     setRefreshing(true);
     onRefreshSlots?.();
-    setTimeout(() => setRefreshing(false), 600);
+    if (refreshTimerRef.current !== null) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = setTimeout(() => setRefreshing(false), 600);
   };
 
   const handleJoinRoom = () => {
