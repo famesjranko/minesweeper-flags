@@ -116,4 +116,95 @@ describe("session storage", () => {
     removeStoredSession("ABCDE");
     expect(localStorage.getItem(SESSION_KEY)).toBeNull();
   });
+
+  describe("when storage is full or blocked", () => {
+    const session = {
+      roomId: "room-1",
+      roomCode: "ABCDE",
+      inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
+      playerId: "player-1",
+      displayName: "Host",
+      sessionToken: "session-1"
+    };
+
+    class FailingStorage extends MemoryStorage {
+      constructor(private readonly failing: Array<"getItem" | "setItem" | "removeItem">) {
+        super();
+      }
+
+      override getItem(key: string): string | null {
+        if (this.failing.includes("getItem")) throw new Error("blocked");
+        return super.getItem(key);
+      }
+
+      override setItem(key: string, value: string): void {
+        if (this.failing.includes("setItem")) throw new Error("QuotaExceededError");
+        super.setItem(key, value);
+      }
+
+      override removeItem(key: string): void {
+        if (this.failing.includes("removeItem")) throw new Error("blocked");
+        super.removeItem(key);
+      }
+    }
+
+    const installStorage = (localStorage: FailingStorage): void => {
+      (globalThis as unknown as { window: { localStorage: FailingStorage } }).window = {
+        localStorage
+      };
+    };
+
+    it("does not throw when a session write fails", () => {
+      // Given storage whose setItem throws
+      const localStorage = new FailingStorage(["setItem"]);
+      installStorage(localStorage);
+
+      // When a session is stored
+      const act = () => storeSession(session);
+
+      // Then the call does not throw
+      expect(act).not.toThrow();
+
+      // And nothing is saved
+      expect(localStorage.getItem(SESSION_KEY)).toBeNull();
+    });
+
+    it("reads as no stored session when getItem throws", () => {
+      // Given storage whose getItem throws
+      installStorage(new FailingStorage(["getItem"]));
+
+      // When the session is read
+      const result = getStoredSession("ABCDE");
+
+      // Then the result is null
+      expect(result).toBeNull();
+    });
+
+    it("reads as no stored session when cleanup of an invalid payload throws", () => {
+      // Given an invalid stored payload and storage whose removeItem throws
+      const localStorage = new FailingStorage(["removeItem"]);
+      localStorage.setItem(SESSION_KEY, "{not-json");
+      installStorage(localStorage);
+
+      // When the session is read
+      const act = () => getStoredSession("ABCDE");
+
+      // Then nothing throws
+      expect(act).not.toThrow();
+
+      // And the result is null
+      expect(act()).toBeNull();
+    });
+
+    it("does not throw when a session removal fails", () => {
+      // Given storage whose removeItem throws
+      installStorage(new FailingStorage(["removeItem"]));
+
+      // When the session is removed
+      const act = () => removeStoredSession("ABCDE");
+
+      // Then the call does not throw
+      expect(act).not.toThrow();
+    });
+  });
 });

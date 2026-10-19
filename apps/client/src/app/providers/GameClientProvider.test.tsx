@@ -219,4 +219,86 @@ describe("GameClientProvider", () => {
     expect(controller.hasStoredSession).toHaveBeenCalledWith("ABCDE");
     expect(controller.reconnect).toHaveBeenCalledWith("ABCDE");
   });
+
+  it("cancels the pending slot refresh when the provider unmounts", () => {
+    // Given a server-mode provider whose lobby was opened, scheduling a delayed slot refresh
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const { runtime } = createFakeRuntime();
+      vi.mocked(createGameClientRuntime).mockReturnValue(runtime);
+      let client: GameClientHookValue | null = null;
+      const Consumer = () => {
+        client = useGameClient();
+        return null;
+      };
+      const { root } = renderIntoRoot(
+        <GameClientProvider>
+          <Consumer />
+        </GameClientProvider>
+      );
+      act(() => {
+        client?.openLobby();
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // When the provider unmounts before the delay elapses
+      act(() => {
+        root.unmount();
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // Then the delayed refresh never runs and no timer is left pending
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("replaces the pending slot refresh when the lobby is opened twice", () => {
+    // Given a server-mode provider under fake timers
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const { runtime } = createFakeRuntime();
+      vi.mocked(createGameClientRuntime).mockReturnValue(runtime);
+      let client: GameClientHookValue | null = null;
+      const Consumer = () => {
+        client = useGameClient();
+        return null;
+      };
+      const { root } = renderIntoRoot(
+        <GameClientProvider>
+          <Consumer />
+        </GameClientProvider>
+      );
+
+      // When the lobby is opened twice before the first delayed refresh fires
+      act(() => {
+        client?.openLobby();
+      });
+      act(() => {
+        client?.openLobby();
+      });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // Then only the mount fetch and one delayed refresh ran
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      act(() => {
+        root.unmount();
+      });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
 });

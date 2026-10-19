@@ -61,6 +61,7 @@ const getEmptyP2PSnapshot = (): null => null;
 
 export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const runtimeRef = useRef<GameClientRuntime | null>(null);
+  const slotRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [slotAvailability, setSlotAvailability] = useState<SlotAvailability | null>(null);
 
   if (!runtimeRef.current) {
@@ -95,7 +96,10 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const openLobby = useCallback(() => {
     runtime.controller.openLobby();
     if (DEPLOYMENT_MODE === "server") {
-      setTimeout(refreshSlotCount, 500);
+      if (slotRefreshTimerRef.current !== null) {
+        clearTimeout(slotRefreshTimerRef.current);
+      }
+      slotRefreshTimerRef.current = setTimeout(refreshSlotCount, 500);
     }
   }, [runtime, refreshSlotCount]);
 
@@ -106,6 +110,10 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     }
 
     return () => {
+      if (slotRefreshTimerRef.current !== null) {
+        clearTimeout(slotRefreshTimerRef.current);
+        slotRefreshTimerRef.current = null;
+      }
       runtime.controller.dispose();
     };
   }, [runtime, refreshSlotCount]);
