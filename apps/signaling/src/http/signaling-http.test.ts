@@ -1,5 +1,5 @@
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { InMemorySignalingRepository } from "../modules/signaling/signaling.repository.js";
 import { SignalingService } from "../modules/signaling/signaling.service.js";
 import { createSignalingServer, type SignalingServerController } from "./signaling.server.js";
@@ -117,6 +117,7 @@ describe("signaling http api", () => {
   let activeServer: SignalingServerController | undefined;
 
   afterEach(async () => {
+    vi.useRealTimers();
     await activeServer?.shutdown();
     activeServer = undefined;
   });
@@ -472,7 +473,8 @@ describe("signaling http api", () => {
       status: 409
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 1_100);
 
     expect(
       await requestJson(baseUrl, `/signaling/sessions/${sessionId}/finalize`, {
@@ -573,7 +575,8 @@ describe("signaling http api", () => {
       })
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 1_100);
 
     expect(
       await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/claim`, {
