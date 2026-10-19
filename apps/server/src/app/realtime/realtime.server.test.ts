@@ -121,6 +121,7 @@ describe("realtime server", () => {
   let activeServer: TestRealtimeServer | undefined;
 
   afterEach(async () => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     await activeServer?.shutdown();
     activeServer = undefined;
@@ -196,6 +197,8 @@ describe("realtime server", () => {
     });
     activeServer.markReady();
 
+    // Freeze Date so updatedAt only moves when the test advances the clock.
+    vi.useFakeTimers({ toFake: ["Date"] });
     const socket = connectSocket(activeServer);
     await emitClientEvent(socket, {
       type: CLIENT_EVENT_NAMES.roomCreate,
@@ -218,7 +221,7 @@ describe("realtime server", () => {
       throw new Error("Expected the room to exist after room creation.");
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    vi.setSystemTime(Date.now() + 5);
 
     socket.emit("pong");
     await flushAsyncWork();
