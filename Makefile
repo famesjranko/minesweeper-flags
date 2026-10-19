@@ -50,6 +50,7 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	server-start \
 	signaling-start \
 	check \
+	images \
 	compose-config \
 	compose-build \
 	compose-p2p-build \
@@ -161,6 +162,10 @@ check: ## Run the main local verification flow
 	$(MAKE) build
 	$(MAKE) compose-config
 	$(MAKE) compose-public-config
+
+images: ## Build every Docker image (server, signaling, client, public client); CI runs this
+	$(DOCKER_COMPOSE) build server signaling client
+	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) build client
 
 compose-config: ## Validate docker compose configuration
 	@if [ "$(DEPLOYMENT_STYLE)" = "p2p" ]; then \

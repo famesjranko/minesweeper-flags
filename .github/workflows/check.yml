@@ -20,3 +20,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: make check
+
+  # Kept out of make check because it needs Docker and takes minutes.
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: make images
