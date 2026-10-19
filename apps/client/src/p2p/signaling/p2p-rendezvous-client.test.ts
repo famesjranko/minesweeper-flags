@@ -132,6 +132,53 @@ describe("P2PRendezvousClient", () => {
     expect(sleepMock).toHaveBeenCalledWith(5, undefined);
   });
 
+  it("waits past a finished attempt's leftover offer for the host's next offer", async () => {
+    // Given signaling still holds the last, finished attempt with its old offer
+    const staleOffer: ReconnectOfferPayload = { ...reconnectOffer, sdp: "stale-offer-sdp" };
+    const readOffer = (
+      attempt: { status: string; finalizationOutcome: string | null },
+      body: ReconnectOfferPayload
+    ) =>
+      createJsonResponse({
+        sessionId: "reconnect-1",
+        state: "open",
+        createdAt: 10,
+        expiresAt: 20,
+        host: { claimStatus: "claimed", instanceId: "host-instance-2", lastHeartbeatAt: 11 },
+        guest: { claimStatus: "claimed", instanceId: "guest-instance-2", lastHeartbeatAt: 11 },
+        attempt: {
+          ...attempt,
+          finalizedBy: attempt.status === "finalized" ? "host" : null,
+          finalizedAt: attempt.status === "finalized" ? 9 : null
+        },
+        offer: body
+      });
+    // And the host publishes a fresh offer on the next read
+    const fetchMock = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(
+        readOffer({ status: "finalized", finalizationOutcome: "reconnected" }, staleOffer)
+      )
+      .mockResolvedValueOnce(
+        readOffer({ status: "offer-ready", finalizationOutcome: null }, reconnectOffer)
+      );
+    const client = new P2PRendezvousClient({
+      baseUrl: "https://signal.example.com",
+      fetch: fetchMock as typeof fetch,
+      sleep: vi.fn(async () => {})
+    });
+
+    // When a reopened guest polls for the reconnect offer
+    const response = await client.pollForReconnectOffer(
+      { sessionId: "reconnect-1", secret: "guest-secret", instanceId: "guest-instance-2" },
+      { intervalMs: 5 }
+    );
+
+    // Then it answers the fresh offer, not the finished attempt's leftover one
+    expect(response.offer).toEqual(reconnectOffer);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("covers reconnect control-session routes", async () => {
     const fetchMock = vi
       .fn<() => Promise<Response>>()

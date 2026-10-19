@@ -397,10 +397,12 @@ export class P2PRendezvousClient {
     while (true) {
       const response = await this.readReconnectOffer(caller, signal);
 
+      // A finished attempt keeps its offer, so a guest that reopens right after a
+      // reconnect would answer that stale offer and be rejected. Wait for an attempt
+      // that is ready for an answer; the signal and session expiry bound the wait.
       if (
-        response.offer ||
-        response.state === "expired" ||
-        response.attempt.status === "finalized"
+        (response.offer && response.attempt.status === "offer-ready") ||
+        response.state === "expired"
       ) {
         return response;
       }
