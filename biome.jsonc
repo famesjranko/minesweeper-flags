@@ -56,6 +56,11 @@
       }
     },
     {
+      // styles.css stays one file because reordering selectors changes the cascade.
+      "includes": ["**/*.css"],
+      "linter": { "rules": { "style": { "noExcessiveLinesPerFile": "off" } } }
+    },
+    {
       // These tests assert Docker Compose interpolation text, not template literals.
       "includes": ["**/public-compose.test.ts"],
       "linter": { "rules": { "suspicious": { "noTemplateCurlyInString": "off" } } }
