@@ -28,7 +28,8 @@ COPY packages/shared/package.json packages/shared/package.json
 COPY apps/server/package.json apps/server/package.json
 COPY apps/client/package.json apps/client/package.json
 
-RUN npm ci --omit=dev
+# --ignore-scripts: the root prepare script runs husky, a dev dependency.
+RUN npm ci --omit=dev --ignore-scripts
 
 COPY --from=builder /app/packages/game-engine/dist ./packages/game-engine/dist
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist

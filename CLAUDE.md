@@ -55,7 +55,7 @@ Always run from the repo root. Do not `cd` into workspaces unless the worktree c
 Hooks (installed by `npm install` through husky; they live in `.husky/`):
 
 - **pre-commit** runs Biome on staged files with safe fixes. On a lint failure, fix the reported line, or run `make format`, then re-stage.
-- **pre-push** runs `make typecheck test`. It refuses to run with uncommitted changes. To repeat it: `make typecheck test`.
+- **pre-push** runs `make typecheck test`. It refuses to run with uncommitted or untracked files. To repeat it: `make typecheck test`.
 - A hook that reports missing dependencies needs `npm install` in that worktree.
 - Biome rule choices and their reasons live in `biome.jsonc`. Suppress a single finding inline with `// biome-ignore <rule>: <reason>`.
 - One-time setup for blame: `git config blame.ignoreRevsFile .git-blame-ignore-revs`. Merge with a merge commit, not a squash, so the recorded SHA stays valid.

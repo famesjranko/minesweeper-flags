@@ -6,10 +6,11 @@ if [ ! -x node_modules/.bin/tsc ]; then
 fi
 
 head=$(git rev-parse HEAD)
+pushes_head=false
 while read -r _local_ref local_sha _remote_ref _remote_sha; do
   case "$local_sha" in
-    0000000000000000000000000000000000000000) ;;
-    "$head") ;;
+    0000000000000000000000000000000000000000) ;; # a deleted ref has nothing to check
+    "$head") pushes_head=true ;;
     *)
       echo "pre-push: skipped local checks, because the pushed commit is not HEAD. CI still runs make check." >&2
       exit 0
@@ -17,9 +18,14 @@ while read -r _local_ref local_sha _remote_ref _remote_sha; do
   esac
 done
 
-if ! git diff --quiet HEAD --; then
-  echo "pre-push: the working tree has uncommitted changes, so it is not the commit you push." >&2
-  echo "pre-push: commit or set them aside, then push again." >&2
+if [ "$pushes_head" = false ]; then
+  exit 0
+fi
+
+# Untracked files count too: a test can pass locally on a file the commit lacks.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "pre-push: the working tree has uncommitted or untracked files, so it is not the commit you push." >&2
+  echo "pre-push: commit, remove, or ignore them, then push again." >&2
   exit 1
 fi
 
