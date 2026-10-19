@@ -83,7 +83,10 @@ make check      # tests, build, and Compose config validation
 
 There are also per-workspace targets: `make test-client`, `make test-server`, `make test-signaling`, `make test-shared`, and `make test-engine`.
 
-Before a public deploy, test the parity stacks: `make compose-public-up` (hosted) and `make compose-public-p2p-up` (direct match). They match the public deployment shape, with split origins and Redis.
+Before a public deploy, test a parity stack. These stacks match the public deployment shape, with split origins and Redis.
+
+- `make compose-public-up` (hosted) runs with built-in localhost defaults.
+- `make compose-public-p2p-up` (direct match) fails fast until you set `VITE_P2P_SIGNALING_URL`, `SIGNALING_ALLOWED_ORIGINS`, and `CSP_CONNECT_SRC`. Start from [`deploy/container/public.p2p.env.example`](deploy/container/public.p2p.env.example).
 
 ## Configuration
 
