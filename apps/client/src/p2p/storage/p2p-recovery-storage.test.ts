@@ -401,6 +401,8 @@ describe("p2p recovery storage", () => {
 
     expect(localStorage.getItem(HOSTED_SESSION_KEY)).toBeTruthy();
     expect(localStorage.getItem(P2P_RECOVERY_KEY)).toBeTruthy();
-    expect(localStorage.getItem(HOSTED_SESSION_KEY)).not.toBe(localStorage.getItem(P2P_RECOVERY_KEY));
+    expect(localStorage.getItem(HOSTED_SESSION_KEY)).not.toBe(
+      localStorage.getItem(P2P_RECOVERY_KEY)
+    );
   });
 });

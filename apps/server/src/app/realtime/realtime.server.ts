@@ -47,10 +47,7 @@ import {
   WEBSOCKET_ALLOWED_ORIGINS,
   TRUST_PROXY
 } from "../config/env.js";
-import {
-  getRawMessageByteLength,
-  isAllowedWebSocketOrigin
-} from "./websocket-admission.js";
+import { getRawMessageByteLength, isAllowedWebSocketOrigin } from "./websocket-admission.js";
 
 const INACTIVE_ROOM_TTL_MS = 30 * 60 * 1000;
 const INACTIVE_ROOM_SWEEP_INTERVAL_MS = 60 * 1000;
@@ -567,12 +564,14 @@ export const createRealtimeServer = async ({
           });
 
           if (!hasActiveConnection) {
-            const deleteRoomState = activeStateStores.deleteRoomState ?? (async () => {
-              await roomRepository.delete(room.roomCode);
-              await matchRepository.deleteByRoomId(room.roomId);
-              await chatRepository.deleteByRoomCode(room.roomCode);
-              await playerSessionService.revokeRoomSessions(room.roomCode);
-            });
+            const deleteRoomState =
+              activeStateStores.deleteRoomState ??
+              (async () => {
+                await roomRepository.delete(room.roomCode);
+                await matchRepository.deleteByRoomId(room.roomId);
+                await chatRepository.deleteByRoomCode(room.roomCode);
+                await playerSessionService.revokeRoomSessions(room.roomCode);
+              });
 
             await deleteRoomState(room);
 
@@ -680,7 +679,10 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await dispatchExecution(socket, await commandService.createRoom(event.payload.displayName));
+            await dispatchExecution(
+              socket,
+              await commandService.createRoom(event.payload.displayName)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.roomJoin: {
@@ -734,7 +736,10 @@ export const createRealtimeServer = async ({
               return;
             }
 
-            await dispatchExecution(socket, await commandService.sendChat(session, event.payload.text));
+            await dispatchExecution(
+              socket,
+              await commandService.sendChat(session, event.payload.text)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.matchAction: {
@@ -747,7 +752,10 @@ export const createRealtimeServer = async ({
               event.payload.sessionToken,
               socket
             );
-            await dispatchExecution(socket, await commandService.applyMatchAction(session, event.payload.action));
+            await dispatchExecution(
+              socket,
+              await commandService.applyMatchAction(session, event.payload.action)
+            );
             break;
           }
           case CLIENT_EVENT_NAMES.matchResign: {
@@ -808,7 +816,10 @@ export const createRealtimeServer = async ({
           eventType
         });
 
-        sendServerError(socket, error instanceof Error ? error.message : "Unexpected server error.");
+        sendServerError(
+          socket,
+          error instanceof Error ? error.message : "Unexpected server error."
+        );
       }
     });
   });

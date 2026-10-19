@@ -186,7 +186,9 @@ export class RedisRoomRepository implements RoomRepository {
 
   async listAll(): Promise<RoomRecord[]> {
     const roomCodes = await this.redis.sMembers(this.roomCodesKey);
-    const rooms = await Promise.all(roomCodes.map(async (roomCode) => await this.getByCode(roomCode)));
+    const rooms = await Promise.all(
+      roomCodes.map(async (roomCode) => await this.getByCode(roomCode))
+    );
     const missingRoomCodes = roomCodes.filter((_, index) => !rooms[index]);
 
     if (missingRoomCodes.length > 0) {

@@ -74,7 +74,9 @@ describe("RematchPanel", () => {
       />
     );
 
-    expect(html).toContain("The other player requested a rematch. Confirm to start the next round.");
+    expect(html).toContain(
+      "The other player requested a rematch. Confirm to start the next round."
+    );
     expect(html).toContain("Accept Rematch");
   });
 });

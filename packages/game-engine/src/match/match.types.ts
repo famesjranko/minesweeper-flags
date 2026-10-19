@@ -37,4 +37,3 @@ export interface MatchState {
   createdAt: number;
   updatedAt: number;
 }
-

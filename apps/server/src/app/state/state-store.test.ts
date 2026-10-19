@@ -60,10 +60,7 @@ class FakeRedisStateClient implements RedisStateClient {
 
   async exists(key: string): Promise<number> {
     return Number(
-      this.strings.has(key) ||
-        this.lists.has(key) ||
-        this.hashes.has(key) ||
-        this.sets.has(key)
+      this.strings.has(key) || this.lists.has(key) || this.hashes.has(key) || this.sets.has(key)
     );
   }
 
@@ -343,7 +340,10 @@ describe("state stores", () => {
       playerSessionService.requireSession(room.roomCode, session.sessionToken)
     ).rejects.toThrow("That session is not valid for this room.");
 
-    const sessionForDelete = await playerSessionService.createSession(room.roomCode, room.players[0]!);
+    const sessionForDelete = await playerSessionService.createSession(
+      room.roomCode,
+      room.players[0]!
+    );
     await stateStores.deleteRoomState(room);
 
     await expect(stateStores.roomRepository.getByCode(room.roomCode)).resolves.toBeUndefined();
@@ -356,7 +356,9 @@ describe("state stores", () => {
     await stateStores.roomRepository.save(room);
     expect(await stateStores.roomRepository.delete(room.roomCode)).toEqual(room);
     expect(await stateStores.roomRepository.getByInviteToken(room.inviteToken)).toBeUndefined();
-    expect(await stateStores.roomRepository.getByPlayerId(room.players[0]!.playerId)).toBeUndefined();
+    expect(
+      await stateStores.roomRepository.getByPlayerId(room.players[0]!.playerId)
+    ).toBeUndefined();
     expect(await stateStores.roomRepository.listAll()).toEqual([]);
     await stateStores.chatRepository.deleteByRoomCode(room.roomCode);
     expect(await stateStores.chatRepository.listRecent(room.roomCode, 25)).toEqual([]);

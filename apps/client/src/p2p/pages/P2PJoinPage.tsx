@@ -52,18 +52,20 @@ export const P2PJoinPage = () => {
     return <Navigate to={`/room/${session.roomCode}`} replace />;
   }
 
-  const inviteBannerLabel = guestSetup?.stage === "waiting-for-host-finalize"
-    ? "Connecting to host"
-    : unavailableMessage || guestSetup?.error
-      ? "Direct link unavailable"
+  const inviteBannerLabel =
+    guestSetup?.stage === "waiting-for-host-finalize"
+      ? "Connecting to host"
+      : unavailableMessage || guestSetup?.error
+        ? "Direct link unavailable"
+        : guestSetup?.offerPayload
+          ? "Direct link loaded"
+          : "Loading direct link";
+  const directLinkReadout =
+    unavailableMessage && guestSetup?.sessionState && guestSetup.sessionState !== "open"
+      ? getStaleLinkLabel(guestSetup.sessionState)
       : guestSetup?.offerPayload
-        ? "Direct link loaded"
-        : "Loading direct link";
-  const directLinkReadout = unavailableMessage && guestSetup?.sessionState && guestSetup.sessionState !== "open"
-    ? getStaleLinkLabel(guestSetup.sessionState)
-    : guestSetup?.offerPayload
-      ? "Loaded from session"
-      : "Loading session";
+        ? "Loaded from session"
+        : "Loading session";
   const setupSummary = unavailableMessage
     ? unavailableMessage
     : "This flow creates your WebRTC answer behind the scenes and waits for the host to finish setup.";
@@ -92,7 +94,8 @@ export const P2PJoinPage = () => {
             <strong>Guest setup</strong>
           </div>
           <p>
-            Open the host's link, enter your display name, and let the app finish the direct setup automatically.
+            Open the host's link, enter your display name, and let the app finish the direct setup
+            automatically.
           </p>
         </div>
 
@@ -107,7 +110,9 @@ export const P2PJoinPage = () => {
             <div className="lobby-identity-card invite-summary-card">
               <div className="lobby-card-heading">
                 <h2>Guest Join Flow</h2>
-                <span className={`lobby-connection-pill is-${connectionStatus}`}>{connectionStatus}</span>
+                <span className={`lobby-connection-pill is-${connectionStatus}`}>
+                  {connectionStatus}
+                </span>
               </div>
 
               <div className="invite-room-readout invite-private-readout">
@@ -125,20 +130,20 @@ export const P2PJoinPage = () => {
                 />
               </label>
 
-              <p className="invite-info-copy">
-                {setupSummary}
-              </p>
+              <p className="invite-info-copy">{setupSummary}</p>
             </div>
 
             <section className="lobby-action-card is-join invite-join-card">
               <div className="lobby-card-heading">
                 <h2>Join Direct Match</h2>
-                <span>{unavailableMessage ? "This invite needs a fresh host link." : "Confirm your display name and connect to the host."}</span>
+                <span>
+                  {unavailableMessage
+                    ? "This invite needs a fresh host link."
+                    : "Confirm your display name and connect to the host."}
+                </span>
               </div>
 
-              <p className="invite-info-copy">
-                {joinSummary}
-              </p>
+              <p className="invite-info-copy">{joinSummary}</p>
 
               <button
                 className={[
@@ -161,11 +166,11 @@ export const P2PJoinPage = () => {
               >
                 {guestSetup?.stage === "creating-answer"
                   ? "Joining Direct Match..."
-                    : guestSetup?.stage === "submitting-answer"
-                      ? "Joining Direct Match..."
-                      : guestSetup?.stage === "waiting-for-host-finalize"
-                        ? "Connecting To Host..."
-                        : "Join Direct Match"}
+                  : guestSetup?.stage === "submitting-answer"
+                    ? "Joining Direct Match..."
+                    : guestSetup?.stage === "waiting-for-host-finalize"
+                      ? "Connecting To Host..."
+                      : "Join Direct Match"}
               </button>
 
               <div className="invite-secondary-actions">
@@ -178,12 +183,8 @@ export const P2PJoinPage = () => {
         </div>
 
         <div className="status-strip lobby-status-strip invite-status-strip">
-          <span className="lobby-status-note">
-            {statusSummary}
-          </span>
-          <span className="lobby-status-note">
-            {statusDetail}
-          </span>
+          <span className="lobby-status-note">{statusSummary}</span>
+          <span className="lobby-status-note">{statusDetail}</span>
           {guestSetup?.error ? <span className="error-text">{guestSetup.error}</span> : null}
           {error ? <span className="error-text">{error}</span> : null}
         </div>

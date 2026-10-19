@@ -9,10 +9,7 @@ import { useGameClient } from "../../features/connection/useGameClient.js";
 import { GameClientProvider } from "./GameClientProvider.js";
 import type { GameClientRuntime } from "./game-client.runtime.js";
 import { createGameClientRuntime } from "./game-client.runtime.js";
-import {
-  createGameClientSnapshot,
-  type GameClientSnapshot
-} from "./game-client.store.js";
+import { createGameClientSnapshot, type GameClientSnapshot } from "./game-client.store.js";
 
 vi.mock("./game-client.runtime.js", () => ({
   createGameClientRuntime: vi.fn()

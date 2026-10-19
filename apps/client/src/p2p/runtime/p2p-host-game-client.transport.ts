@@ -20,7 +20,8 @@ import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
 import type { WebRTCPeerController } from "../transport/webrtc-peer.types.js";
 
 const createBindingId = (): string =>
-  globalThis.crypto?.randomUUID() ?? `p2p-binding-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  globalThis.crypto?.randomUUID() ??
+  `p2p-binding-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const parseClientEvent = (message: string): ClientEvent | null => {
   let parsed: unknown;

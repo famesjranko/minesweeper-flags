@@ -130,7 +130,11 @@ describe("redis signaling repository", () => {
     vi.useFakeTimers();
     vi.setSystemTime(10_000);
 
-    const repository = new RedisSignalingRepository(new FakeExpiringRedisClient(), "test-signaling", 2);
+    const repository = new RedisSignalingRepository(
+      new FakeExpiringRedisClient(),
+      "test-signaling",
+      2
+    );
     const service = new SignalingService(repository, {
       sessionTtlSeconds: 1,
       reconnectControlSession: {
@@ -148,7 +152,9 @@ describe("redis signaling repository", () => {
       state: "expired"
     });
 
-    await expect(service.getAnswer(created.sessionId, created.hostSecret, 11_500)).resolves.toMatchObject({
+    await expect(
+      service.getAnswer(created.sessionId, created.hostSecret, 11_500)
+    ).resolves.toMatchObject({
       sessionId: created.sessionId,
       state: "expired",
       answer: null
@@ -221,7 +227,10 @@ describe("redis signaling repository", () => {
     vi.useFakeTimers();
     vi.setSystemTime(30_000);
 
-    const repository = new RedisSignalingRepository(new FakeExpiringRedisClient(), "test-signaling");
+    const repository = new RedisSignalingRepository(
+      new FakeExpiringRedisClient(),
+      "test-signaling"
+    );
     const service = new SignalingService(repository, {
       sessionTtlSeconds: 60,
       reconnectControlSession: {
@@ -331,7 +340,10 @@ describe("redis signaling repository", () => {
     vi.useFakeTimers();
     vi.setSystemTime(40_000);
 
-    const repository = new RedisSignalingRepository(new FakeExpiringRedisClient(), "test-signaling");
+    const repository = new RedisSignalingRepository(
+      new FakeExpiringRedisClient(),
+      "test-signaling"
+    );
     const service = new SignalingService(repository, {
       sessionTtlSeconds: 1,
       reconnectControlSession: {
@@ -373,7 +385,9 @@ describe("redis signaling repository", () => {
 
     vi.setSystemTime(41_500);
 
-    await expect(repository.getReconnectControlSessionBySessionId("reconnect-sliding-redis")).resolves.toMatchObject({
+    await expect(
+      repository.getReconnectControlSessionBySessionId("reconnect-sliding-redis")
+    ).resolves.toMatchObject({
       sessionId: "reconnect-sliding-redis",
       expiresAt: 41_900,
       host: {
@@ -384,10 +398,14 @@ describe("redis signaling repository", () => {
 
     vi.setSystemTime(42_899);
 
-    await expect(repository.getReconnectControlSessionBySessionId("reconnect-sliding-redis")).resolves.toBeDefined();
+    await expect(
+      repository.getReconnectControlSessionBySessionId("reconnect-sliding-redis")
+    ).resolves.toBeDefined();
 
     vi.setSystemTime(42_901);
 
-    await expect(repository.getReconnectControlSessionBySessionId("reconnect-sliding-redis")).resolves.toBeUndefined();
+    await expect(
+      repository.getReconnectControlSessionBySessionId("reconnect-sliding-redis")
+    ).resolves.toBeUndefined();
   });
 });

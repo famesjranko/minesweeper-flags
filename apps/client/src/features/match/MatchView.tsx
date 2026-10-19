@@ -181,7 +181,7 @@ export const MatchView = ({
               ? "Winner"
               : match.winnerPlayerId
                 ? "Defeated"
-              : "Draw"}
+                : "Draw"}
           </p>
         ) : slot.isSelf ? (
           <p>

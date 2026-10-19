@@ -142,7 +142,9 @@ export class SignalingService {
         const session = this.assertActiveSession(await this.getSessionOrThrow(sessionId), now);
 
         if (session.answer) {
-          throw new SignalingSessionConflictError("That direct-match link already has a guest answer.");
+          throw new SignalingSessionConflictError(
+            "That direct-match link already has a guest answer."
+          );
         }
 
         if (session.state !== "open") {
@@ -316,9 +318,14 @@ export class SignalingService {
           );
         }
 
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -350,9 +357,14 @@ export class SignalingService {
           ...claim,
           lastHeartbeatAt: now
         });
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -387,9 +399,14 @@ export class SignalingService {
             finalizedAt: null
           }
         };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -443,9 +460,14 @@ export class SignalingService {
             answer: request.answer
           }
         };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -504,9 +526,14 @@ export class SignalingService {
             finalizedAt: now
           }
         };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(updatedSession, now);
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
 
-        if (!(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))) {
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
           continue;
         }
 
@@ -570,7 +597,10 @@ export class SignalingService {
     return session;
   }
 
-  private assertActiveSession(session: SignalingSessionRecord, now: number): SignalingSessionRecord {
+  private assertActiveSession(
+    session: SignalingSessionRecord,
+    now: number
+  ): SignalingSessionRecord {
     if (session.expiresAt <= now) {
       throw new SignalingSessionExpiredError("That direct-match link has expired.");
     }

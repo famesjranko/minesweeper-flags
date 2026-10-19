@@ -25,4 +25,3 @@ export const keepTurn = (state: MatchState): MatchState => ({
   ...state,
   turnNumber: state.turnNumber + 1
 });
-

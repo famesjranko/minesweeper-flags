@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { INVITE_TOKEN_LENGTH } from "../constants/game.constants.js";
 
-export const roomCodeSchema = z.string().trim().min(4).max(8).transform((value) => value.toUpperCase());
+export const roomCodeSchema = z
+  .string()
+  .trim()
+  .min(4)
+  .max(8)
+  .transform((value) => value.toUpperCase());
 export const inviteTokenSchema = z
   .string()
   .trim()

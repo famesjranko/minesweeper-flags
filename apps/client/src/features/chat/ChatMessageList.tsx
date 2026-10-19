@@ -57,8 +57,7 @@ export const ChatMessageList = ({
     }
 
     const handleScroll = () => {
-      shouldStickToBottomRef.current =
-        list.scrollHeight - list.scrollTop - list.clientHeight < 28;
+      shouldStickToBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 28;
     };
 
     handleScroll();

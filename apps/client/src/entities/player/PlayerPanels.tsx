@@ -40,4 +40,3 @@ export const PlayerPanels = ({ match, currentPlayerId }: PlayerPanelsProps) => (
     ))}
   </div>
 );
-

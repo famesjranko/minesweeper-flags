@@ -7,9 +7,7 @@
     "noEmit": true,
     "declaration": false,
     "declarationMap": false,
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
   "references": [
     {
@@ -19,9 +17,5 @@
       "path": "../../packages/shared"
     }
   ],
-  "include": [
-    "src",
-    "vite.config.ts"
-  ]
+  "include": ["src", "vite.config.ts"]
 }
-

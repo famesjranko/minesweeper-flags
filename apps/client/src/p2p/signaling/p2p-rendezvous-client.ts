@@ -124,7 +124,10 @@ export class P2PRendezvousClient {
     this.sleepImpl = sleep;
   }
 
-  createSession = (offer: HostOfferPayload, signal?: AbortSignal): Promise<CreateSignalingSessionResponse> =>
+  createSession = (
+    offer: HostOfferPayload,
+    signal?: AbortSignal
+  ): Promise<CreateSignalingSessionResponse> =>
     this.request(
       "/signaling/sessions",
       {
@@ -187,7 +190,10 @@ export class P2PRendezvousClient {
       finalizeSignalingSessionResponseSchema
     );
 
-  getFinalization = (sessionId: string, signal?: AbortSignal): Promise<GetSignalingFinalizationResponse> =>
+  getFinalization = (
+    sessionId: string,
+    signal?: AbortSignal
+  ): Promise<GetSignalingFinalizationResponse> =>
     this.request(
       `/signaling/sessions/${encodeURIComponent(sessionId)}/finalization`,
       { method: "GET", signal },
@@ -400,7 +406,11 @@ export class P2PRendezvousClient {
     while (true) {
       const response = await this.readReconnectOffer(sessionId, secret, instanceId, signal);
 
-      if (response.offer || response.state === "expired" || response.attempt.status === "finalized") {
+      if (
+        response.offer ||
+        response.state === "expired" ||
+        response.attempt.status === "finalized"
+      ) {
         return response;
       }
 
@@ -417,7 +427,11 @@ export class P2PRendezvousClient {
     while (true) {
       const response = await this.readReconnectAnswer(sessionId, secret, instanceId, signal);
 
-      if (response.answer || response.state === "expired" || response.attempt.status === "finalized") {
+      if (
+        response.answer ||
+        response.state === "expired" ||
+        response.attempt.status === "finalized"
+      ) {
         return response;
       }
 

@@ -101,8 +101,7 @@ export const hasDeliveredChatText = (
   messages: ChatMessageDto[],
   playerId: string,
   text: string
-): boolean =>
-  messages.some((message) => message.playerId === playerId && message.text === text);
+): boolean => messages.some((message) => message.playerId === playerId && message.text === text);
 
 export const reconcileRecoveredChatDraft = ({
   currentDraft,
@@ -162,7 +161,10 @@ export const shouldApplyServerEvent = (
   event: ServerEvent,
   activeRoomCode: string | null
 ): boolean => {
-  if (event.type === SERVER_EVENT_NAMES.roomCreated || event.type === SERVER_EVENT_NAMES.roomJoined) {
+  if (
+    event.type === SERVER_EVENT_NAMES.roomCreated ||
+    event.type === SERVER_EVENT_NAMES.roomJoined
+  ) {
     return true;
   }
 

@@ -1,4 +1,9 @@
-import { createBoard, getCell, revealBombArea, revealConnectedSafeCells } from "../board/board.logic.js";
+import {
+  createBoard,
+  getCell,
+  revealBombArea,
+  revealConnectedSafeCells
+} from "../board/board.logic.js";
 import {
   MIN_BOMB_DEFICIT,
   clearRematchVotes,
@@ -13,7 +18,10 @@ import type { ActionResolution, MatchAction } from "./action.types.js";
 
 interface CreateMatchOptions {
   roomId: string;
-  players: [Pick<PlayerMatchState, "playerId" | "displayName">, Pick<PlayerMatchState, "playerId" | "displayName">];
+  players: [
+    Pick<PlayerMatchState, "playerId" | "displayName">,
+    Pick<PlayerMatchState, "playerId" | "displayName">
+  ];
   seed: number;
   createdAt: number;
   startingPlayerId: string;

@@ -272,10 +272,7 @@ const checkHostAuthorityRelationships = (
   }
 
   // Rule 3: match requires room, hostSession, and guestSession all present.
-  if (
-    match !== null &&
-    (room === null || hostSession === null || guestSession === null)
-  ) {
+  if (match !== null && (room === null || hostSession === null || guestSession === null)) {
     ctx.addIssue({
       code: "custom",
       message: "match requires room, hostSession, and guestSession"
@@ -315,8 +312,7 @@ const checkHostAuthorityRelationships = (
     hostSession !== null &&
     !room.players.some(
       (player) =>
-        player.playerId === hostSession.playerId &&
-        player.displayName === hostSession.displayName
+        player.playerId === hostSession.playerId && player.displayName === hostSession.displayName
     )
   ) {
     ctx.addIssue({
@@ -327,12 +323,7 @@ const checkHostAuthorityRelationships = (
   }
 
   // Rule 7: solo room must have exactly one player.
-  if (
-    room !== null &&
-    hostSession !== null &&
-    guestSession === null &&
-    room.players.length !== 1
-  ) {
+  if (room !== null && hostSession !== null && guestSession === null && room.players.length !== 1) {
     ctx.addIssue({
       code: "custom",
       message: "room without guestSession must contain exactly one player"
@@ -346,8 +337,7 @@ const checkHostAuthorityRelationships = (
     guestSession !== null &&
     !room.players.some(
       (player) =>
-        player.playerId === guestSession.playerId &&
-        player.displayName === guestSession.displayName
+        player.playerId === guestSession.playerId && player.displayName === guestSession.displayName
     )
   ) {
     ctx.addIssue({
@@ -396,8 +386,7 @@ const checkHostAuthorityRelationships = (
       match.players[0].playerId === match.players[1].playerId ||
       !match.players.some(
         (player) =>
-          player.playerId === hostSession.playerId &&
-          player.displayName === hostSession.displayName
+          player.playerId === hostSession.playerId && player.displayName === hostSession.displayName
       ) ||
       !match.players.some(
         (player) =>

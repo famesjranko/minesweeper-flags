@@ -16,4 +16,3 @@ export interface BoardState {
   mineCount: number;
   cells: BoardCell[][];
 }
-

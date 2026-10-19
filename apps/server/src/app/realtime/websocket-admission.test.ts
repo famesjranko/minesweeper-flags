@@ -14,12 +14,9 @@ const createRequest = (origin?: string) =>
 
 describe("websocket admission", () => {
   it("parses and normalizes configured origins", () => {
-    expect(
-      parseAllowedOrigins(" https://app.example.com , https://www.example.com:8443 ")
-    ).toEqual([
-      "https://app.example.com",
-      "https://www.example.com:8443"
-    ]);
+    expect(parseAllowedOrigins(" https://app.example.com , https://www.example.com:8443 ")).toEqual(
+      ["https://app.example.com", "https://www.example.com:8443"]
+    );
   });
 
   it("allows all origins when the allowlist is empty or wildcarded", () => {
@@ -28,9 +25,7 @@ describe("websocket admission", () => {
   });
 
   it("rejects missing or mismatched origins when an allowlist is configured", () => {
-    expect(
-      isAllowedWebSocketOrigin(createRequest(), ["https://app.example.com"])
-    ).toBe(false);
+    expect(isAllowedWebSocketOrigin(createRequest(), ["https://app.example.com"])).toBe(false);
     expect(
       isAllowedWebSocketOrigin(createRequest("https://evil.example.com"), [
         "https://app.example.com"

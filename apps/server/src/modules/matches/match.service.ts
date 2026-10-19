@@ -35,10 +35,7 @@ export class MatchService {
 
       const matchState = createMatchState({
         roomId: room.roomId,
-        players: [
-          firstPlayer,
-          secondPlayer
-        ],
+        players: [firstPlayer, secondPlayer],
         seed: startedAt,
         createdAt: startedAt,
         startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId

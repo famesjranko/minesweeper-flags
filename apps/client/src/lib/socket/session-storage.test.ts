@@ -31,7 +31,9 @@ describe("session storage", () => {
 
   it("persists only the canonical stored-session shape", () => {
     const localStorage = new MemoryStorage();
-    (globalThis as unknown as { window: { localStorage: MemoryStorage } }).window = { localStorage };
+    (globalThis as unknown as { window: { localStorage: MemoryStorage } }).window = {
+      localStorage
+    };
 
     storeSession({
       roomId: "room-1",
@@ -64,7 +66,9 @@ describe("session storage", () => {
 
   it("drops invalid or over-wide persisted payloads on read", () => {
     const localStorage = new MemoryStorage();
-    (globalThis as unknown as { window: { localStorage: MemoryStorage } }).window = { localStorage };
+    (globalThis as unknown as { window: { localStorage: MemoryStorage } }).window = {
+      localStorage
+    };
     const persistence = createBrowserSessionPersistence();
 
     localStorage.setItem(

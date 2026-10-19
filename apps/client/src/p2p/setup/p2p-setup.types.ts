@@ -1,4 +1,8 @@
-import type { GuestAnswerPayload, HostOfferPayload, SignalingSessionState } from "@minesweeper-flags/shared";
+import type {
+  GuestAnswerPayload,
+  HostOfferPayload,
+  SignalingSessionState
+} from "@minesweeper-flags/shared";
 
 export type P2PSetupStage =
   | "idle"

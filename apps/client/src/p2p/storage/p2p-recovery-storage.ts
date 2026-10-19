@@ -73,9 +73,7 @@ const cloneHostReconnectMetadata = (
   ...(reconnect.lastInstanceId ? { lastInstanceId: reconnect.lastInstanceId } : {})
 });
 
-export const validateHostAuthoritySnapshot = (
-  value: unknown
-): P2PHostAuthoritySnapshot | null => {
+export const validateHostAuthoritySnapshot = (value: unknown): P2PHostAuthoritySnapshot | null => {
   const result = hostAuthoritySnapshotSchema.safeParse(value);
 
   if (!result.success) {

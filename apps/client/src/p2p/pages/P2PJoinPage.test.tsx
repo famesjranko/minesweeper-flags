@@ -131,8 +131,16 @@ describe("P2PJoinPage", () => {
 
   it.each([
     ["expired", "Expired", "This direct-match link has expired. Start a new direct match."],
-    ["answered", "Already used", "This direct-match link was already used by another guest. Ask the host for a new link."],
-    ["finalized", "Finalized", "This direct-match link has already finished setup. Ask the host for a new link."]
+    [
+      "answered",
+      "Already used",
+      "This direct-match link was already used by another guest. Ask the host for a new link."
+    ],
+    [
+      "finalized",
+      "Finalized",
+      "This direct-match link has already finished setup. Ask the host for a new link."
+    ]
   ] as const)("shows %s direct links as unavailable", (sessionState, statusLabel, message) => {
     gameClientMock.guestSessionState = sessionState;
     gameClientMock.guestError = message;

@@ -152,7 +152,9 @@ describe("signaling http api", () => {
     const sessionId = created.body.sessionId as string;
     const hostSecret = created.body.hostSecret as string;
 
-    expect(await requestJson(baseUrl, `/signaling/sessions/${sessionId}`, { method: "GET" })).toMatchObject({
+    expect(
+      await requestJson(baseUrl, `/signaling/sessions/${sessionId}`, { method: "GET" })
+    ).toMatchObject({
       status: 200,
       body: {
         sessionId,
@@ -319,7 +321,11 @@ describe("signaling http api", () => {
     expect(
       await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/offer`, {
         method: "POST",
-        body: JSON.stringify({ secret: hostSecret, instanceId: hostInstanceId, offer: reconnectOffer })
+        body: JSON.stringify({
+          secret: hostSecret,
+          instanceId: hostInstanceId,
+          offer: reconnectOffer
+        })
       })
     ).toMatchObject({
       status: 200,
@@ -349,7 +355,11 @@ describe("signaling http api", () => {
     expect(
       await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/answer`, {
         method: "POST",
-        body: JSON.stringify({ secret: guestSecret, instanceId: guestInstanceId, answer: reconnectAnswer })
+        body: JSON.stringify({
+          secret: guestSecret,
+          instanceId: guestInstanceId,
+          answer: reconnectAnswer
+        })
       })
     ).toMatchObject({
       status: 200,
@@ -497,7 +507,11 @@ describe("signaling http api", () => {
     expect(
       await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/claim`, {
         method: "POST",
-        body: JSON.stringify({ role: "guest", secret: "wrong-secret", instanceId: "guest-instance-1" })
+        body: JSON.stringify({
+          role: "guest",
+          secret: "wrong-secret",
+          instanceId: "guest-instance-1"
+        })
       })
     ).toMatchObject({ status: 403 });
 
@@ -525,7 +539,11 @@ describe("signaling http api", () => {
     });
     await requestJson(baseUrl, `/signaling/reconnect/${sessionId}/claim`, {
       method: "POST",
-      body: JSON.stringify({ role: "guest", secret: "guest-secret", instanceId: "guest-instance-1" })
+      body: JSON.stringify({
+        role: "guest",
+        secret: "guest-secret",
+        instanceId: "guest-instance-1"
+      })
     });
 
     expect(
@@ -710,25 +728,33 @@ describe("signaling http api", () => {
     });
 
     expect(
-      await requestJson(baseUrl, `/signaling/sessions/${createdOne.body.sessionId as string}/answer`, {
-        method: "POST",
-        headers: {
-          "x-forwarded-for": "198.51.100.10, 203.0.113.20"
-        },
-        body: JSON.stringify({ answer })
-      })
+      await requestJson(
+        baseUrl,
+        `/signaling/sessions/${createdOne.body.sessionId as string}/answer`,
+        {
+          method: "POST",
+          headers: {
+            "x-forwarded-for": "198.51.100.10, 203.0.113.20"
+          },
+          body: JSON.stringify({ answer })
+        }
+      )
     ).toMatchObject({
       status: 200
     });
 
     expect(
-      await requestJson(baseUrl, `/signaling/sessions/${createdTwo.body.sessionId as string}/answer`, {
-        method: "POST",
-        headers: {
-          "x-forwarded-for": "198.51.100.99, 203.0.113.20"
-        },
-        body: JSON.stringify({ answer })
-      })
+      await requestJson(
+        baseUrl,
+        `/signaling/sessions/${createdTwo.body.sessionId as string}/answer`,
+        {
+          method: "POST",
+          headers: {
+            "x-forwarded-for": "198.51.100.99, 203.0.113.20"
+          },
+          body: JSON.stringify({ answer })
+        }
+      )
     ).toMatchObject({
       status: 429
     });
@@ -921,10 +947,14 @@ describe("signaling http api", () => {
     expect(secondCreate.status).toBe(201);
 
     expect(
-      await requestJson(baseUrl, `/signaling/sessions/${firstCreate.body.sessionId as string}/answer`, {
-        method: "POST",
-        body: JSON.stringify({ answer })
-      })
+      await requestJson(
+        baseUrl,
+        `/signaling/sessions/${firstCreate.body.sessionId as string}/answer`,
+        {
+          method: "POST",
+          body: JSON.stringify({ answer })
+        }
+      )
     ).toMatchObject({
       status: 200
     });

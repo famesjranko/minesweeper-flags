@@ -4,7 +4,7 @@ import { ConnectionRegistry } from "./connection.registry.js";
 import { PlayerSessionService } from "./player-session.service.js";
 import { requireAttachedSession } from "./session-auth.js";
 
-const createSocket = () => ({ readyState: 1, close: () => undefined } as unknown as WebSocket);
+const createSocket = () => ({ readyState: 1, close: () => undefined }) as unknown as WebSocket;
 
 describe("session auth", () => {
   it("rejects a valid session token when the sending socket is not the active owner", async () => {

@@ -65,11 +65,7 @@ class FakeRedisClient implements SignalingRedisClient {
     return true;
   }
 
-  async compareAndSwap(
-    key: string,
-    expectedValue: string,
-    nextValue: string
-  ): Promise<boolean> {
+  async compareAndSwap(key: string, expectedValue: string, nextValue: string): Promise<boolean> {
     const currentValue = this.values.get(key) ?? null;
 
     if (currentValue !== expectedValue) {
@@ -133,9 +129,9 @@ describe.each([
     expect(createdSession.state).toBe("open");
     expect(createdSession.hostSecret.length).toBeGreaterThan(10);
 
-    await expect(service.getAnswer(createdSession.sessionId, "wrong-secret", 1_001)).rejects.toBeInstanceOf(
-      SignalingSessionForbiddenError
-    );
+    await expect(
+      service.getAnswer(createdSession.sessionId, "wrong-secret", 1_001)
+    ).rejects.toBeInstanceOf(SignalingSessionForbiddenError);
 
     expect(await service.getSession(createdSession.sessionId, 1_001)).toMatchObject({
       sessionId: createdSession.sessionId,
@@ -143,7 +139,9 @@ describe.each([
       offer
     });
 
-    expect(await service.getAnswer(createdSession.sessionId, createdSession.hostSecret, 1_001)).toMatchObject({
+    expect(
+      await service.getAnswer(createdSession.sessionId, createdSession.hostSecret, 1_001)
+    ).toMatchObject({
       sessionId: createdSession.sessionId,
       state: "open",
       answer: null
@@ -155,11 +153,13 @@ describe.each([
       answer
     });
 
-    await expect(service.submitAnswer(createdSession.sessionId, { answer }, 1_003)).rejects.toBeInstanceOf(
-      SignalingSessionConflictError
-    );
+    await expect(
+      service.submitAnswer(createdSession.sessionId, { answer }, 1_003)
+    ).rejects.toBeInstanceOf(SignalingSessionConflictError);
 
-    expect(await service.getAnswer(createdSession.sessionId, createdSession.hostSecret, 1_003)).toMatchObject({
+    expect(
+      await service.getAnswer(createdSession.sessionId, createdSession.hostSecret, 1_003)
+    ).toMatchObject({
       sessionId: createdSession.sessionId,
       state: "answered",
       answer
@@ -204,9 +204,9 @@ describe.each([
       state: "expired"
     });
 
-    await expect(service.submitAnswer(createdSession.sessionId, { answer }, 11_500)).rejects.toBeInstanceOf(
-      SignalingSessionExpiredError
-    );
+    await expect(
+      service.submitAnswer(createdSession.sessionId, { answer }, 11_500)
+    ).rejects.toBeInstanceOf(SignalingSessionExpiredError);
   });
 
   it("keeps first-answer-wins semantics when the stored session changes during submit", async () => {
@@ -230,9 +230,9 @@ describe.each([
       state: "answered"
     });
 
-    await expect(service.submitAnswer(createdSession.sessionId, { answer }, 1_001)).rejects.toBeInstanceOf(
-      SignalingSessionConflictError
-    );
+    await expect(
+      service.submitAnswer(createdSession.sessionId, { answer }, 1_001)
+    ).rejects.toBeInstanceOf(SignalingSessionConflictError);
   });
 
   it("registers and reads a reconnect control session", async () => {
@@ -388,7 +388,12 @@ describe.each([
     ).rejects.toBeInstanceOf(SignalingSessionForbiddenError);
 
     await expect(
-      service.readReconnectControlSession("reconnect-displace", "host-secret", "host-instance-2", 1_202)
+      service.readReconnectControlSession(
+        "reconnect-displace",
+        "host-secret",
+        "host-instance-2",
+        1_202
+      )
     ).resolves.toMatchObject({
       host: {
         claimStatus: "claimed",
@@ -447,7 +452,9 @@ describe.each([
       }
     });
 
-    await expect(service.getReconnectControlSession("reconnect-sliding-ttl", 2_050)).resolves.toMatchObject({
+    await expect(
+      service.getReconnectControlSession("reconnect-sliding-ttl", 2_050)
+    ).resolves.toMatchObject({
       state: "open",
       expiresAt: 2_900,
       host: {
@@ -456,7 +463,9 @@ describe.each([
       }
     });
 
-    await expect(service.getReconnectControlSession("reconnect-sliding-ttl", 2_950)).resolves.toMatchObject({
+    await expect(
+      service.getReconnectControlSession("reconnect-sliding-ttl", 2_950)
+    ).resolves.toMatchObject({
       state: "expired",
       expiresAt: 2_900
     });
@@ -484,7 +493,9 @@ describe.each([
       1_100
     );
 
-    await expect(service.getReconnectControlSession("reconnect-stale", 6_100)).resolves.toMatchObject({
+    await expect(
+      service.getReconnectControlSession("reconnect-stale", 6_100)
+    ).resolves.toMatchObject({
       guest: {
         claimStatus: "stale",
         instanceId: "guest-instance-1",
@@ -649,7 +660,12 @@ describe.each([
     });
 
     await expect(
-      service.readReconnectOffer("reconnect-host-replace", "guest-secret", "guest-instance-1", 1_301)
+      service.readReconnectOffer(
+        "reconnect-host-replace",
+        "guest-secret",
+        "guest-instance-1",
+        1_301
+      )
     ).resolves.toMatchObject({
       offer: null,
       attempt: {
@@ -734,7 +750,12 @@ describe.each([
     });
 
     await expect(
-      service.readReconnectAnswer("reconnect-guest-replace", "host-secret", "host-instance-1", 1_301)
+      service.readReconnectAnswer(
+        "reconnect-guest-replace",
+        "host-secret",
+        "host-instance-1",
+        1_301
+      )
     ).resolves.toMatchObject({
       answer: null,
       attempt: {

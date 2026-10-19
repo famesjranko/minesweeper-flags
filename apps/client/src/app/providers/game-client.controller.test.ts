@@ -6,20 +6,14 @@ import {
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
-import {
-  GameClientController,
-  type GameClientScheduler
-} from "./game-client.controller.js";
+import { GameClientController, type GameClientScheduler } from "./game-client.controller.js";
 import { GameClientStore } from "./game-client.store.js";
 import type {
   GameClientTransport,
   GameClientTransportListener,
   GameClientTransportStatusChange
 } from "./game-client.transport.js";
-import type {
-  SessionPersistence,
-  StoredSession
-} from "../../lib/socket/session-storage.js";
+import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 
 class FakeTransport implements GameClientTransport {
   readonly sentEvents: ClientEvent[] = [];
@@ -136,11 +130,7 @@ const storedSession: StoredSession = {
   sessionToken: "session-1"
 };
 
-const createHarness = ({
-  sessions = []
-}: {
-  sessions?: StoredSession[];
-} = {}) => {
+const createHarness = ({ sessions = [] }: { sessions?: StoredSession[] } = {}) => {
   const transport = new FakeTransport();
   const persistence = new FakeSessionPersistence(sessions);
   const scheduler = new FakeScheduler();

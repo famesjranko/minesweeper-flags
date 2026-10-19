@@ -5,13 +5,21 @@ import type { WebRTCPeerStatusChange } from "./webrtc-peer.types.js";
 
 type ListenerMap = Map<string, Set<(event?: any) => void>>;
 
-const addListener = (listeners: ListenerMap, type: string, listener: (event?: any) => void): void => {
+const addListener = (
+  listeners: ListenerMap,
+  type: string,
+  listener: (event?: any) => void
+): void => {
   const bucket = listeners.get(type) ?? new Set<(event?: any) => void>();
   bucket.add(listener);
   listeners.set(type, bucket);
 };
 
-const removeListener = (listeners: ListenerMap, type: string, listener: (event?: any) => void): void => {
+const removeListener = (
+  listeners: ListenerMap,
+  type: string,
+  listener: (event?: any) => void
+): void => {
   listeners.get(type)?.delete(listener);
 };
 
@@ -62,7 +70,10 @@ class FakeRTCPeerConnection {
   iceGatheringState: RTCIceGatheringState = "new";
   readonly createdDataChannels: FakeRTCDataChannel[] = [];
   readonly createOfferResult: RTCSessionDescriptionInit = { type: "offer", sdp: "host-offer-sdp" };
-  readonly createAnswerResult: RTCSessionDescriptionInit = { type: "answer", sdp: "guest-answer-sdp" };
+  readonly createAnswerResult: RTCSessionDescriptionInit = {
+    type: "answer",
+    sdp: "guest-answer-sdp"
+  };
   private readonly listeners: ListenerMap = new Map();
 
   addEventListener(type: string, listener: (event?: any) => void): void {
@@ -157,10 +168,7 @@ describe("WebRTCPeer", () => {
     connection.completeIceGathering();
 
     await expect(offerPromise).resolves.toEqual(createHostOfferPayload());
-    expect(statuses).toEqual([
-      { status: "creating-offer" },
-      { status: "waiting-for-answer" }
-    ]);
+    expect(statuses).toEqual([{ status: "creating-offer" }, { status: "waiting-for-answer" }]);
   });
 
   it("creates a guest answer, wires the remote data channel, and forwards messages", async () => {

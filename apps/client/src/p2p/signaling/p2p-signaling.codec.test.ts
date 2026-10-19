@@ -1,4 +1,8 @@
-import { P2P_SIGNALING_PROTOCOL_VERSION, type GuestAnswerPayload, type HostOfferPayload } from "@minesweeper-flags/shared";
+import {
+  P2P_SIGNALING_PROTOCOL_VERSION,
+  type GuestAnswerPayload,
+  type HostOfferPayload
+} from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import {
   decodeGuestAnswerPayload,
@@ -26,7 +30,9 @@ const guestAnswerPayload: GuestAnswerPayload = {
 
 describe("p2p signaling codec", () => {
   it("round-trips host offer payloads through encoded text", () => {
-    expect(decodeHostOfferPayload(encodeHostOfferPayload(hostOfferPayload))).toEqual(hostOfferPayload);
+    expect(decodeHostOfferPayload(encodeHostOfferPayload(hostOfferPayload))).toEqual(
+      hostOfferPayload
+    );
   });
 
   it("round-trips guest answer payloads through encoded text", () => {
@@ -51,7 +57,9 @@ describe("p2p signaling codec", () => {
       })
     );
 
-    expect(() => decodeHostOfferPayload(invalidPayload)).toThrow("Invalid host offer signaling payload.");
+    expect(() => decodeHostOfferPayload(invalidPayload)).toThrow(
+      "Invalid host offer signaling payload."
+    );
   });
 
   it("rejects unsupported payload versions", () => {

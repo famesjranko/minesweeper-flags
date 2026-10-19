@@ -1,8 +1,5 @@
 import type { SignalingRedisClient } from "../../state/redis-client.js";
-import type {
-  ReconnectControlSessionRecord,
-  SignalingSessionRecord
-} from "./signaling.types.js";
+import type { ReconnectControlSessionRecord, SignalingSessionRecord } from "./signaling.types.js";
 
 export const REDIS_EXPIRED_SESSION_GRACE_SECONDS = 60;
 
@@ -33,7 +30,10 @@ export interface SignalingRepository {
   create(session: SignalingSessionRecord): Promise<boolean>;
   getBySessionId(sessionId: string): Promise<SignalingSessionRecord | undefined>;
   save(session: SignalingSessionRecord): Promise<void>;
-  saveIfUnchanged(previousSession: SignalingSessionRecord, nextSession: SignalingSessionRecord): Promise<boolean>;
+  saveIfUnchanged(
+    previousSession: SignalingSessionRecord,
+    nextSession: SignalingSessionRecord
+  ): Promise<boolean>;
   createReconnectControlSession(session: ReconnectControlSessionRecord): Promise<boolean>;
   getReconnectControlSessionBySessionId(
     sessionId: string
@@ -107,7 +107,8 @@ export class InMemorySignalingRepository implements SignalingRepository {
 
     if (
       !currentSession ||
-      serializeReconnectControlSession(currentSession) !== serializeReconnectControlSession(previousSession)
+      serializeReconnectControlSession(currentSession) !==
+        serializeReconnectControlSession(previousSession)
     ) {
       return false;
     }

@@ -31,8 +31,7 @@ export const InvitePage = () => {
           : null;
 
   if (inviteErrorState) {
-    const title =
-      inviteErrorState === "full" ? "Match already claimed" : "Invite unavailable";
+    const title = inviteErrorState === "full" ? "Match already claimed" : "Invite unavailable";
     const message =
       inviteErrorState === "full"
         ? "Another player already filled this room. Ask the host for a fresh room if you still want to play."
@@ -56,7 +55,8 @@ export const InvitePage = () => {
           </div>
 
           <p className="waiting-room-note">
-            Invite links are the only public join path now. Room codes are shown only after you enter the room.
+            Invite links are the only public join path now. Room codes are shown only after you
+            enter the room.
           </p>
           {error && activeInviteToken ? <span className="error-text">{error}</span> : null}
         </section>
@@ -75,8 +75,8 @@ export const InvitePage = () => {
             <strong>Guest seat</strong>
           </div>
           <p>
-            Someone shared a private match with you. Pick a display name and claim the
-            open guest seat with this invite link.
+            Someone shared a private match with you. Pick a display name and claim the open guest
+            seat with this invite link.
           </p>
         </div>
 
@@ -84,11 +84,7 @@ export const InvitePage = () => {
           <LobbyPreviewPanel
             title="Incoming match"
             badge="invite"
-            featurePills={[
-              "Private invite link",
-              "Shared 16x16 field",
-              "First to 26 mines"
-            ]}
+            featurePills={["Private invite link", "Shared 16x16 field", "First to 26 mines"]}
           />
 
           <section className="lobby-control-panel invite-control-panel">
@@ -134,15 +130,12 @@ export const InvitePage = () => {
               </div>
 
               <p className="invite-info-copy">
-                The match starts as soon as both players are connected. Room codes are shown after entry as a reference, not as a public join key.
+                The match starts as soon as both players are connected. Room codes are shown after
+                entry as a reference, not as a public join key.
               </p>
 
               <button
-                className={[
-                  "lobby-action-button",
-                  "lobby-join-button",
-                  canJoin ? "is-ready" : ""
-                ]
+                className={["lobby-action-button", "lobby-join-button", canJoin ? "is-ready" : ""]
                   .filter(Boolean)
                   .join(" ")}
                 disabled={!canJoin}

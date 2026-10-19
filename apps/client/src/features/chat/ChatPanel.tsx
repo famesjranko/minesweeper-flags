@@ -40,7 +40,7 @@ export const ChatPanel = ({
       ? "Sending..."
       : connectionStatus !== "connected"
         ? "Chat offline. You can keep typing."
-        : helperText ?? "Press Enter to send.";
+        : (helperText ?? "Press Enter to send.");
 
   return (
     <section className={["classic-chat-frame", className].filter(Boolean).join(" ")}>

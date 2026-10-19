@@ -13,10 +13,7 @@ import type { MatchService } from "../../modules/matches/match.service.js";
 import type { RematchService } from "../../modules/rematch/rematch.service.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
 import type { RoomService } from "../../modules/rooms/room.service.js";
-import {
-  PlayerSessionService,
-  type PlayerSession
-} from "../realtime/player-session.service.js";
+import { PlayerSessionService, type PlayerSession } from "../realtime/player-session.service.js";
 import {
   createBroadcastStep,
   createDirectStep,
@@ -129,7 +126,12 @@ export class GameCommandService {
     ];
 
     if (updated) {
-      steps.push(createBroadcastStep(session.roomCode, this.buildMatchStateEvent(session.roomCode, updated.dto)));
+      steps.push(
+        createBroadcastStep(
+          session.roomCode,
+          this.buildMatchStateEvent(session.roomCode, updated.dto)
+        )
+      );
     }
 
     return {
@@ -156,7 +158,10 @@ export class GameCommandService {
 
       return {
         steps: [
-          createBroadcastStep(session.roomCode, this.buildChatMessageEvent(session.roomCode, message))
+          createBroadcastStep(
+            session.roomCode,
+            this.buildChatMessageEvent(session.roomCode, message)
+          )
         ]
       };
     } catch (error) {
@@ -236,7 +241,12 @@ export class GameCommandService {
       await roomService.touchRoomActivity(session.roomCode, result.state.updatedAt);
 
       return {
-        steps: [createBroadcastStep(result.roomCode, this.buildMatchEndedEvent(result.roomCode, result.dto))]
+        steps: [
+          createBroadcastStep(
+            result.roomCode,
+            this.buildMatchEndedEvent(result.roomCode, result.dto)
+          )
+        ]
       };
     } catch (error) {
       logger.warn("match.resign_rejected", {
@@ -383,7 +393,9 @@ export class GameCommandService {
     ];
 
     if (updated) {
-      steps.push(createBroadcastStep(room.roomCode, this.buildMatchStateEvent(room.roomCode, updated.dto)));
+      steps.push(
+        createBroadcastStep(room.roomCode, this.buildMatchStateEvent(room.roomCode, updated.dto))
+      );
     }
 
     return { steps };

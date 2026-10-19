@@ -67,7 +67,10 @@ describe("GameCommandService", () => {
 
     const roomCreatedEvent = roomCreated.steps[0];
 
-    if (roomCreatedEvent?.kind !== "direct" || roomCreatedEvent.event.type !== SERVER_EVENT_NAMES.roomCreated) {
+    if (
+      roomCreatedEvent?.kind !== "direct" ||
+      roomCreatedEvent.event.type !== SERVER_EVENT_NAMES.roomCreated
+    ) {
       throw new Error("Expected the room create command to produce room:created first.");
     }
 
@@ -85,7 +88,10 @@ describe("GameCommandService", () => {
 
     const chatHistoryStep = joined.steps[1];
 
-    if (chatHistoryStep?.kind !== "direct" || chatHistoryStep.event.type !== SERVER_EVENT_NAMES.chatHistory) {
+    if (
+      chatHistoryStep?.kind !== "direct" ||
+      chatHistoryStep.event.type !== SERVER_EVENT_NAMES.chatHistory
+    ) {
       throw new Error("Expected chat history as the second join step.");
     }
 
@@ -110,7 +116,10 @@ describe("GameCommandService", () => {
 
     const roomCreatedEvent = roomCreated.steps[0];
 
-    if (roomCreatedEvent?.kind !== "direct" || roomCreatedEvent.event.type !== SERVER_EVENT_NAMES.roomCreated) {
+    if (
+      roomCreatedEvent?.kind !== "direct" ||
+      roomCreatedEvent.event.type !== SERVER_EVENT_NAMES.roomCreated
+    ) {
       throw new Error("Expected the room create command to produce room:created first.");
     }
 
@@ -143,7 +152,10 @@ describe("GameCommandService", () => {
 
     const roomCreatedEvent = roomCreated.steps[0];
 
-    if (roomCreatedEvent?.kind !== "direct" || roomCreatedEvent.event.type !== SERVER_EVENT_NAMES.roomCreated) {
+    if (
+      roomCreatedEvent?.kind !== "direct" ||
+      roomCreatedEvent.event.type !== SERVER_EVENT_NAMES.roomCreated
+    ) {
       throw new Error("Expected the room create command to produce room:created first.");
     }
 

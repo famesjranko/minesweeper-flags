@@ -46,10 +46,7 @@ class FakeRawRedisClient {
     return "OK";
   }
 
-  async eval(
-    _script: string,
-    options: { keys: string[]; arguments: string[] }
-  ): Promise<number> {
+  async eval(_script: string, options: { keys: string[]; arguments: string[] }): Promise<number> {
     const [key] = options.keys;
     const [expectedValue, nextValue, ttlSeconds] = options.arguments;
 

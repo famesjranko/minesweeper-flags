@@ -1,7 +1,4 @@
-export const STATE_BACKENDS = [
-  "memory",
-  "redis"
-] as const;
+export const STATE_BACKENDS = ["memory", "redis"] as const;
 
 export type StateBackend = (typeof STATE_BACKENDS)[number];
 

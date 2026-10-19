@@ -11,7 +11,7 @@ import { cleanupInactiveRooms } from "./inactive-room-cleanup.js";
 import { PlayerSessionService } from "./player-session.service.js";
 
 const createSocket = (readyState = 1) =>
-  ({ readyState, close: () => undefined } as unknown as WebSocket);
+  ({ readyState, close: () => undefined }) as unknown as WebSocket;
 
 const createRoom = (updatedAt: number): RoomRecord => ({
   roomId: "room-1",
@@ -142,9 +142,7 @@ describe("inactive room cleanup", () => {
         return true;
       },
       async listAll(): Promise<RoomRecord[]> {
-        return [
-          createRoom(0)
-        ];
+        return [createRoom(0)];
       },
       async delete(roomCode: string): Promise<RoomRecord | undefined> {
         deletedRoomCode = roomCode;

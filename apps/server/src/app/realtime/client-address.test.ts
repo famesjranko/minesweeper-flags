@@ -44,8 +44,8 @@ describe("client address resolution", () => {
   });
 
   it("falls back to unknown when no address is available", () => {
-    expect(
-      resolveClientAddress(createRequest({ remoteAddress: "" }), { trustProxy: true })
-    ).toBe("unknown");
+    expect(resolveClientAddress(createRequest({ remoteAddress: "" }), { trustProxy: true })).toBe(
+      "unknown"
+    );
   });
 });

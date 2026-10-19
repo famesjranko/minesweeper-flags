@@ -1,4 +1,8 @@
-import type { GuestAnswerPayload, HostOfferPayload, SignalingSessionState } from "@minesweeper-flags/shared";
+import type {
+  GuestAnswerPayload,
+  HostOfferPayload,
+  SignalingSessionState
+} from "@minesweeper-flags/shared";
 import { P2PSetupStore } from "./p2p-setup.store.js";
 import type { P2PSetupStage } from "./p2p-setup.types.js";
 

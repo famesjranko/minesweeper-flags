@@ -6,7 +6,16 @@ import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 export const LobbyPage = () => {
   const [isReady, setIsReady] = useState(false);
-  const { connectionStatus, error, session, createRoom, joinRoom, openLobby, slotAvailability, refreshSlotCount } = useGameClient();
+  const {
+    connectionStatus,
+    error,
+    session,
+    createRoom,
+    joinRoom,
+    openLobby,
+    slotAvailability,
+    refreshSlotCount
+  } = useGameClient();
   const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
 
   useEffect(() => {

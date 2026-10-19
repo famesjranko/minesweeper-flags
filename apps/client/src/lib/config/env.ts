@@ -78,9 +78,7 @@ export const resolveP2PSignalingUrl = ({
     return explicitUrl;
   }
 
-  throw new Error(
-    "VITE_P2P_SIGNALING_URL is required when VITE_DEPLOYMENT_MODE=p2p."
-  );
+  throw new Error("VITE_P2P_SIGNALING_URL is required when VITE_DEPLOYMENT_MODE=p2p.");
 };
 
 export const resolveServerUrl = ({

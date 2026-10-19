@@ -3,7 +3,7 @@ import type WebSocket from "ws";
 import { ConnectionRegistry } from "./connection.registry.js";
 import type { PlayerSession } from "./player-session.service.js";
 
-const createSocket = () => ({ readyState: 1, close: () => undefined } as unknown as WebSocket);
+const createSocket = () => ({ readyState: 1, close: () => undefined }) as unknown as WebSocket;
 
 const createSession = (playerId: string, roomCode: string): PlayerSession => ({
   playerId,

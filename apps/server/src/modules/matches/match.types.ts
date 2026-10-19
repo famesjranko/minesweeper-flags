@@ -10,4 +10,3 @@ export interface MatchResult {
 export interface ActionResult extends MatchResult {
   action: MatchAction;
 }
-

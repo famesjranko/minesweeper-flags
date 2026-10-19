@@ -4,10 +4,7 @@ import {
   type ClientEvent,
   type ServerEvent
 } from "@minesweeper-flags/shared";
-import type {
-  SessionPersistence,
-  StoredSession
-} from "../../lib/socket/session-storage.js";
+import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 import {
   buildReconnectEvent,
   buildSessionFromRoomEvent,
@@ -65,13 +62,7 @@ export class GameClientController {
   private recoveredChatDraftText: string | null = null;
   private unsubscribeTransport: (() => void) | null = null;
 
-  constructor({
-    store,
-    transport,
-    persistence,
-    scheduler,
-    copy
-  }: GameClientControllerOptions) {
+  constructor({ store, transport, persistence, scheduler, copy }: GameClientControllerOptions) {
     this.store = store;
     this.transport = transport;
     this.persistence = persistence;
@@ -104,8 +95,7 @@ export class GameClientController {
     this.transport.disconnect();
   };
 
-  hasStoredSession = (roomCode: string): boolean =>
-    this.persistence.read(roomCode) !== null;
+  hasStoredSession = (roomCode: string): boolean => this.persistence.read(roomCode) !== null;
 
   openLobby = (): void => {
     this.clearActiveRoomState();

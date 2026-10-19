@@ -28,4 +28,3 @@ export interface ActionSuccess {
 }
 
 export type ActionResolution = ActionFailure | ActionSuccess;
-

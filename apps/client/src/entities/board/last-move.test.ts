@@ -108,7 +108,11 @@ describe("last move trail", () => {
     const once = play([[6, action("opp", 1, 1)]]);
 
     // When a snapshot at turn 6 carries a different action, as after a missed rematch reset
-    const next = advanceLastMoveTrail(once, { turnNumber: 6, lastAction: action("opp", 9, 9) }, "me");
+    const next = advanceLastMoveTrail(
+      once,
+      { turnNumber: 6, lastAction: action("opp", 9, 9) },
+      "me"
+    );
 
     // Then only the new action is marked
     expect(next.map((e) => [e.turnNumber, e.action.row, e.action.column])).toEqual([[6, 9, 9]]);

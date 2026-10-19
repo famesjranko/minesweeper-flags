@@ -16,12 +16,12 @@ import {
   RedisMatchRepository
 } from "../../modules/matches/match.repository.js";
 import type { ChatRepository } from "../../modules/chat/chat.repository.js";
-import {
-  InMemoryChatRepository,
-  RedisChatRepository
-} from "../../modules/chat/chat.repository.js";
+import { InMemoryChatRepository, RedisChatRepository } from "../../modules/chat/chat.repository.js";
 import type { RoomRepository } from "../../modules/rooms/room.repository.js";
-import { InMemoryRoomRepository, RedisRoomRepository } from "../../modules/rooms/room.repository.js";
+import {
+  InMemoryRoomRepository,
+  RedisRoomRepository
+} from "../../modules/rooms/room.repository.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
 import type { StateBackend } from "./state-backend.js";
 
@@ -89,7 +89,11 @@ export const createStateStores = async (
     redisOptions.reconnectSessionTtlSeconds ?? RECONNECT_SESSION_TTL_SECONDS;
   const roomRepository = new RedisRoomRepository(connectedRedisClient, keyPrefix);
   const matchRepository = new RedisMatchRepository(connectedRedisClient, keyPrefix);
-  const chatRepository = new RedisChatRepository(connectedRedisClient, keyPrefix, CHAT_HISTORY_LIMIT);
+  const chatRepository = new RedisChatRepository(
+    connectedRedisClient,
+    keyPrefix,
+    CHAT_HISTORY_LIMIT
+  );
   const playerSessionStore = new RedisPlayerSessionStore(
     connectedRedisClient,
     keyPrefix,

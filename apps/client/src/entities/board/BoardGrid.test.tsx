@@ -59,7 +59,9 @@ describe("BoardGrid last-move marks", () => {
     // When the board renders
     const html = render({
       cells: [],
-      areas: [{ bounds: { minRow: 0, maxRow: 1, minColumn: 0, maxColumn: 1 }, age: 0, tone: "blue" }]
+      areas: [
+        { bounds: { minRow: 0, maxRow: 1, minColumn: 0, maxColumn: 1 }, age: 0, tone: "blue" }
+      ]
     });
 
     // Then the overlay spans two cells

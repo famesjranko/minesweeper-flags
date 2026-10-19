@@ -20,7 +20,7 @@ const renderCellContent = (
   playerTones: Record<string, "blue" | "red">
 ) => {
   if (status === "claimed") {
-    const tone = claimedByPlayerId ? playerTones[claimedByPlayerId] ?? "blue" : "blue";
+    const tone = claimedByPlayerId ? (playerTones[claimedByPlayerId] ?? "blue") : "blue";
     return <FlagIcon color={tone} size={20} />;
   }
 
@@ -57,10 +57,10 @@ export const BoardGrid = ({
         hoveredCell.column
       )
     : null;
-  const previewRowSpan =
-    previewBounds ? previewBounds.maxRow - previewBounds.minRow + 1 : 0;
-  const previewColumnSpan =
-    previewBounds ? previewBounds.maxColumn - previewBounds.minColumn + 1 : 0;
+  const previewRowSpan = previewBounds ? previewBounds.maxRow - previewBounds.minRow + 1 : 0;
+  const previewColumnSpan = previewBounds
+    ? previewBounds.maxColumn - previewBounds.minColumn + 1
+    : 0;
 
   return (
     <div
@@ -116,7 +116,9 @@ export const BoardGrid = ({
               "board-cell",
               `status-${cell.status}`,
               cell.claimedByPlayerId ? "claimed-cell" : "",
-              cell.claimedByPlayerId ? `claimed-${playerTones[cell.claimedByPlayerId] ?? "blue"}` : "",
+              cell.claimedByPlayerId
+                ? `claimed-${playerTones[cell.claimedByPlayerId] ?? "blue"}`
+                : "",
               bombArmed && canAct && cell.status === "hidden" ? "bomb-targetable" : "",
               isPreviewed ? "bomb-preview-cell" : "",
               isPreviewed && hoveredCell?.row === cell.row && hoveredCell?.column === cell.column
