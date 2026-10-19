@@ -2,10 +2,6 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="Minesweeper Flags: the word FLAGS dug out of a blue Minesweeper board. Two players, one 16×16 board, first to 26 mines wins.">
 </p>
 
-<p align="center">
-  <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with create and join options, beside a live match with a red and blue score sidebar, a half-cleared board, and room chat.">
-</p>
-
 This is an homage to the MSN Messenger game I used to play with friends back in the day. It is realtime two-player competitive Minesweeper with room chat, and it runs in the browser.
 
 ## How to play
@@ -16,6 +12,10 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 - Find a mine and you claim it. The first player to 26 mines wins.
 - Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 4 or more.
 - Chat stays with the room through reconnects and rematches.
+
+<p align="center">
+  <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with create and join options, beside a live match with a red and blue score sidebar, a half-cleared board, and room chat.">
+</p>
 
 ## Two ways to run it
 
