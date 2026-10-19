@@ -288,44 +288,21 @@ export class SignalingService {
     request: ClaimReconnectRoleRequest,
     now = Date.now()
   ): Promise<ClaimReconnectRoleResponse> {
-    return await this.taskRunner.run(sessionId, async () => {
-      while (true) {
-        const session = assertActiveReconnectControlSession(
-          await this.getReconnectControlSessionOrThrow(sessionId),
-          now
-        );
+    return await this.updateReconnectControlSession(sessionId, now, (session) => {
+      assertReconnectRoleSecret(session, request.role, request.secret);
+      const previousClaim = getReconnectRoleClaim(session, request.role);
+      const isSameRoleReplacement =
+        previousClaim.instanceId !== null && previousClaim.instanceId !== request.instanceId;
 
-        assertReconnectRoleSecret(session, request.role, request.secret);
-        const previousClaim = getReconnectRoleClaim(session, request.role);
-        const isSameRoleReplacement =
-          previousClaim.instanceId !== null && previousClaim.instanceId !== request.instanceId;
+      const updatedSession = withUpdatedReconnectRoleClaim(session, request.role, {
+        secret: previousClaim.secret,
+        instanceId: request.instanceId,
+        lastHeartbeatAt: now
+      });
 
-        let updatedSession = withUpdatedReconnectRoleClaim(session, request.role, {
-          secret: getReconnectRoleClaim(session, request.role).secret,
-          instanceId: request.instanceId,
-          lastHeartbeatAt: now
-        });
-
-        if (isSameRoleReplacement) {
-          updatedSession = withReconnectAttemptReconciledForRoleReplacement(
-            updatedSession,
-            request.role
-          );
-        }
-
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
-          updatedSession,
-          now
-        );
-
-        if (
-          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
-        ) {
-          continue;
-        }
-
-        return this.toVisibleReconnectControlSession(refreshedSession, now);
-      }
+      return isSameRoleReplacement
+        ? withReconnectAttemptReconciledForRoleReplacement(updatedSession, request.role)
+        : updatedSession;
     });
   }
 
@@ -334,37 +311,18 @@ export class SignalingService {
     request: HeartbeatReconnectRoleRequest,
     now = Date.now()
   ): Promise<HeartbeatReconnectRoleResponse> {
-    return await this.taskRunner.run(sessionId, async () => {
-      while (true) {
-        const session = assertActiveReconnectControlSession(
-          await this.getReconnectControlSessionOrThrow(sessionId),
-          now
-        );
+    return await this.updateReconnectControlSession(sessionId, now, (session) => {
+      const claim = assertReconnectRoleAccess(
+        session,
+        request.role,
+        request.secret,
+        request.instanceId
+      );
 
-        const claim = assertReconnectRoleAccess(
-          session,
-          request.role,
-          request.secret,
-          request.instanceId
-        );
-
-        const updatedSession = withUpdatedReconnectRoleClaim(session, request.role, {
-          ...claim,
-          lastHeartbeatAt: now
-        });
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
-          updatedSession,
-          now
-        );
-
-        if (
-          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
-        ) {
-          continue;
-        }
-
-        return this.toVisibleReconnectControlSession(refreshedSession, now);
-      }
+      return withUpdatedReconnectRoleClaim(session, request.role, {
+        ...claim,
+        lastHeartbeatAt: now
+      });
     });
   }
 
@@ -373,40 +331,21 @@ export class SignalingService {
     request: WriteReconnectOfferRequest,
     now = Date.now()
   ): Promise<WriteReconnectOfferResponse> {
-    return await this.taskRunner.run(sessionId, async () => {
-      while (true) {
-        const session = assertActiveReconnectControlSession(
-          await this.getReconnectControlSessionOrThrow(sessionId),
-          now
-        );
+    return await this.updateReconnectControlSession(sessionId, now, (session) => {
+      assertReconnectRoleAccess(session, "host", request.secret, request.instanceId);
 
-        assertReconnectRoleAccess(session, "host", request.secret, request.instanceId);
-
-        const updatedSession: ReconnectControlSessionRecord = {
-          ...session,
-          state: "open",
-          attempt: {
-            status: "offer-ready",
-            offer: request.offer,
-            answer: null,
-            finalizationOutcome: null,
-            finalizedBy: null,
-            finalizedAt: null
-          }
-        };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
-          updatedSession,
-          now
-        );
-
-        if (
-          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
-        ) {
-          continue;
+      return {
+        ...session,
+        state: "open",
+        attempt: {
+          status: "offer-ready",
+          offer: request.offer,
+          answer: null,
+          finalizationOutcome: null,
+          finalizedBy: null,
+          finalizedAt: null
         }
-
-        return this.toVisibleReconnectControlSession(refreshedSession, now);
-      }
+      };
     });
   }
 
@@ -432,42 +371,23 @@ export class SignalingService {
     request: WriteReconnectAnswerRequest,
     now = Date.now()
   ): Promise<WriteReconnectAnswerResponse> {
-    return await this.taskRunner.run(sessionId, async () => {
-      while (true) {
-        const session = assertActiveReconnectControlSession(
-          await this.getReconnectControlSessionOrThrow(sessionId),
-          now
+    return await this.updateReconnectControlSession(sessionId, now, (session) => {
+      assertReconnectRoleAccess(session, "guest", request.secret, request.instanceId);
+
+      if (!session.attempt.offer || session.attempt.status !== "offer-ready") {
+        throw new SignalingSessionConflictError(
+          "That reconnect attempt is not ready for a guest answer."
         );
-
-        assertReconnectRoleAccess(session, "guest", request.secret, request.instanceId);
-
-        if (!session.attempt.offer || session.attempt.status !== "offer-ready") {
-          throw new SignalingSessionConflictError(
-            "That reconnect attempt is not ready for a guest answer."
-          );
-        }
-
-        const updatedSession: ReconnectControlSessionRecord = {
-          ...session,
-          attempt: {
-            ...session.attempt,
-            status: "answer-ready",
-            answer: request.answer
-          }
-        };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
-          updatedSession,
-          now
-        );
-
-        if (
-          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
-        ) {
-          continue;
-        }
-
-        return this.toVisibleReconnectControlSession(refreshedSession, now);
       }
+
+      return {
+        ...session,
+        attempt: {
+          ...session.attempt,
+          status: "answer-ready",
+          answer: request.answer
+        }
+      };
     });
   }
 
@@ -493,47 +413,28 @@ export class SignalingService {
     request: FinalizeReconnectAttemptRequest,
     now = Date.now()
   ): Promise<FinalizeReconnectAttemptResponse> {
-    return await this.taskRunner.run(sessionId, async () => {
-      while (true) {
-        const session = assertActiveReconnectControlSession(
-          await this.getReconnectControlSessionOrThrow(sessionId),
-          now
-        );
+    return await this.updateReconnectControlSession(sessionId, now, (session) => {
+      assertReconnectRoleAccess(session, request.role, request.secret, request.instanceId);
 
-        assertReconnectRoleAccess(session, request.role, request.secret, request.instanceId);
-
-        if (session.attempt.status === "idle") {
-          throw new SignalingSessionConflictError("That reconnect attempt has not started yet.");
-        }
-
-        if (session.attempt.status === "finalized") {
-          return this.toVisibleReconnectControlSession(session, now);
-        }
-
-        const updatedSession: ReconnectControlSessionRecord = {
-          ...session,
-          state: "finalized",
-          attempt: {
-            ...session.attempt,
-            status: "finalized",
-            finalizationOutcome: request.outcome,
-            finalizedBy: request.role,
-            finalizedAt: now
-          }
-        };
-        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
-          updatedSession,
-          now
-        );
-
-        if (
-          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
-        ) {
-          continue;
-        }
-
-        return this.toVisibleReconnectControlSession(refreshedSession, now);
+      if (session.attempt.status === "idle") {
+        throw new SignalingSessionConflictError("That reconnect attempt has not started yet.");
       }
+
+      if (session.attempt.status === "finalized") {
+        return session;
+      }
+
+      return {
+        ...session,
+        state: "finalized",
+        attempt: {
+          ...session.attempt,
+          status: "finalized",
+          finalizationOutcome: request.outcome,
+          finalizedBy: request.role,
+          finalizedAt: now
+        }
+      };
     });
   }
 
@@ -557,6 +458,44 @@ export class SignalingService {
     assertReconnectRoleAccess(session, role, secret, instanceId);
 
     return this.toVisibleReconnectControlSession(session, now);
+  }
+
+  /**
+   * Applies `update` to the active record under the session's task lock and saves it
+   * with compare-and-swap, retrying when a concurrent write wins. A saved update also
+   * extends the session's expiry. Returning the record unchanged skips the save.
+   */
+  private async updateReconnectControlSession(
+    sessionId: string,
+    now: number,
+    update: (session: ReconnectControlSessionRecord) => ReconnectControlSessionRecord
+  ): Promise<VisibleReconnectControlSessionRecord> {
+    return await this.taskRunner.run(sessionId, async () => {
+      while (true) {
+        const session = assertActiveReconnectControlSession(
+          await this.getReconnectControlSessionOrThrow(sessionId),
+          now
+        );
+        const updatedSession = update(session);
+
+        if (updatedSession === session) {
+          return this.toVisibleReconnectControlSession(session, now);
+        }
+
+        const refreshedSession = this.withRefreshedReconnectControlSessionExpiry(
+          updatedSession,
+          now
+        );
+
+        if (
+          !(await this.repository.saveReconnectControlSessionIfUnchanged(session, refreshedSession))
+        ) {
+          continue;
+        }
+
+        return this.toVisibleReconnectControlSession(refreshedSession, now);
+      }
+    });
   }
 
   private toVisibleReconnectControlSession(
