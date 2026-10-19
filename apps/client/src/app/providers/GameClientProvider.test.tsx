@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useGameClient } from "../../features/connection/useGameClient.js";
+import { LobbyPage } from "../../pages/LobbyPage.js";
 import { RoomPage } from "../../pages/RoomPage.js";
 import { GameClientProvider } from "./GameClientProvider.js";
 import type { GameClientRuntime } from "./game-client.runtime.js";
@@ -166,6 +167,37 @@ describe("GameClientProvider", () => {
     });
 
     expect(controller.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the lobby once when the lobby route updates the store", () => {
+    // Given a runtime whose openLobby updates the store, as the real controller does
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {}))
+    );
+    const { runtime, store, controller } = createFakeRuntime();
+    controller.openLobby.mockImplementation(() => {
+      store.update({ error: null });
+    });
+    vi.mocked(createGameClientRuntime).mockReturnValue(runtime);
+
+    // When the lobby route renders inside the provider
+    renderIntoRoot(
+      <GameClientProvider>
+        <MemoryRouter initialEntries={["/lobby"]}>
+          <Routes>
+            <Route path="/lobby" element={<LobbyPage />} />
+          </Routes>
+        </MemoryRouter>
+      </GameClientProvider>
+    );
+
+    // Then the lobby is opened exactly once instead of on every render
+    expect(controller.openLobby).toHaveBeenCalledTimes(1);
+
+    // And the lobby renders its create-room action
+    expect(document.body.textContent).toContain("Create Room");
+    vi.unstubAllGlobals();
   });
 
   it("lets RoomPage trigger route bootstrap reconnect through the provider boundary", () => {

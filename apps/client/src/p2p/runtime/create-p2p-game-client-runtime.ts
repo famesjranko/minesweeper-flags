@@ -14,6 +14,7 @@ import { P2P_STUN_URLS } from "../../lib/config/env.js";
 import type { SessionPersistence, StoredSession } from "../../lib/socket/session-storage.js";
 import { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
 import type { P2PHostAuthoritySnapshot } from "../host/p2p-host-state.js";
+import { createRandomId } from "../random-id.js";
 import { decodeP2PRecoveryControlMessage } from "../recovery/p2p-recovery-control.js";
 import {
   createP2PSetupController,
@@ -101,9 +102,6 @@ interface ActiveReconnectClaimState {
   roomCode: string | null;
   timerId: number | null;
 }
-
-const createRandomId = (): string =>
-  globalThis.crypto?.randomUUID() ?? `p2p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const toStoredSession = (record: P2PRecoveryGuestRecord): StoredSession => ({
   roomId: record.roomId,

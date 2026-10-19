@@ -167,8 +167,9 @@ check: ## Run the main local verification flow
 	$(MAKE) compose-config
 	$(MAKE) compose-public-config
 
-images: ## Build every Docker image (server, signaling, client, public client); CI runs this
+images: ## Build every Docker image (server, signaling, server-mode and p2p clients, public client); CI runs this
 	$(DOCKER_COMPOSE) build server signaling client
+	$(DOCKER_COMPOSE) -f $(P2P_COMPOSE_FILE) build client
 	$(DOCKER_COMPOSE) -f $(PUBLIC_COMPOSE_FILE) build client
 
 compose-config: ## Validate docker compose configuration

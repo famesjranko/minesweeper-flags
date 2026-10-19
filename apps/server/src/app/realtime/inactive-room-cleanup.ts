@@ -1,5 +1,6 @@
 import { WebSocket } from "ws";
 import type { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
+import { logger } from "../../lib/logging/logger.js";
 import type { ChatRepository } from "../../modules/chat/chat.repository.js";
 import type { MatchRepository } from "../../modules/matches/match.repository.js";
 import type { RoomRepository } from "../../modules/rooms/room.repository.js";
@@ -83,4 +84,34 @@ export const cleanupInactiveRooms = async ({
   }
 
   return removedRooms;
+};
+
+interface InactiveRoomSweepOptions extends Omit<CleanupInactiveRoomsOptions, "now"> {
+  intervalMs: number;
+}
+
+/** Runs the inactive room cleanup on an interval and logs each sweep. Returns a stop function. */
+export const startInactiveRoomSweep = ({
+  intervalMs,
+  ...cleanupOptions
+}: InactiveRoomSweepOptions): (() => void) => {
+  const cleanupInterval = setInterval(() => {
+    void (async () => {
+      const removedRooms = await cleanupInactiveRooms({ ...cleanupOptions, now: Date.now() });
+
+      if (removedRooms.length > 0) {
+        for (const removedRoom of removedRooms) {
+          logger.info("realtime.room_cleaned_up", { ...removedRoom });
+        }
+
+        logger.info("realtime.inactive_room_cleanup", { removedRooms: removedRooms.length });
+      }
+    })().catch((error) => {
+      logger.error("realtime.inactive_room_cleanup_failed", { error });
+    });
+  }, intervalMs);
+
+  cleanupInterval.unref?.();
+
+  return () => clearInterval(cleanupInterval);
 };

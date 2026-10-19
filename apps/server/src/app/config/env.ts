@@ -75,116 +75,75 @@ export interface ServerEnv {
   RECONNECT_SESSION_TTL_SECONDS: number;
 }
 
+const getPublicModeConfigurationErrors = (env: ServerEnv, rawPort: string | number): string[] => {
+  const configurationErrors: string[] = [];
+
+  if (env.STATE_BACKEND !== "redis") {
+    configurationErrors.push("DEPLOYMENT_MODE=public requires STATE_BACKEND=redis.");
+  }
+
+  if (env.WEBSOCKET_ALLOWED_ORIGINS.length === 0 || env.WEBSOCKET_ALLOWED_ORIGINS.includes("*")) {
+    configurationErrors.push(
+      "DEPLOYMENT_MODE=public requires WEBSOCKET_ALLOWED_ORIGINS to be set to an explicit allowlist."
+    );
+  }
+
+  if (!env.TRUST_PROXY) {
+    configurationErrors.push("DEPLOYMENT_MODE=public requires TRUST_PROXY=true.");
+  }
+
+  if (!isValidPositiveInteger(env.SERVER_PORT)) {
+    configurationErrors.push(
+      `DEPLOYMENT_MODE=public requires PORT to be a positive integer. Received "${rawPort}".`
+    );
+  }
+
+  return configurationErrors;
+};
+
 export const parseServerEnv = (environment: NodeJS.ProcessEnv = process.env): ServerEnv => {
-  const DEPLOYMENT_MODE = parseDeploymentMode(environment.DEPLOYMENT_MODE);
-  const SERVER_PORT = Number(environment.PORT ?? DEFAULT_SERVER_PORT);
-  const SERVER_HOST = environment.HOST ?? "0.0.0.0";
-  const WEBSOCKET_PATH = environment.WS_PATH ?? "/ws";
-  const WEBSOCKET_ALLOWED_ORIGINS = parseAllowedOrigins(environment.WEBSOCKET_ALLOWED_ORIGINS);
-  const MAX_WEBSOCKET_MESSAGE_BYTES = parsePositiveInteger(
-    environment.MAX_WEBSOCKET_MESSAGE_BYTES,
-    16 * 1024
-  );
-  const TRUST_PROXY = parseBoolean(environment.TRUST_PROXY, false);
-  const MAX_CONNECTIONS_PER_IP = parsePositiveInteger(environment.MAX_CONNECTIONS_PER_IP, 6);
-  const MAX_CONCURRENT_ROOMS = parsePositiveInteger(environment.MAX_CONCURRENT_ROOMS, 4);
-  const ROOM_CREATE_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.ROOM_CREATE_RATE_LIMIT_MAX,
-    4
-  );
-  const ROOM_CREATE_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.ROOM_CREATE_RATE_LIMIT_WINDOW_MS,
-    60_000
-  );
-  const ROOM_JOIN_RATE_LIMIT_MAX = parsePositiveInteger(environment.ROOM_JOIN_RATE_LIMIT_MAX, 10);
-  const ROOM_JOIN_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.ROOM_JOIN_RATE_LIMIT_WINDOW_MS,
-    60_000
-  );
-  const INVALID_MESSAGE_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.INVALID_MESSAGE_RATE_LIMIT_MAX,
-    5
-  );
-  const INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
-    30_000
-  );
-  const CHAT_MESSAGE_MAX_LENGTH = parsePositiveInteger(environment.CHAT_MESSAGE_MAX_LENGTH, 200);
-  const CHAT_HISTORY_LIMIT = parsePositiveInteger(environment.CHAT_HISTORY_LIMIT, 25);
-  const CHAT_MESSAGE_RATE_LIMIT_MAX = parsePositiveInteger(
-    environment.CHAT_MESSAGE_RATE_LIMIT_MAX,
-    8
-  );
-  const CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS = parsePositiveInteger(
-    environment.CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS,
-    10_000
-  );
-  const SOCKET_HEARTBEAT_INTERVAL_MS = parsePositiveInteger(
-    environment.SOCKET_HEARTBEAT_INTERVAL_MS,
-    30_000
-  );
-  const STATE_BACKEND = parseStateBackend(environment.STATE_BACKEND);
-  const REDIS_URL = environment.REDIS_URL;
-  const REDIS_KEY_PREFIX = environment.REDIS_KEY_PREFIX ?? "minesweeper-flags";
-  const RECONNECT_SESSION_TTL_SECONDS = parsePositiveInteger(
-    environment.RECONNECT_SESSION_TTL_SECONDS,
-    30 * 60
-  );
+  const rawPort = environment.PORT ?? DEFAULT_SERVER_PORT;
+  const positiveInteger = (name: string, fallback: number): number =>
+    parsePositiveInteger(environment[name], fallback);
+  const env: ServerEnv = {
+    DEPLOYMENT_MODE: parseDeploymentMode(environment.DEPLOYMENT_MODE),
+    SERVER_PORT: Number(rawPort),
+    SERVER_HOST: environment.HOST ?? "0.0.0.0",
+    WEBSOCKET_PATH: environment.WS_PATH ?? "/ws",
+    WEBSOCKET_ALLOWED_ORIGINS: parseAllowedOrigins(environment.WEBSOCKET_ALLOWED_ORIGINS),
+    MAX_WEBSOCKET_MESSAGE_BYTES: positiveInteger("MAX_WEBSOCKET_MESSAGE_BYTES", 16 * 1024),
+    TRUST_PROXY: parseBoolean(environment.TRUST_PROXY, false),
+    MAX_CONNECTIONS_PER_IP: positiveInteger("MAX_CONNECTIONS_PER_IP", 6),
+    MAX_CONCURRENT_ROOMS: positiveInteger("MAX_CONCURRENT_ROOMS", 4),
+    ROOM_CREATE_RATE_LIMIT_MAX: positiveInteger("ROOM_CREATE_RATE_LIMIT_MAX", 4),
+    ROOM_CREATE_RATE_LIMIT_WINDOW_MS: positiveInteger("ROOM_CREATE_RATE_LIMIT_WINDOW_MS", 60_000),
+    ROOM_JOIN_RATE_LIMIT_MAX: positiveInteger("ROOM_JOIN_RATE_LIMIT_MAX", 10),
+    ROOM_JOIN_RATE_LIMIT_WINDOW_MS: positiveInteger("ROOM_JOIN_RATE_LIMIT_WINDOW_MS", 60_000),
+    INVALID_MESSAGE_RATE_LIMIT_MAX: positiveInteger("INVALID_MESSAGE_RATE_LIMIT_MAX", 5),
+    INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS: positiveInteger(
+      "INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS",
+      30_000
+    ),
+    CHAT_MESSAGE_MAX_LENGTH: positiveInteger("CHAT_MESSAGE_MAX_LENGTH", 200),
+    CHAT_HISTORY_LIMIT: positiveInteger("CHAT_HISTORY_LIMIT", 25),
+    CHAT_MESSAGE_RATE_LIMIT_MAX: positiveInteger("CHAT_MESSAGE_RATE_LIMIT_MAX", 8),
+    CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS: positiveInteger("CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS", 10_000),
+    SOCKET_HEARTBEAT_INTERVAL_MS: positiveInteger("SOCKET_HEARTBEAT_INTERVAL_MS", 30_000),
+    STATE_BACKEND: parseStateBackend(environment.STATE_BACKEND),
+    REDIS_URL: environment.REDIS_URL,
+    REDIS_KEY_PREFIX: environment.REDIS_KEY_PREFIX ?? "minesweeper-flags",
+    RECONNECT_SESSION_TTL_SECONDS: positiveInteger("RECONNECT_SESSION_TTL_SECONDS", 30 * 60)
+  };
 
-  if (DEPLOYMENT_MODE === "public") {
-    const configurationErrors: string[] = [];
-
-    if (STATE_BACKEND !== "redis") {
-      configurationErrors.push("DEPLOYMENT_MODE=public requires STATE_BACKEND=redis.");
-    }
-
-    if (WEBSOCKET_ALLOWED_ORIGINS.length === 0 || WEBSOCKET_ALLOWED_ORIGINS.includes("*")) {
-      configurationErrors.push(
-        "DEPLOYMENT_MODE=public requires WEBSOCKET_ALLOWED_ORIGINS to be set to an explicit allowlist."
-      );
-    }
-
-    if (!TRUST_PROXY) {
-      configurationErrors.push("DEPLOYMENT_MODE=public requires TRUST_PROXY=true.");
-    }
-
-    if (!isValidPositiveInteger(SERVER_PORT)) {
-      configurationErrors.push(
-        `DEPLOYMENT_MODE=public requires PORT to be a positive integer. Received "${environment.PORT ?? DEFAULT_SERVER_PORT}".`
-      );
-    }
+  if (env.DEPLOYMENT_MODE === "public") {
+    const configurationErrors = getPublicModeConfigurationErrors(env, rawPort);
 
     if (configurationErrors.length > 0) {
       throw new Error(configurationErrors.join(" "));
     }
   }
 
-  return {
-    DEPLOYMENT_MODE,
-    SERVER_PORT,
-    SERVER_HOST,
-    WEBSOCKET_PATH,
-    WEBSOCKET_ALLOWED_ORIGINS,
-    MAX_WEBSOCKET_MESSAGE_BYTES,
-    TRUST_PROXY,
-    MAX_CONNECTIONS_PER_IP,
-    MAX_CONCURRENT_ROOMS,
-    ROOM_CREATE_RATE_LIMIT_MAX,
-    ROOM_CREATE_RATE_LIMIT_WINDOW_MS,
-    ROOM_JOIN_RATE_LIMIT_MAX,
-    ROOM_JOIN_RATE_LIMIT_WINDOW_MS,
-    INVALID_MESSAGE_RATE_LIMIT_MAX,
-    INVALID_MESSAGE_RATE_LIMIT_WINDOW_MS,
-    CHAT_MESSAGE_MAX_LENGTH,
-    CHAT_HISTORY_LIMIT,
-    CHAT_MESSAGE_RATE_LIMIT_MAX,
-    CHAT_MESSAGE_RATE_LIMIT_WINDOW_MS,
-    SOCKET_HEARTBEAT_INTERVAL_MS,
-    STATE_BACKEND,
-    REDIS_URL,
-    REDIS_KEY_PREFIX,
-    RECONNECT_SESSION_TTL_SECONDS
-  };
+  return env;
 };
 
 const serverEnv = parseServerEnv(process.env);
