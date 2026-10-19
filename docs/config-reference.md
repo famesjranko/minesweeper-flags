@@ -329,6 +329,17 @@ Public p2p requires Redis-backed signaling even though gameplay remains browser-
 The Compose file does not inject localhost fallbacks for those browser-facing values anymore.
 Provide them explicitly through your shell or an env file so public deploys fail fast instead of silently building a broken client.
 
+## Health Endpoints
+
+Hosted server (`apps/server`):
+
+- `/health` reports liveness. It also returns `activeRooms` and `maxRooms` for the lobby slot indicator.
+- `/ready` reports readiness.
+
+Signaling (`apps/signaling`):
+
+- `/health` reports liveness.
+
 ## Common Config Recipes
 
 ### Convenience Local App With Redis-Backed State
