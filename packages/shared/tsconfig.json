@@ -6,5 +6,6 @@
     "composite": true,
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
   },
+  "references": [{ "path": "../game-engine" }],
   "include": ["src"]
 }
