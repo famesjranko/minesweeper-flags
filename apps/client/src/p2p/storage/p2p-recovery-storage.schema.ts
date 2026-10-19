@@ -241,163 +241,106 @@ interface HostAuthorityRefinementInput {
   } | null;
 }
 
+interface HostAuthorityRule {
+  message: string;
+  isBroken: (value: HostAuthorityRefinementInput) => boolean;
+}
+
+type PlayerIdentity = { playerId: string; displayName: string };
+
+const containsIdentity = (players: readonly PlayerIdentity[], identity: PlayerIdentity): boolean =>
+  players.some(
+    (player) => player.playerId === identity.playerId && player.displayName === identity.displayName
+  );
+
 /**
  * Cross-field rules that apply to any host-authority shape (both the stored
  * recovery record and the looser runtime snapshot passed to
- * validateHostAuthoritySnapshot). Factoring into a helper keeps the rules in a
- * single place so the two consumers can't drift.
+ * validateHostAuthoritySnapshot). Keeping the rules in one list means the two
+ * consumers can't drift. Order matters: only the first broken rule is reported.
  */
+const HOST_AUTHORITY_RULES: readonly HostAuthorityRule[] = [
+  {
+    message: "room and hostSession must both be present or both null",
+    isBroken: ({ room, hostSession }) => (room === null) !== (hostSession === null)
+  },
+  {
+    message: "guestSession requires a room",
+    isBroken: ({ room, guestSession }) => guestSession !== null && room === null
+  },
+  {
+    message: "match requires room, hostSession, and guestSession",
+    isBroken: ({ room, hostSession, guestSession, match }) =>
+      match !== null && (room === null || hostSession === null || guestSession === null)
+  },
+  {
+    message: "hostSession must match room roomId/roomCode",
+    isBroken: ({ room, hostSession }) =>
+      room !== null &&
+      hostSession !== null &&
+      (hostSession.roomId !== room.roomId || hostSession.roomCode !== room.roomCode)
+  },
+  {
+    message: "guestSession must match room roomId/roomCode",
+    isBroken: ({ room, guestSession }) =>
+      room !== null &&
+      guestSession !== null &&
+      (guestSession.roomId !== room.roomId || guestSession.roomCode !== room.roomCode)
+  },
+  {
+    message: "room.players must contain hostSession identity",
+    isBroken: ({ room, hostSession }) =>
+      room !== null && hostSession !== null && !containsIdentity(room.players, hostSession)
+  },
+  {
+    message: "room without guestSession must contain exactly one player",
+    isBroken: ({ room, hostSession, guestSession }) =>
+      room !== null && hostSession !== null && guestSession === null && room.players.length !== 1
+  },
+  {
+    message: "room.players must contain guestSession identity",
+    isBroken: ({ room, guestSession }) =>
+      room !== null && guestSession !== null && !containsIdentity(room.players, guestSession)
+  },
+  {
+    message: "hostSession and guestSession must have distinct playerId and sessionToken",
+    isBroken: ({ hostSession, guestSession }) =>
+      hostSession !== null &&
+      guestSession !== null &&
+      (hostSession.playerId === guestSession.playerId ||
+        hostSession.sessionToken === guestSession.sessionToken)
+  },
+  {
+    message: "full room must contain exactly two uniquely identified players",
+    isBroken: ({ room, hostSession, guestSession }) =>
+      room !== null &&
+      hostSession !== null &&
+      guestSession !== null &&
+      (room.players.length !== 2 ||
+        new Set(room.players.map((player) => player.playerId)).size !== room.players.length)
+  },
+  {
+    message: "match must reference the active room and both players",
+    isBroken: ({ room, hostSession, guestSession, match }) =>
+      match !== null &&
+      room !== null &&
+      hostSession !== null &&
+      guestSession !== null &&
+      (match.roomId !== room.roomId ||
+        match.players[0].playerId === match.players[1].playerId ||
+        !containsIdentity(match.players, hostSession) ||
+        !containsIdentity(match.players, guestSession))
+  }
+];
+
 const checkHostAuthorityRelationships = (
   value: HostAuthorityRefinementInput,
   ctx: z.RefinementCtx
 ): void => {
-  const { room, hostSession, guestSession, match } = value;
+  const brokenRule = HOST_AUTHORITY_RULES.find((rule) => rule.isBroken(value));
 
-  // Rule 1: room and hostSession are linked — both present or both null.
-  if ((room === null) !== (hostSession === null)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "room and hostSession must both be present or both null"
-    });
-    return;
-  }
-
-  // Rule 2: guestSession requires a room.
-  if (guestSession !== null && room === null) {
-    ctx.addIssue({
-      code: "custom",
-      message: "guestSession requires a room"
-    });
-    return;
-  }
-
-  // Rule 3: match requires room, hostSession, and guestSession all present.
-  if (match !== null && (room === null || hostSession === null || guestSession === null)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "match requires room, hostSession, and guestSession"
-    });
-    return;
-  }
-
-  // Rule 4: room/hostSession parity.
-  if (
-    room !== null &&
-    hostSession !== null &&
-    (hostSession.roomId !== room.roomId || hostSession.roomCode !== room.roomCode)
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "hostSession must match room roomId/roomCode"
-    });
-    return;
-  }
-
-  // Rule 5: room/guestSession parity.
-  if (
-    room !== null &&
-    guestSession !== null &&
-    (guestSession.roomId !== room.roomId || guestSession.roomCode !== room.roomCode)
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "guestSession must match room roomId/roomCode"
-    });
-    return;
-  }
-
-  // Rule 6: hostSession identity must be present in room.players.
-  if (
-    room !== null &&
-    hostSession !== null &&
-    !room.players.some(
-      (player) =>
-        player.playerId === hostSession.playerId && player.displayName === hostSession.displayName
-    )
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "room.players must contain hostSession identity"
-    });
-    return;
-  }
-
-  // Rule 7: solo room must have exactly one player.
-  if (room !== null && hostSession !== null && guestSession === null && room.players.length !== 1) {
-    ctx.addIssue({
-      code: "custom",
-      message: "room without guestSession must contain exactly one player"
-    });
-    return;
-  }
-
-  // Rule 8: guestSession identity must be present in room.players.
-  if (
-    room !== null &&
-    guestSession !== null &&
-    !room.players.some(
-      (player) =>
-        player.playerId === guestSession.playerId && player.displayName === guestSession.displayName
-    )
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "room.players must contain guestSession identity"
-    });
-    return;
-  }
-
-  // Rule 9: hostSession and guestSession must have distinct identities.
-  if (
-    hostSession !== null &&
-    guestSession !== null &&
-    (hostSession.playerId === guestSession.playerId ||
-      hostSession.sessionToken === guestSession.sessionToken)
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "hostSession and guestSession must have distinct playerId and sessionToken"
-    });
-    return;
-  }
-
-  // Rule 10: full room must have exactly two unique players.
-  if (
-    room !== null &&
-    hostSession !== null &&
-    guestSession !== null &&
-    (room.players.length !== 2 ||
-      new Set(room.players.map((player) => player.playerId)).size !== room.players.length)
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "full room must contain exactly two uniquely identified players"
-    });
-    return;
-  }
-
-  // Rule 11: match must reference the current room and both players.
-  if (
-    match !== null &&
-    room !== null &&
-    hostSession !== null &&
-    guestSession !== null &&
-    (match.roomId !== room.roomId ||
-      match.players[0].playerId === match.players[1].playerId ||
-      !match.players.some(
-        (player) =>
-          player.playerId === hostSession.playerId && player.displayName === hostSession.displayName
-      ) ||
-      !match.players.some(
-        (player) =>
-          player.playerId === guestSession.playerId &&
-          player.displayName === guestSession.displayName
-      ))
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "match must reference the active room and both players"
-    });
+  if (brokenRule) {
+    ctx.addIssue({ code: "custom", message: brokenRule.message });
   }
 };
 
