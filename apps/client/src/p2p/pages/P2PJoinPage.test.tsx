@@ -149,8 +149,10 @@ describe("P2PJoinPage", () => {
 
     expect(container.textContent).toContain("Direct link unavailable");
     expect(container.textContent).toContain(statusLabel);
-    expect(container.textContent).toContain(message);
-    expect(container.textContent).toContain("This invite can no longer create a guest answer.");
+    expect(container.textContent).toContain("This link can't be used again.");
+    expect(container.textContent?.split(message).length).toBe(2);
+    expect(container.textContent).not.toContain("guest answer");
+    expect(container.textContent).not.toContain("no longer joinable");
 
     const joinButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Join Direct Match"
