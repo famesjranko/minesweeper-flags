@@ -27,13 +27,16 @@ vi.mock("../../p2p/runtime/create-p2p-game-client-runtime.js", () => ({
 }));
 
 vi.mock("./game-client.transport.js", () => ({
-  WebSocketGameClientTransport: vi.fn(() => ({
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    send: vi.fn(),
-    subscribe: vi.fn(),
-    getStatus: vi.fn(() => "disconnected")
-  }))
+  // The runtime calls this with `new`, so the mock must be constructible.
+  WebSocketGameClientTransport: vi.fn(
+    class {
+      connect = vi.fn();
+      disconnect = vi.fn();
+      send = vi.fn();
+      subscribe = vi.fn();
+      getStatus = vi.fn(() => "disconnected");
+    }
+  )
 }));
 
 vi.mock("../../lib/socket/session-storage.js", () => ({
@@ -45,23 +48,25 @@ vi.mock("../../lib/socket/session-storage.js", () => ({
 }));
 
 vi.mock("./game-client.controller.js", () => ({
-  GameClientController: vi.fn(() => ({
-    start: vi.fn(),
-    dispose: vi.fn(),
-    hasStoredSession: vi.fn(() => false),
-    openLobby: vi.fn(),
-    createRoom: vi.fn(),
-    joinRoom: vi.fn(),
-    reconnect: vi.fn(),
-    submitCellAction: vi.fn(),
-    setChatDraft: vi.fn(),
-    sendChatMessage: vi.fn(),
-    toggleBombMode: vi.fn(),
-    resignMatch: vi.fn(),
-    requestRematch: vi.fn(),
-    cancelRematch: vi.fn(),
-    clearError: vi.fn()
-  })),
+  GameClientController: vi.fn(
+    class {
+      start = vi.fn();
+      dispose = vi.fn();
+      hasStoredSession = vi.fn(() => false);
+      openLobby = vi.fn();
+      createRoom = vi.fn();
+      joinRoom = vi.fn();
+      reconnect = vi.fn();
+      submitCellAction = vi.fn();
+      setChatDraft = vi.fn();
+      sendChatMessage = vi.fn();
+      toggleBombMode = vi.fn();
+      resignMatch = vi.fn();
+      requestRematch = vi.fn();
+      cancelRematch = vi.fn();
+      clearError = vi.fn();
+    }
+  ),
   createBrowserGameClientScheduler: vi.fn(() => ({
     setTimeout: vi.fn(),
     clearTimeout: vi.fn(),
