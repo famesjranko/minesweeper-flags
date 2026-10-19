@@ -90,6 +90,15 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       .catch(() => {});
   }, []);
 
+  // LobbyPage calls openLobby from an effect keyed on its identity, and
+  // openLobby updates the store. A new function on every render would loop.
+  const openLobby = useCallback(() => {
+    runtime.controller.openLobby();
+    if (DEPLOYMENT_MODE === "server") {
+      setTimeout(refreshSlotCount, 500);
+    }
+  }, [runtime, refreshSlotCount]);
+
   useEffect(() => {
     runtime.controller.start();
     if (DEPLOYMENT_MODE === "server") {
@@ -116,12 +125,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         slotAvailability,
         refreshSlotCount,
         hasStoredSession: runtime.controller.hasStoredSession,
-        openLobby: () => {
-          runtime.controller.openLobby();
-          if (DEPLOYMENT_MODE === "server") {
-            setTimeout(refreshSlotCount, 500);
-          }
-        },
+        openLobby,
         createRoom: runtime.controller.createRoom,
         joinRoom: runtime.controller.joinRoom,
         reconnect: runtime.controller.reconnect,
