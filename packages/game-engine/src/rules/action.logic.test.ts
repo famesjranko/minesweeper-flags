@@ -47,6 +47,14 @@ const createTwoPlayerMatch = (): MatchState =>
     startingPlayerId: "p1"
   });
 
+// Leaves the player far enough behind that the bomb-deficit guard would allow a bomb, so a
+// rejection can only come from the guard a test is aiming at.
+const makePlayerTrail = (match: MatchState, playerId: string): void => {
+  for (const player of match.players) {
+    player.score = player.playerId === playerId ? 0 : MIN_BOMB_DEFICIT;
+  }
+};
+
 describe("resolveAction", () => {
   it("keeps the turn when a player claims a mine", () => {
     const match = createMatchState({
@@ -216,6 +224,7 @@ describe("resolveAction", () => {
   ] as const)("rejects a %s when the match is not live", (type, row, column) => {
     // Given a match that has already finished
     const match = createTwoPlayerMatch();
+    makePlayerTrail(match, "p1");
     match.phase = "finished";
     const before = structuredClone(match);
 
@@ -234,6 +243,7 @@ describe("resolveAction", () => {
     (type) => {
       // Given a live match where p1 holds the turn
       const match = createTwoPlayerMatch();
+      makePlayerTrail(match, "p2");
       const before = structuredClone(match);
 
       // When p2 acts on an open cell
@@ -274,6 +284,7 @@ describe("resolveAction", () => {
   ] as const)("rejects a %s on %s", (type, _label, cellState) => {
     // Given a live match where the cell at 0,0 is already resolved
     const match = createTwoPlayerMatch();
+    makePlayerTrail(match, "p1");
     match.board = createCustomBoard([{ row: 0, column: 0, ...cellState }]);
     const before = structuredClone(match);
 

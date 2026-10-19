@@ -160,8 +160,12 @@ describe("session storage", () => {
       installStorage(localStorage);
 
       // When a session is stored
-      // Then the call does not throw and nothing is saved
-      expect(() => storeSession(session)).not.toThrow();
+      const act = () => storeSession(session);
+
+      // Then the call does not throw
+      expect(act).not.toThrow();
+
+      // And nothing is saved
       expect(localStorage.getItem(SESSION_KEY)).toBeNull();
     });
 
@@ -170,8 +174,10 @@ describe("session storage", () => {
       installStorage(new FailingStorage(["getItem"]));
 
       // When the session is read
+      const result = getStoredSession("ABCDE");
+
       // Then the result is null
-      expect(getStoredSession("ABCDE")).toBeNull();
+      expect(result).toBeNull();
     });
 
     it("reads as no stored session when cleanup of an invalid payload throws", () => {
@@ -181,8 +187,13 @@ describe("session storage", () => {
       installStorage(localStorage);
 
       // When the session is read
-      // Then the result is null and nothing throws
-      expect(getStoredSession("ABCDE")).toBeNull();
+      const act = () => getStoredSession("ABCDE");
+
+      // Then nothing throws
+      expect(act).not.toThrow();
+
+      // And the result is null
+      expect(act()).toBeNull();
     });
 
     it("does not throw when a session removal fails", () => {
@@ -190,8 +201,10 @@ describe("session storage", () => {
       installStorage(new FailingStorage(["removeItem"]));
 
       // When the session is removed
+      const act = () => removeStoredSession("ABCDE");
+
       // Then the call does not throw
-      expect(() => removeStoredSession("ABCDE")).not.toThrow();
+      expect(act).not.toThrow();
     });
   });
 });

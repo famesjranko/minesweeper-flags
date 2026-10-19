@@ -95,4 +95,46 @@ describe("RoomLobby", () => {
       vi.useRealTimers();
     }
   });
+
+  it("keeps a single refresh timer when the refresh button is pressed twice", () => {
+    // Given a server lobby mounted under fake timers
+    vi.useFakeTimers();
+    try {
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => {
+        root.render(
+          <MemoryRouter>
+            <RoomLobby
+              connectionStatus="connected"
+              deploymentMode="server"
+              error={null}
+              slotAvailability={{ activeRooms: 1, maxRooms: 5 }}
+              onRefreshSlots={vi.fn()}
+              onCreateRoom={vi.fn()}
+              onJoinRoom={vi.fn()}
+            />
+          </MemoryRouter>
+        );
+      });
+
+      // When the slot refresh button is pressed twice before the timer elapses
+      act(() => {
+        container.querySelector<HTMLButtonElement>(".lobby-slot-refresh")?.click();
+      });
+      act(() => {
+        container.querySelector<HTMLButtonElement>(".lobby-slot-refresh")?.click();
+      });
+
+      // Then only one refresh timer is pending
+      expect(vi.getTimerCount()).toBe(1);
+
+      act(() => {
+        root.unmount();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
