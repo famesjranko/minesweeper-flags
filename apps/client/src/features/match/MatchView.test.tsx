@@ -304,3 +304,60 @@ describe("MatchView last-move marks", () => {
     expect(html).not.toContain("board-last-move-area");
   });
 });
+
+const renderMatchView = (match: MatchStateDto, currentPlayerId = "player-1") =>
+  renderToStaticMarkup(
+    <MatchView
+      roomCode="ABCDE"
+      currentPlayerId={currentPlayerId}
+      match={match}
+      bombArmed={false}
+      connectionStatus="connected"
+      chatMessages={[]}
+      chatError={null}
+      chatDraft=""
+      chatPending={false}
+      onToggleBomb={() => {}}
+      onCellSelect={() => {}}
+      onChatDraftChange={() => {}}
+      onSendChatMessage={() => {}}
+      onResign={() => {}}
+      onRequestRematch={() => {}}
+      onCancelRematch={() => {}}
+    />
+  );
+
+describe("MatchView match end", () => {
+  it("crowns only the winner's score once the match ends", () => {
+    // Given a finished match that red (player-2) won
+    const match: MatchStateDto = {
+      ...createMatch({ currentTurnPlayerId: "player-1", scores: [24, 26] }),
+      phase: "finished",
+      currentTurnPlayerId: null,
+      turnPhase: "ended",
+      winnerPlayerId: "player-2"
+    };
+
+    // When the match view renders
+    const html = renderMatchView(match);
+
+    // Then exactly one score carries the crown, and it is red's
+    expect(html.match(/winner-crown/g)?.length).toBe(1);
+    expect(html).toMatch(/sidebar-player-panel-red[\s\S]*sidebar-score-pill is-winner/);
+
+    // And the result is shown over the board
+    expect(html).toMatch(/classic-board-frame[\s\S]*match-result-ribbon/);
+  });
+
+  it("shows no crown or result while the match is live", () => {
+    // Given a live match
+    const match = createMatch({ currentTurnPlayerId: "player-1", scores: [3, 1] });
+
+    // When the match view renders
+    const html = renderMatchView(match);
+
+    // Then nothing marks a winner yet
+    expect(html).not.toContain("winner-crown");
+    expect(html).not.toContain("match-result-ribbon");
+  });
+});

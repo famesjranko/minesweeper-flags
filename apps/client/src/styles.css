@@ -1162,12 +1162,32 @@ button {
 }
 
 .sidebar-score-pill {
+  position: relative;
   flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   font-size: 1.25rem;
+}
+
+.sidebar-score-pill.is-winner {
+  outline: 3px solid #ffd54a;
+  box-shadow:
+    0 0 12px rgba(255, 213, 74, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Seated on the pill's top-left corner so it clears the labels above the score. */
+.winner-crown {
+  position: absolute;
+  top: -11px;
+  left: -9px;
+  width: 24px;
+  height: 18px;
+  transform: rotate(-18deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
 }
 
 .sidebar-bomb-pill {
@@ -1584,6 +1604,7 @@ button {
 }
 
 .classic-board-frame {
+  position: relative;
   width: fit-content;
   max-width: 100%;
   padding: 8px;
@@ -1797,26 +1818,83 @@ button {
   text-align: center;
 }
 
-.rematch-panel {
-  grid-column: 1 / -1;
+/* The result ribbon covers the middle of the finished board; the rest stays visible. */
+.match-result-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.match-result-ribbon {
   width: 100%;
+  padding: 14px 12px 12px;
   text-align: center;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 28%),
-    linear-gradient(180deg, #1c202d 0%, #090c13 100%);
-  color: #edf2ff;
-  border-color: rgba(125, 148, 204, 0.2);
+  color: #fff;
+  pointer-events: auto;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 32px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
-.rematch-panel p {
+.match-result-ribbon.is-red {
+  background: linear-gradient(180deg, #ff7b4a 0%, #d4331d 100%);
+}
+
+.match-result-ribbon.is-blue {
+  background: linear-gradient(180deg, #5aa8ff 0%, #1e5fd0 100%);
+}
+
+.match-result-ribbon.is-draw {
+  background: linear-gradient(180deg, #7d8798 0%, #464e5c 100%);
+}
+
+.match-result-title {
   margin: 0;
+  font-size: clamp(1.6rem, 7vw, 2.2rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.rematch-panel .action-row {
+.match-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
+  gap: 8px 14px;
+  margin-top: 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.match-result-button {
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.match-result-button:hover,
+.match-result-button:focus-visible {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.match-result-status {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.92;
 }
 
 @media (max-width: 920px) {
