@@ -14,7 +14,7 @@ import {
 } from "../match/scoring.logic.js";
 import { keepTurn, switchTurn } from "../match/turn.logic.js";
 import { findWinnerPlayerId, isFinished } from "../match/win.logic.js";
-import type { ActionResolution, MatchAction } from "./action.types.js";
+import type { ActionResolution, BombAction, MatchAction, SelectAction } from "./action.types.js";
 
 interface CreateMatchOptions {
   roomId: string;
@@ -83,99 +83,88 @@ export const createMatchState = ({
   updatedAt: createdAt
 });
 
-export const resolveAction = (
+const resolveMineClaim = (
   state: MatchState,
-  action: MatchAction,
+  action: SelectAction,
   updatedAt: number
 ): ActionResolution => {
-  if (state.phase !== "live") {
-    return reject("The match is not currently active.");
-  }
+  const nextBoard = {
+    ...state.board,
+    cells: state.board.cells.map((row) => row.map((entry) => ({ ...entry })))
+  };
+  nextBoard.cells[action.row]![action.column]!.claimedByPlayerId = action.playerId;
 
-  if (state.currentTurnPlayerId !== action.playerId) {
-    return reject("It is not your turn.");
-  }
+  const scoredState = incrementPlayerScore(
+    {
+      ...state,
+      board: nextBoard
+    },
+    action.playerId,
+    1
+  );
 
-  const actingPlayer = state.players.find((player) => player.playerId === action.playerId);
+  const actionResult = {
+    type: "select" as const,
+    playerId: action.playerId,
+    row: action.row,
+    column: action.column,
+    outcome: "mine_claimed" as const,
+    revealedCount: 0,
+    claimedMineCount: 1
+  };
 
-  if (!actingPlayer) {
-    return reject("The player is not part of this match.");
-  }
+  const nextState = finalizeState(
+    {
+      ...clearRematchVotes(keepTurn(scoredState)),
+      lastAction: actionResult
+    },
+    updatedAt
+  );
 
-  const cell = getCell(state.board, action.row, action.column);
+  return { ok: true, state: nextState, action: actionResult };
+};
 
-  if (cell.claimedByPlayerId || cell.isRevealed) {
-    return reject("That cell has already been resolved.");
-  }
+const resolveSafeReveal = (
+  state: MatchState,
+  action: SelectAction,
+  updatedAt: number
+): ActionResolution => {
+  const revealed = revealConnectedSafeCells(state.board, action.row, action.column);
+  const actionResult = {
+    type: "select" as const,
+    playerId: action.playerId,
+    row: action.row,
+    column: action.column,
+    outcome: "safe_reveal" as const,
+    revealedCount: revealed.revealedCount,
+    claimedMineCount: 0
+  };
 
-  if (action.type === "select") {
-    if (cell.hasMine) {
-      const nextBoard = {
-        ...state.board,
-        cells: state.board.cells.map((row) => row.map((entry) => ({ ...entry })))
-      };
-      nextBoard.cells[action.row]![action.column]!.claimedByPlayerId = action.playerId;
+  const nextState = finalizeState(
+    {
+      ...clearRematchVotes(
+        switchTurn(
+          {
+            ...state,
+            board: revealed.board
+          },
+          action.playerId
+        )
+      ),
+      lastAction: actionResult
+    },
+    updatedAt
+  );
 
-      const scoredState = incrementPlayerScore(
-        {
-          ...state,
-          board: nextBoard
-        },
-        action.playerId,
-        1
-      );
+  return { ok: true, state: nextState, action: actionResult };
+};
 
-      const actionResult = {
-        type: "select" as const,
-        playerId: action.playerId,
-        row: action.row,
-        column: action.column,
-        outcome: "mine_claimed" as const,
-        revealedCount: 0,
-        claimedMineCount: 1
-      };
-
-      const nextState = finalizeState(
-        {
-          ...clearRematchVotes(keepTurn(scoredState)),
-          lastAction: actionResult
-        },
-        updatedAt
-      );
-
-      return { ok: true, state: nextState, action: actionResult };
-    }
-
-    const revealed = revealConnectedSafeCells(state.board, action.row, action.column);
-    const actionResult = {
-      type: "select" as const,
-      playerId: action.playerId,
-      row: action.row,
-      column: action.column,
-      outcome: "safe_reveal" as const,
-      revealedCount: revealed.revealedCount,
-      claimedMineCount: 0
-    };
-
-    const nextState = finalizeState(
-      {
-        ...clearRematchVotes(
-          switchTurn(
-            {
-              ...state,
-              board: revealed.board
-            },
-            action.playerId
-          )
-        ),
-        lastAction: actionResult
-      },
-      updatedAt
-    );
-
-    return { ok: true, state: nextState, action: actionResult };
-  }
-
+const resolveBomb = (
+  state: MatchState,
+  action: BombAction,
+  actingPlayer: PlayerMatchState,
+  updatedAt: number
+): ActionResolution => {
   if (actingPlayer.bombsRemaining === 0) {
     return reject("You have already used your bomb.");
   }
@@ -226,4 +215,38 @@ export const resolveAction = (
   );
 
   return { ok: true, state: nextState, action: actionResult };
+};
+
+export const resolveAction = (
+  state: MatchState,
+  action: MatchAction,
+  updatedAt: number
+): ActionResolution => {
+  if (state.phase !== "live") {
+    return reject("The match is not currently active.");
+  }
+
+  if (state.currentTurnPlayerId !== action.playerId) {
+    return reject("It is not your turn.");
+  }
+
+  const actingPlayer = state.players.find((player) => player.playerId === action.playerId);
+
+  if (!actingPlayer) {
+    return reject("The player is not part of this match.");
+  }
+
+  const cell = getCell(state.board, action.row, action.column);
+
+  if (cell.claimedByPlayerId || cell.isRevealed) {
+    return reject("That cell has already been resolved.");
+  }
+
+  if (action.type === "select") {
+    return cell.hasMine
+      ? resolveMineClaim(state, action, updatedAt)
+      : resolveSafeReveal(state, action, updatedAt);
+  }
+
+  return resolveBomb(state, action, actingPlayer, updatedAt);
 };
