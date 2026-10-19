@@ -60,6 +60,7 @@ Run these from the repo root:
 - `make format` applies Biome formatting and safe lint fixes.
 - `make lint` checks formatting and lint rules without changing files.
 - `make typecheck` type-checks every workspace, including tests.
+- `make complexity` reports functions and files over the advisory limits in `biome.jsonc`. It never fails.
 - `make test-server` runs the server test suite.
 - `make test-signaling` runs the signaling test suite.
 - `make build` builds all workspaces.

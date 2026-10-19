@@ -13,9 +13,10 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "complexity": "biome lint --diagnostic-level=info --max-diagnostics=none .",
     "dev": "concurrently -k -n server,client -c yellow,cyan \"npm run dev -w @minesweeper-flags/server\" \"npm run dev -w @minesweeper-flags/client\"",
     "format": "biome check --write .",
-    "lint": "biome check --error-on-warnings .",
+    "lint": "biome check --error-on-warnings --diagnostic-level=warn .",
     "prepare": "husky",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"

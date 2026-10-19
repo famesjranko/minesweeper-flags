@@ -8,6 +8,10 @@ fi
 head=$(git rev-parse HEAD)
 pushes_head=false
 while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  # Peel annotated tags to their commit, so a tag at HEAD counts as HEAD.
+  if [ "$local_sha" != 0000000000000000000000000000000000000000 ]; then
+    local_sha=$(git rev-parse "$local_sha^{commit}" 2>/dev/null || echo "$local_sha")
+  fi
   case "$local_sha" in
     0000000000000000000000000000000000000000) ;; # a deleted ref has nothing to check
     "$head") pushes_head=true ;;

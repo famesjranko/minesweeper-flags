@@ -80,6 +80,7 @@ make help       # list every target
 make format     # apply formatting and safe lint fixes (Biome)
 make lint       # check formatting and lint rules
 make typecheck  # type-check every workspace, tests included
+make complexity # advisory size and complexity report; never fails
 make test       # all workspace tests (Vitest)
 make check      # all of the above, the build, and Compose config validation; CI runs this
 make images     # build every Docker image; CI runs this too
