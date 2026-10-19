@@ -1,6 +1,7 @@
 import {
   createBoard,
   getCell,
+  isWithinBoard,
   revealBombArea,
   revealConnectedSafeCells
 } from "../board/board.logic.js";
@@ -234,6 +235,12 @@ export const resolveAction = (
 
   if (!actingPlayer) {
     return reject("The player is not part of this match.");
+  }
+
+  // The protocol bounds coordinates only from below, so check the board here and reject
+  // like any other invalid move instead of letting getCell throw.
+  if (!isWithinBoard(state.board, action.row, action.column)) {
+    return reject("That cell is outside the board.");
   }
 
   const cell = getCell(state.board, action.row, action.column);

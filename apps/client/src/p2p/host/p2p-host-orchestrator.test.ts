@@ -376,6 +376,22 @@ describe("P2PHostOrchestrator", () => {
     );
   });
 
+  it("rejects a move outside the board instead of throwing", () => {
+    // Given a live match on the host's turn
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host");
+    orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
+
+    // When a move targets a row past the board's edge
+    const result = orchestrator.applyHostAction({ type: "select", row: 999, column: 0 });
+
+    // Then the mover gets the usual rejection and the match is unchanged
+    expect(result.steps.map((step) => `${step.target}:${step.event.type}`)).toEqual([
+      "host-local:match:action-rejected"
+    ]);
+    expect(orchestrator.getState().match?.lastAction).toBeNull();
+  });
+
   it("hydrates host authority state and continues serving commands", () => {
     const source = createOrchestrator();
 
