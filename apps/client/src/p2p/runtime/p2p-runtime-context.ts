@@ -139,40 +139,28 @@ export class P2PRuntimeContext {
   }
 
   teardownActiveRuntime(): void {
-    this.hostSetupAbortController?.abort();
-    this.guestSetupAbortController?.abort();
-    this.hostReconnectAbortController?.abort();
-    this.clearHostReconnectRetryTimer();
-    this.hostSetupAbortController = null;
-    this.guestSetupAbortController = null;
-    this.hostReconnectAbortController = null;
-    this.claims.stop();
-    this.pendingGuestDisplayName = null;
-    this.hostSessionFinalized = false;
-    this.hostReconnectInFlight = false;
-    this.hostReconnectNeedsGuestRebind = false;
-    this.pendingGuestRecoveryControl = null;
-    this.guestReconnectInFlight = false;
+    this.teardownRuntime();
     this.hostReconnectControl = null;
-    this.hostTransport = null;
-    this.activeRole = null;
-    this.activePeer = null;
-    this.activeController?.dispose();
-    this.activeController = null;
   }
 
   // Unlike teardownActiveRuntime, this leaves hostReconnectControl in place.
   teardownFailedRuntime(): void {
-    this.claims.stop();
-    this.pendingGuestDisplayName = null;
-    this.hostSessionFinalized = false;
+    this.teardownRuntime();
+  }
+
+  // Abort every in-flight loop before the claim heartbeat stops, and abort each controller
+  // before it is nulled, so no waiter outlives the state it reads.
+  private teardownRuntime(): void {
     this.hostSetupAbortController?.abort();
     this.guestSetupAbortController?.abort();
     this.hostReconnectAbortController?.abort();
+    this.clearHostReconnectRetryTimer();
     this.hostSetupAbortController = null;
     this.guestSetupAbortController = null;
     this.hostReconnectAbortController = null;
-    this.clearHostReconnectRetryTimer();
+    this.claims.stop();
+    this.pendingGuestDisplayName = null;
+    this.hostSessionFinalized = false;
     this.hostReconnectInFlight = false;
     this.hostReconnectNeedsGuestRebind = false;
     this.pendingGuestRecoveryControl = null;
