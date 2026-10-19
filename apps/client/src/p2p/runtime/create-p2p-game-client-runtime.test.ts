@@ -186,6 +186,8 @@ class FakeRendezvousClient {
   finalizeSessionCalls = 0;
   getSessionCalls = 0;
   reconnectClaims: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> = [];
+  // Like signaling, a claim must present the secret registered for its role.
+  registeredSecrets = new Map<string, { host: string; guest: string }>();
   reconnectHeartbeats: Array<{ sessionId: string; role: "host" | "guest"; instanceId: string }> =
     [];
   reconnectOffer: ReconnectOfferPayload | null = null;
@@ -333,12 +335,14 @@ class FakeRendezvousClient {
 
   registerReconnectControlSession = async (
     sessionId: string,
-    _hostSecret: string,
-    _guestSecret: string
+    hostSecret: string,
+    guestSecret: string
   ) => {
     if (this.registerReconnectControlSessionError) {
       throw this.registerReconnectControlSessionError;
     }
+
+    this.registeredSecrets.set(sessionId, { host: hostSecret, guest: guestSecret });
 
     return {
       sessionId,
@@ -356,7 +360,13 @@ class FakeRendezvousClient {
     };
   };
 
-  claimReconnectRole = async ({ sessionId, role, instanceId }: ReconnectRoleCaller) => {
+  claimReconnectRole = async ({ sessionId, role, instanceId, secret }: ReconnectRoleCaller) => {
+    const registered = this.registeredSecrets.get(sessionId);
+
+    if (registered && registered[role] !== secret) {
+      throw new P2PRendezvousRequestError("Reconnect secret does not match the role.", 403);
+    }
+
     this.reconnectClaims.push({ sessionId, role, instanceId });
 
     return {
