@@ -13,8 +13,7 @@ import {
   type ClientEvent,
   displayNameSchema,
   SERVER_EVENT_NAMES,
-  type ServerEvent,
-  toMatchStateDto
+  type ServerEvent
 } from "@minesweeper-flags/shared";
 import type { z } from "zod";
 import { validateHostAuthoritySnapshot } from "../storage/p2p-recovery-storage.js";
@@ -25,13 +24,26 @@ import {
   type P2PHostFanoutStep
 } from "./p2p-host-events.js";
 import {
+  buildChatHistoryEvent,
+  buildChatMessageEvent,
+  buildChatRejectedEvent,
+  buildMatchActionRejectedEvent,
+  buildMatchEndedEvent,
+  buildMatchStartedEvent,
+  buildMatchStateEvent,
+  buildPlayerReconnectedEvent,
+  buildRematchUpdatedEvent,
+  buildRoomCreatedEvent,
+  buildRoomJoinedEvent,
+  buildRoomStateEvent
+} from "./p2p-host-server-events.js";
+import {
   createDefaultP2PHostIdentityFactory,
   createGuestSessionRecord,
   createHostSessionRecord,
   matchesGuestBinding,
   matchesGuestCommandScope,
   type P2PBaseSessionRecord,
-  type P2PBoundGuestCommandScope,
   type P2PGuestSessionRecord,
   type P2PHostIdentityFactory,
   type P2PHostSessionRecord
@@ -76,12 +88,6 @@ export interface P2PGuestReconnectOptions {
 }
 
 const normalizeChatText = (text: string): string => text.replace(/\r\n?/g, "\n").trim();
-
-const cloneRoomPlayers = (players: readonly P2PRoomPlayerRecord[]): P2PRoomPlayerRecord[] =>
-  players.map((player) => ({ ...player }));
-
-const cloneChatMessages = (messages: readonly ChatMessageDto[]): ChatMessageDto[] =>
-  messages.map((message) => ({ ...message }));
 
 const normalizeDisplayName = (displayName: string): string => displayNameSchema.parse(displayName);
 
@@ -141,8 +147,8 @@ export class P2PHostOrchestrator {
 
     return {
       steps: [
-        createHostLocalFanoutStep(this.buildRoomCreatedEvent(room, hostSession)),
-        createHostLocalFanoutStep(this.buildChatHistoryEvent(room.roomCode))
+        createHostLocalFanoutStep(buildRoomCreatedEvent(room, hostSession)),
+        createHostLocalFanoutStep(buildChatHistoryEvent(room.roomCode, this.state.chatMessages))
       ]
     };
   }
@@ -178,10 +184,10 @@ export class P2PHostOrchestrator {
 
     return {
       steps: [
-        createGuestFanoutStep(this.buildRoomJoinedEvent(updatedRoom, guestSession)),
-        createGuestFanoutStep(this.buildChatHistoryEvent(updatedRoom.roomCode)),
-        createBroadcastFanoutStep(this.buildRoomStateEvent(updatedRoom)),
-        createBroadcastFanoutStep(this.buildMatchStartedEvent(updatedRoom.roomCode, match))
+        createGuestFanoutStep(buildRoomJoinedEvent(updatedRoom, guestSession)),
+        createGuestFanoutStep(buildChatHistoryEvent(updatedRoom.roomCode, this.state.chatMessages)),
+        createBroadcastFanoutStep(buildRoomStateEvent(updatedRoom)),
+        createBroadcastFanoutStep(buildMatchStartedEvent(updatedRoom.roomCode, match))
       ]
     };
   }
@@ -233,52 +239,30 @@ export class P2PHostOrchestrator {
       return { steps: [] };
     }
 
+    if (
+      event.type === CLIENT_EVENT_NAMES.roomCreate ||
+      event.type === CLIENT_EVENT_NAMES.roomJoin
+    ) {
+      return { steps: [] };
+    }
+
+    if (!matchesGuestCommandScope(guestSession, event.payload)) {
+      return this.rejectRemoteGuestCommand(guestSession);
+    }
+
     switch (event.type) {
-      case CLIENT_EVENT_NAMES.chatSend: {
-        if (!this.isGuestCommandInScope(guestSession, event.payload)) {
-          return this.rejectRemoteGuestCommand(guestSession);
-        }
-
+      case CLIENT_EVENT_NAMES.chatSend:
         return this.sendGuestChat(event.payload.text);
-      }
-      case CLIENT_EVENT_NAMES.matchAction: {
-        if (!this.isGuestCommandInScope(guestSession, event.payload)) {
-          return this.rejectRemoteGuestCommand(guestSession);
-        }
-
+      case CLIENT_EVENT_NAMES.matchAction:
         return this.applyGuestAction(event.payload.action);
-      }
-      case CLIENT_EVENT_NAMES.matchResign: {
-        if (!this.isGuestCommandInScope(guestSession, event.payload)) {
-          return this.rejectRemoteGuestCommand(guestSession);
-        }
-
+      case CLIENT_EVENT_NAMES.matchResign:
         return this.resignGuest();
-      }
-      case CLIENT_EVENT_NAMES.matchRematchRequest: {
-        if (!this.isGuestCommandInScope(guestSession, event.payload)) {
-          return this.rejectRemoteGuestCommand(guestSession);
-        }
-
+      case CLIENT_EVENT_NAMES.matchRematchRequest:
         return this.requestGuestRematch();
-      }
-      case CLIENT_EVENT_NAMES.matchRematchCancel: {
-        if (!this.isGuestCommandInScope(guestSession, event.payload)) {
-          return this.rejectRemoteGuestCommand(guestSession);
-        }
-
+      case CLIENT_EVENT_NAMES.matchRematchCancel:
         return this.cancelGuestRematch();
-      }
-      case CLIENT_EVENT_NAMES.playerReconnect: {
-        if (!this.isGuestCommandInScope(guestSession, event.payload)) {
-          return this.rejectRemoteGuestCommand(guestSession);
-        }
-
+      case CLIENT_EVENT_NAMES.playerReconnect:
         return this.replayGuestReconnect({ bindingId });
-      }
-      case CLIENT_EVENT_NAMES.roomCreate:
-      case CLIENT_EVENT_NAMES.roomJoin:
-        return { steps: [] };
     }
   }
 
@@ -303,13 +287,6 @@ export class P2PHostOrchestrator {
     };
   }
 
-  private isGuestCommandInScope(
-    session: P2PGuestSessionRecord,
-    scope: P2PBoundGuestCommandScope
-  ): boolean {
-    return matchesGuestCommandScope(session, scope);
-  }
-
   private rejectRemoteGuestCommand(session: P2PGuestSessionRecord): P2PHostCommandResult {
     return {
       steps: [
@@ -332,7 +309,7 @@ export class P2PHostOrchestrator {
         steps: [
           this.createActorStep(
             session,
-            this.buildChatRejectedEvent(room.roomCode, "Type a message before sending.")
+            buildChatRejectedEvent(room.roomCode, "Type a message before sending.")
           )
         ]
       };
@@ -343,7 +320,7 @@ export class P2PHostOrchestrator {
         steps: [
           this.createActorStep(
             session,
-            this.buildChatRejectedEvent(
+            buildChatRejectedEvent(
               room.roomCode,
               `Chat messages can be at most ${this.chatMessageMaxLength} characters.`
             )
@@ -371,7 +348,7 @@ export class P2PHostOrchestrator {
     };
 
     return {
-      steps: [createBroadcastFanoutStep(this.buildChatMessageEvent(room.roomCode, message))]
+      steps: [createBroadcastFanoutStep(buildChatMessageEvent(room.roomCode, message))]
     };
   }
 
@@ -390,32 +367,22 @@ export class P2PHostOrchestrator {
     if (!resolved.ok) {
       return {
         steps: [
-          this.createActorStep(session, {
-            type: SERVER_EVENT_NAMES.matchActionRejected,
-            payload: {
-              roomCode: room.roomCode,
-              message: resolved.error
-            }
-          })
+          this.createActorStep(
+            session,
+            buildMatchActionRejectedEvent(room.roomCode, resolved.error)
+          )
         ]
       };
     }
 
-    this.state = {
-      ...this.state,
-      room: {
-        ...room,
-        updatedAt: resolved.state.updatedAt
-      },
-      match: resolved.state
-    };
+    this.storeMatch(room, resolved.state, resolved.state.updatedAt);
 
     return {
       steps: [
         createBroadcastFanoutStep(
           resolved.state.phase === "finished"
-            ? this.buildMatchEndedEvent(room.roomCode, resolved.state)
-            : this.buildMatchStateEvent(room.roomCode, resolved.state)
+            ? buildMatchEndedEvent(room.roomCode, resolved.state)
+            : buildMatchStateEvent(room.roomCode, resolved.state)
         )
       ]
     };
@@ -427,28 +394,21 @@ export class P2PHostOrchestrator {
     try {
       const nextMatch = resignMatch(this.requireMatch(), session.playerId, this.now());
 
-      this.state = {
-        ...this.state,
-        room: {
-          ...room,
-          updatedAt: nextMatch.updatedAt
-        },
-        match: nextMatch
-      };
+      this.storeMatch(room, nextMatch, nextMatch.updatedAt);
 
       return {
-        steps: [createBroadcastFanoutStep(this.buildMatchEndedEvent(room.roomCode, nextMatch))]
+        steps: [createBroadcastFanoutStep(buildMatchEndedEvent(room.roomCode, nextMatch))]
       };
     } catch (error) {
       return {
         steps: [
-          this.createActorStep(session, {
-            type: SERVER_EVENT_NAMES.matchActionRejected,
-            payload: {
-              roomCode: room.roomCode,
-              message: error instanceof Error ? error.message : "The resign action was rejected."
-            }
-          })
+          this.createActorStep(
+            session,
+            buildMatchActionRejectedEvent(
+              room.roomCode,
+              error instanceof Error ? error.message : "The resign action was rejected."
+            )
+          )
         ]
       };
     }
@@ -459,16 +419,7 @@ export class P2PHostOrchestrator {
     const match = this.requireMatch();
 
     if (match.phase !== "finished") {
-      return {
-        steps: [
-          this.createActorStep(session, {
-            type: SERVER_EVENT_NAMES.serverError,
-            payload: {
-              message: "Rematch is only available once the current match has ended."
-            }
-          })
-        ]
-      };
+      return this.rejectRematchBeforeMatchEnd(session);
     }
 
     const current = setPlayerRematchRequested(match, session.playerId, true);
@@ -491,26 +442,17 @@ export class P2PHostOrchestrator {
 
       return {
         steps: [
-          createBroadcastFanoutStep(
-            this.buildRematchUpdatedEvent(updatedRoom.roomCode, started, 0)
-          ),
-          createBroadcastFanoutStep(this.buildMatchStartedEvent(updatedRoom.roomCode, started))
+          createBroadcastFanoutStep(buildRematchUpdatedEvent(updatedRoom.roomCode, started, 0)),
+          createBroadcastFanoutStep(buildMatchStartedEvent(updatedRoom.roomCode, started))
         ]
       };
     }
 
-    this.state = {
-      ...this.state,
-      room: {
-        ...room,
-        updatedAt: this.now()
-      },
-      match: current
-    };
+    this.storeMatch(room, current, this.now());
 
     return {
       steps: [
-        createBroadcastFanoutStep(this.buildRematchUpdatedEvent(room.roomCode, current, readyCount))
+        createBroadcastFanoutStep(buildRematchUpdatedEvent(room.roomCode, current, readyCount))
       ]
     };
   }
@@ -520,33 +462,17 @@ export class P2PHostOrchestrator {
     const match = this.requireMatch();
 
     if (match.phase !== "finished") {
-      return {
-        steps: [
-          this.createActorStep(session, {
-            type: SERVER_EVENT_NAMES.serverError,
-            payload: {
-              message: "Rematch is only available once the current match has ended."
-            }
-          })
-        ]
-      };
+      return this.rejectRematchBeforeMatchEnd(session);
     }
 
     const current = setPlayerRematchRequested(match, session.playerId, false);
     const readyCount = current.players.filter((player) => player.rematchRequested).length;
 
-    this.state = {
-      ...this.state,
-      room: {
-        ...room,
-        updatedAt: this.now()
-      },
-      match: current
-    };
+    this.storeMatch(room, current, this.now());
 
     return {
       steps: [
-        createBroadcastFanoutStep(this.buildRematchUpdatedEvent(room.roomCode, current, readyCount))
+        createBroadcastFanoutStep(buildRematchUpdatedEvent(room.roomCode, current, readyCount))
       ]
     };
   }
@@ -558,26 +484,48 @@ export class P2PHostOrchestrator {
     this.rebindGuest(bindingId);
 
     const steps: P2PHostFanoutStep[] = [
-      createGuestFanoutStep(this.buildRoomJoinedEvent(room, { ...guestSession, bindingId })),
-      createGuestFanoutStep(this.buildChatHistoryEvent(room.roomCode)),
-      createBroadcastFanoutStep(
-        this.buildPlayerReconnectedEvent(room.roomCode, guestSession.playerId)
-      )
+      createGuestFanoutStep(buildRoomJoinedEvent(room, { ...guestSession, bindingId })),
+      createGuestFanoutStep(buildChatHistoryEvent(room.roomCode, this.state.chatMessages)),
+      createBroadcastFanoutStep(buildPlayerReconnectedEvent(room.roomCode, guestSession.playerId))
     ];
 
     if (this.state.match) {
       steps.push(
         createGuestFanoutStep(
           this.state.match.phase === "finished"
-            ? this.buildMatchEndedEvent(room.roomCode, this.state.match)
+            ? buildMatchEndedEvent(room.roomCode, this.state.match)
             : this.state.match.lastAction === null
-              ? this.buildMatchStartedEvent(room.roomCode, this.state.match)
-              : this.buildMatchStateEvent(room.roomCode, this.state.match)
+              ? buildMatchStartedEvent(room.roomCode, this.state.match)
+              : buildMatchStateEvent(room.roomCode, this.state.match)
         )
       );
     }
 
     return { steps };
+  }
+
+  private storeMatch(room: P2PHostRoomRecord, match: MatchState, updatedAt: number): void {
+    this.state = {
+      ...this.state,
+      room: {
+        ...room,
+        updatedAt
+      },
+      match
+    };
+  }
+
+  private rejectRematchBeforeMatchEnd(session: P2PBaseSessionRecord): P2PHostCommandResult {
+    return {
+      steps: [
+        this.createActorStep(session, {
+          type: SERVER_EVENT_NAMES.serverError,
+          payload: {
+            message: "Rematch is only available once the current match has ended."
+          }
+        })
+      ]
+    };
   }
 
   private startMatch(room: P2PHostRoomRecord): MatchState {
@@ -633,147 +581,5 @@ export class P2PHostOrchestrator {
     }
 
     return this.state.match;
-  }
-
-  private buildRoomCreatedEvent(
-    room: P2PHostRoomRecord,
-    session: P2PHostSessionRecord
-  ): ServerEvent {
-    if (!room.inviteToken) {
-      throw new Error("Created rooms must include an invite token.");
-    }
-
-    return {
-      type: SERVER_EVENT_NAMES.roomCreated,
-      payload: {
-        roomId: room.roomId,
-        roomCode: room.roomCode,
-        inviteToken: room.inviteToken,
-        self: {
-          playerId: session.playerId,
-          displayName: session.displayName,
-          sessionToken: session.sessionToken
-        },
-        players: cloneRoomPlayers(room.players)
-      }
-    };
-  }
-
-  private buildRoomJoinedEvent(
-    room: P2PHostRoomRecord,
-    session: P2PGuestSessionRecord
-  ): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.roomJoined,
-      payload: {
-        roomId: room.roomId,
-        roomCode: room.roomCode,
-        self: {
-          playerId: session.playerId,
-          displayName: session.displayName,
-          sessionToken: session.sessionToken
-        },
-        players: cloneRoomPlayers(room.players)
-      }
-    };
-  }
-
-  private buildRoomStateEvent(room: P2PHostRoomRecord): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.roomState,
-      payload: {
-        roomId: room.roomId,
-        roomCode: room.roomCode,
-        players: cloneRoomPlayers(room.players)
-      }
-    };
-  }
-
-  private buildChatHistoryEvent(roomCode: string): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.chatHistory,
-      payload: {
-        roomCode,
-        messages: cloneChatMessages(this.state.chatMessages)
-      }
-    };
-  }
-
-  private buildChatMessageEvent(roomCode: string, message: ChatMessageDto): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.chatMessage,
-      payload: {
-        roomCode,
-        message: { ...message }
-      }
-    };
-  }
-
-  private buildChatRejectedEvent(roomCode: string, message: string): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.chatMessageRejected,
-      payload: {
-        roomCode,
-        message
-      }
-    };
-  }
-
-  private buildMatchStartedEvent(roomCode: string, match: MatchState): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.matchStarted,
-      payload: {
-        roomCode,
-        match: toMatchStateDto(match)
-      }
-    };
-  }
-
-  private buildMatchStateEvent(roomCode: string, match: MatchState): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.matchState,
-      payload: {
-        roomCode,
-        match: toMatchStateDto(match)
-      }
-    };
-  }
-
-  private buildMatchEndedEvent(roomCode: string, match: MatchState): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.matchEnded,
-      payload: {
-        roomCode,
-        match: toMatchStateDto(match)
-      }
-    };
-  }
-
-  private buildRematchUpdatedEvent(
-    roomCode: string,
-    match: MatchState,
-    readyCount: number
-  ): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.matchRematchUpdated,
-      payload: {
-        roomCode,
-        players: match.players.map((player) => ({
-          playerId: player.playerId,
-          rematchRequested: player.rematchRequested
-        })),
-        readyCount
-      }
-    };
-  }
-
-  private buildPlayerReconnectedEvent(roomCode: string, playerId: string): ServerEvent {
-    return {
-      type: SERVER_EVENT_NAMES.playerReconnected,
-      payload: {
-        roomCode,
-        playerId
-      }
-    };
   }
 }
