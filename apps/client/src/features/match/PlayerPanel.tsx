@@ -1,5 +1,6 @@
 import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { BombIcon } from "../../shared-ui/BombIcon.js";
+import { CrownIcon } from "../../shared-ui/CrownIcon.js";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 
 export interface PlayerSlot {
@@ -131,8 +132,9 @@ const getTurnBoxText = ({
 };
 
 export const PlayerPanel = (props: PlayerPanelProps) => {
-  const { slot, bombArmed, canAct, canBomb, onToggleBomb } = props;
+  const { slot, match, bombArmed, canAct, canBomb, onToggleBomb } = props;
   const bombState: BombState = { bombArmed, isReady: slot.isSelf && canAct && canBomb };
+  const isWinner = match.phase === "finished" && match.winnerPlayerId === slot.player.playerId;
 
   return (
     <section
@@ -164,7 +166,8 @@ export const PlayerPanel = (props: PlayerPanelProps) => {
       </p>
 
       <div className="sidebar-score-strip">
-        <div className="sidebar-pill sidebar-score-pill">
+        <div className={`sidebar-pill sidebar-score-pill${isWinner ? " is-winner" : ""}`}>
+          {isWinner ? <CrownIcon className="winner-crown" /> : null}
           <FlagIcon color={slot.tone} size={22} />
           <strong>{slot.player.score}</strong>
         </div>
