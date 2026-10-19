@@ -1,8 +1,9 @@
-import { INVITE_TOKEN_LENGTH, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import type { DeploymentMode } from "../../lib/config/env.js";
 import { extractInviteToken } from "./invite-link.js";
+import { DirectMatchActionCards, ServerMatchActionCards } from "./LobbyActionCards.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
 
 interface RoomLobbyProps {
@@ -15,6 +16,16 @@ interface RoomLobbyProps {
   onCreateRoom: (displayName: string) => void;
   onJoinRoom: (displayName: string, inviteToken: string) => void;
 }
+
+const getStatusNote = (isP2PDeployment: boolean, canJoinRoom: boolean): string => {
+  if (isP2PDeployment) {
+    return "Direct matches stay in the browser. Hosts share one link and guests join from that link.";
+  }
+
+  return canJoinRoom
+    ? "Invite looks valid. Press Join Match."
+    : "Paste an invite token to unlock Join Match.";
+};
 
 export const RoomLobby = ({
   connectionStatus,
@@ -111,129 +122,23 @@ export const RoomLobby = ({
 
           <div className="lobby-action-cards">
             {isP2PDeployment ? (
-              <>
-                <form
-                  className="lobby-action-card is-create"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleCreateRoom();
-                  }}
-                >
-                  <div className="lobby-card-heading">
-                    <h2>Host Direct Match</h2>
-                    <span>Create a browser-to-browser match and share one direct link.</span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="lobby-action-button lobby-create-button"
-                    disabled={!canCreateRoom}
-                  >
-                    Host Direct Match
-                  </button>
-                </form>
-
-                <div className="lobby-action-card is-join">
-                  <div className="lobby-card-heading">
-                    <h2>Join Direct Match</h2>
-                    <span>Open the host's shared link to load the direct match automatically.</span>
-                  </div>
-
-                  <p className="waiting-room-copy">
-                    Guests join from the host's direct link. Open that shared link in this browser
-                    to connect.
-                  </p>
-
-                  <button className="lobby-action-button lobby-join-button" disabled type="button">
-                    Join Direct Match
-                  </button>
-                </div>
-              </>
+              <DirectMatchActionCards
+                canCreateRoom={canCreateRoom}
+                onCreateRoom={handleCreateRoom}
+              />
             ) : (
-              <>
-                <form
-                  className="lobby-action-card is-create"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleCreateRoom();
-                  }}
-                >
-                  <div className="lobby-card-heading">
-                    <div className="lobby-card-heading-row">
-                      <h2>Create a Match</h2>
-                      {slotAvailability !== null && (
-                        <span className="lobby-slot-indicator">
-                          <span className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}>
-                            {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
-                          </span>
-                          <button
-                            type="button"
-                            className={`lobby-slot-refresh${refreshing ? " is-refreshing" : ""}`}
-                            onClick={handleRefreshSlots}
-                            title="Refresh slot count"
-                          >
-                            &#x21bb;
-                          </button>
-                        </span>
-                      )}
-                    </div>
-                    <span>
-                      {slotsFull
-                        ? "All room slots are in use."
-                        : "Host a room and share a private invite link."}
-                    </span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="lobby-action-button lobby-create-button"
-                    disabled={!canCreateRoom}
-                  >
-                    Create Room
-                  </button>
-                </form>
-
-                <form
-                  className="lobby-action-card is-join"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleJoinRoom();
-                  }}
-                >
-                  <div className="lobby-card-heading">
-                    <h2>Join by Token</h2>
-                    <span>Paste the invite token from another player.</span>
-                  </div>
-
-                  <label className="field lobby-field">
-                    <span>Invite token</span>
-                    <input
-                      className="invite-token-input"
-                      value={inviteValue}
-                      onChange={(event) => setInviteValue(event.target.value)}
-                      maxLength={INVITE_TOKEN_LENGTH}
-                      placeholder="Paste invite token"
-                      spellCheck={false}
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    className={[
-                      "lobby-action-button",
-                      "lobby-join-button",
-                      canJoinRoom ? "is-ready" : ""
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    disabled={!canJoinRoom}
-                  >
-                    Join Match
-                  </button>
-                </form>
-              </>
+              <ServerMatchActionCards
+                canCreateRoom={canCreateRoom}
+                onCreateRoom={handleCreateRoom}
+                slotAvailability={slotAvailability}
+                slotsFull={slotsFull}
+                refreshing={refreshing}
+                onRefreshSlots={handleRefreshSlots}
+                inviteValue={inviteValue}
+                onInviteValueChange={setInviteValue}
+                canJoinRoom={canJoinRoom}
+                onJoinRoom={handleJoinRoom}
+              />
             )}
           </div>
         </section>
@@ -243,15 +148,7 @@ export const RoomLobby = ({
         <span className="lobby-status-note">
           No account needed. Open two tabs or invite a friend.
         </span>
-        {isP2PDeployment ? (
-          <span className="lobby-status-note">
-            Direct matches stay in the browser. Hosts share one link and guests join from that link.
-          </span>
-        ) : !canJoinRoom ? (
-          <span className="lobby-status-note">Paste an invite token to unlock Join Match.</span>
-        ) : (
-          <span className="lobby-status-note">Invite looks valid. Press Join Match.</span>
-        )}
+        <span className="lobby-status-note">{getStatusNote(isP2PDeployment, canJoinRoom)}</span>
         {error ? <span className="error-text">{error}</span> : null}
       </div>
     </section>
