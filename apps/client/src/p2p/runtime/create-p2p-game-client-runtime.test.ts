@@ -664,10 +664,19 @@ const flushPromises = async (): Promise<void> => {
 const createAbortError = (): DOMException =>
   new DOMException("The operation was aborted.", "AbortError");
 
+// This loop only awaits microtasks, so the event loop never runs while it spins and
+// Vitest cannot time the test out. Bound it so a condition that never comes true
+// fails the test instead of hanging the run.
+const WAIT_FOR_MAX_ITERATIONS = 10_000;
+
 const waitFor = async (predicate: () => boolean, signal?: AbortSignal): Promise<void> => {
-  while (!predicate()) {
+  for (let iteration = 0; !predicate(); iteration++) {
     if (signal?.aborted) {
       throw createAbortError();
+    }
+
+    if (iteration >= WAIT_FOR_MAX_ITERATIONS) {
+      throw new Error("waitFor: the condition never became true.");
     }
 
     await flushPromises();
