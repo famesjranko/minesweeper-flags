@@ -61,7 +61,7 @@ export const RoomPage = () => {
 
   if (match) {
     return (
-      <main className="page-shell room-page-shell">
+      <main className="page-shell arcade-page-shell arcade-match-page">
         {error ? (
           <section className="panel error-banner">
             <p>{error}</p>

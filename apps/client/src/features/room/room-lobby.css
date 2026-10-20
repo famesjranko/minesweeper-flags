@@ -1,8 +1,3 @@
-.page-shell.arcade-page-shell {
-  padding: 28px 48px;
-  background: #101c31;
-}
-
 .arcade-lobby {
   width: min(100%, 1024px);
   margin: 0 auto;
@@ -11,58 +6,9 @@
   line-height: 1.45;
 }
 
-.arcade-header,
-.arcade-brand,
-.arcade-connection,
 .arcade-footer {
   display: flex;
   align-items: center;
-}
-
-.arcade-header {
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #ffffff1a;
-}
-
-.arcade-brand {
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 750;
-  letter-spacing: -0.4px;
-}
-
-.arcade-brand-mark {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: #5bcaff;
-}
-
-.arcade-connection {
-  gap: 7px;
-  color: #d0daeb;
-  font-size: 12px;
-  text-transform: capitalize;
-}
-
-.arcade-connection::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ef9e91;
-}
-
-.arcade-connection.is-connected::before {
-  background: #60c99c;
-}
-
-.arcade-connection.is-connecting::before {
-  background: #ffd079;
 }
 
 .arcade-stage {
@@ -369,25 +315,6 @@
 }
 
 @media (max-width: 900px) {
-  .page-shell.arcade-page-shell {
-    padding: 20px;
-  }
-
-  .arcade-header {
-    gap: 8px;
-    padding-bottom: 16px;
-  }
-
-  .arcade-brand {
-    gap: 8px;
-    font-size: 15px;
-  }
-
-  .arcade-connection {
-    gap: 5px;
-    font-size: 11px;
-  }
-
   .arcade-stage {
     grid-template-columns: minmax(0, 1fr);
   }

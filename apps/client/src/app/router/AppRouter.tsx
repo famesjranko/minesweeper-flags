@@ -4,6 +4,7 @@ import { P2PJoinPage } from "../../p2p/pages/P2PJoinPage.js";
 import { HomePage } from "../../pages/HomePage.js";
 import { InvitePage } from "../../pages/InvitePage.js";
 import { LobbyPage } from "../../pages/LobbyPage.js";
+import { NotFoundPage } from "../../pages/NotFoundPage.js";
 import { RoomPage } from "../../pages/RoomPage.js";
 
 export const AppRouter = () => (
@@ -16,6 +17,7 @@ export const AppRouter = () => (
       ) : null}
       <Route path="/invite/:inviteToken" element={<InvitePage />} />
       <Route path="/room/:roomCode" element={<RoomPage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   </BrowserRouter>
 );

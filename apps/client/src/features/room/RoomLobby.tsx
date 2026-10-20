@@ -4,7 +4,7 @@ import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { useEffect, useRef, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import type { DeploymentMode } from "../../lib/config/env.js";
-import { FlagIcon } from "../../shared-ui/FlagIcon.js";
+import { ArcadeHeader } from "../../shared-ui/ArcadeHeader.js";
 import { extractInviteToken } from "./invite-link.js";
 import { DirectMatchActionCards, ServerMatchActionCards } from "./LobbyActionCards.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
@@ -86,17 +86,7 @@ export const RoomLobby = ({
 
   return (
     <section className="arcade-lobby">
-      <header className="arcade-header">
-        <div className="arcade-brand">
-          <span className="arcade-brand-mark">
-            <FlagIcon color="blue" size={26} />
-          </span>
-          <span>Minesweeper Flags</span>
-        </div>
-        <span className={`arcade-connection is-${connectionStatus}`} role="status">
-          {connectionStatus}
-        </span>
-      </header>
+      <ArcadeHeader connectionStatus={connectionStatus} />
 
       <div className="arcade-introduction">
         <p className="arcade-eyebrow">A Messenger classic</p>

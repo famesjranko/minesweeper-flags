@@ -69,6 +69,7 @@ export const ChatPanel = ({
         }}
       >
         <input
+          aria-label="Chat message"
           value={draft}
           disabled={pending}
           placeholder="Type a message..."

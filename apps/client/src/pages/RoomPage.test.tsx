@@ -142,13 +142,13 @@ describe("RoomPage", () => {
 
     const { container, root } = renderRoomPage();
 
-    expect(container.textContent).toContain("Room unavailable");
+    expect(container.textContent).toContain("Reconnect to your game.");
     expect(container.textContent).toContain("active in another tab or window");
     expect(container.textContent).toContain(
       "Another tab has claimed control. Close other tabs for this room, or reconnect to reclaim control."
     );
 
-    const reconnectButton = container.querySelector("button.primary-button");
+    const reconnectButton = container.querySelector("button.arcade-primary");
     expect(reconnectButton).not.toBeNull();
     expect(reconnectButton?.textContent).toBe("Reconnect");
 
@@ -213,7 +213,7 @@ describe("RoomPage", () => {
       "Recovery data was cleared. You can start a fresh direct match from the lobby."
     );
 
-    const buttons = Array.from(container.querySelectorAll("button.primary-button"));
+    const buttons = Array.from(container.querySelectorAll("button.arcade-primary"));
     const reconnectButton = buttons.find((button) => button.textContent === "Reconnect");
     expect(reconnectButton).toBeUndefined();
 
@@ -232,7 +232,7 @@ describe("RoomPage", () => {
     expect(container.textContent).toContain("Room unavailable");
     expect(container.textContent).toContain("now have control");
 
-    const buttons = Array.from(container.querySelectorAll("button.primary-button"));
+    const buttons = Array.from(container.querySelectorAll("button.arcade-primary"));
     const reconnectButton = buttons.find((button) => button.textContent === "Reconnect");
     expect(reconnectButton).toBeUndefined();
 
@@ -249,12 +249,14 @@ describe("RoomPage", () => {
 
     const { container, root } = renderRoomPage();
 
-    const reconnectButton = container.querySelector("button.primary-button");
+    const reconnectButton = container.querySelector("button.arcade-primary");
 
+    mockState.current.reconnect.mockClear();
     act(() => {
       reconnectButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
+    expect(mockState.current.reconnect).toHaveBeenCalledTimes(1);
     expect(mockState.current.reconnect).toHaveBeenCalledWith("DIRECT");
 
     act(() => {
