@@ -1,7 +1,10 @@
+import "./room-lobby.css";
+
 import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { useEffect, useRef, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import type { DeploymentMode } from "../../lib/config/env.js";
+import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 import { extractInviteToken } from "./invite-link.js";
 import { DirectMatchActionCards, ServerMatchActionCards } from "./LobbyActionCards.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
@@ -16,16 +19,6 @@ interface RoomLobbyProps {
   onCreateRoom: (displayName: string) => void;
   onJoinRoom: (displayName: string, inviteToken: string) => void;
 }
-
-const getStatusNote = (isP2PDeployment: boolean, canJoinRoom: boolean): string => {
-  if (isP2PDeployment) {
-    return "Direct matches stay in the browser. Hosts share one link and guests join from that link.";
-  }
-
-  return canJoinRoom
-    ? "Invite looks valid. Press Join Match."
-    : "Paste an invite token to unlock Join Match.";
-};
 
 export const RoomLobby = ({
   connectionStatus,
@@ -92,35 +85,39 @@ export const RoomLobby = ({
   }, [initialInviteValue]);
 
   return (
-    <section className="panel hero-panel lobby-panel">
-      <div className="hero-copy">
-        <p className="eyebrow">MSN-style competitive minesweeper</p>
-        <h1>Minesweeper Flags</h1>
-        <p>
-          Pick hidden squares on a shared 16x16 field. Mines are claimed for points, safe squares
-          reveal clues, and the first player to 26 flags wins.
-        </p>
-      </div>
+    <section className="arcade-lobby">
+      <header className="arcade-header">
+        <div className="arcade-brand">
+          <span className="arcade-brand-mark">
+            <FlagIcon color="blue" size={26} />
+          </span>
+          <span>Minesweeper Flags</span>
+        </div>
+        <span className={`arcade-connection is-${connectionStatus}`} role="status">
+          {connectionStatus}
+        </span>
+      </header>
 
-      <div className="lobby-stage">
-        <LobbyPreviewPanel
-          title="Classic duel board"
-          badge="2 players"
-          featurePills={[
-            "Shared 16x16 field",
-            "First to 26 mines",
-            `One comeback bomb at down ${MIN_BOMB_DEFICIT}+`
-          ]}
-        />
+      <div className="arcade-stage">
+        <div className="arcade-introduction">
+          <p className="arcade-eyebrow">A Messenger classic</p>
+          <h1>
+            Find the mines.
+            <br />
+            <span>Win the flags.</span>
+          </h1>
+          <p className="arcade-description">
+            Claim mines on a shared 16×16 board. The first player to 26 wins.
+          </p>
+          <div className="arcade-illustration" aria-hidden="true">
+            <LobbyPreviewPanel title="Classic duel board" badge="2 players" />
+            <p>51 mines. One shared board.</p>
+          </div>
+        </div>
 
         <section className="lobby-control-panel">
           <div className="lobby-identity-card">
-            <div className="lobby-card-heading">
-              <h2>Get Ready</h2>
-              <span className={`lobby-connection-pill is-${connectionStatus}`}>
-                {connectionStatus}
-              </span>
-            </div>
+            <h2>Play with a friend</h2>
 
             <label className="field lobby-field">
               <span>Display name</span>
@@ -157,13 +154,22 @@ export const RoomLobby = ({
         </section>
       </div>
 
-      <div className="status-strip lobby-status-strip">
-        <span className="lobby-status-note">
-          No account needed. Open two tabs or invite a friend.
-        </span>
-        <span className="lobby-status-note">{getStatusNote(isP2PDeployment, canJoinRoom)}</span>
-        {error ? <span className="error-text">{error}</span> : null}
-      </div>
+      {error ? (
+        <p className="arcade-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <footer className="arcade-footer">
+        <p>No account needed. Invite a friend.</p>
+        <details>
+          <summary>How to play</summary>
+          <p>
+            Take turns choosing squares. A mine scores a point and keeps your turn. A safe square
+            ends your turn. Your comeback bomb unlocks when you trail by {MIN_BOMB_DEFICIT} or more.
+            {isP2PDeployment ? " Keep the host's browser tab open during a direct match." : null}
+          </p>
+        </details>
+      </footer>
     </section>
   );
 };
