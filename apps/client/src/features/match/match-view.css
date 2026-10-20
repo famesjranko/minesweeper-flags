@@ -467,6 +467,10 @@
   background: #54332bf5;
 }
 
+.arcade-match .match-result-ribbon.is-blue {
+  background: #123760f5;
+}
+
 .arcade-match .match-result-ribbon.is-draw {
   border-color: #a0b1cb;
   background: #283750f5;
@@ -488,10 +492,11 @@
 }
 
 .arcade-result-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  max-width: 380px;
+  margin: 0 auto;
 }
 
 .arcade-match .match-result-button {
@@ -642,7 +647,7 @@
   }
 
   .arcade-result-actions {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 }
@@ -728,5 +733,10 @@
 
   .arcade-match .match-result-ribbon {
     padding: 12px;
+  }
+
+  .arcade-result-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
