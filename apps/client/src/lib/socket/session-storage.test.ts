@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createBrowserSessionPersistence,
   getStoredSession,
@@ -26,16 +26,15 @@ const SESSION_KEY = "msf:session:ABCDE";
 
 describe("session storage", () => {
   afterEach(() => {
-    delete (globalThis as { window?: Window }).window;
+    vi.unstubAllGlobals();
   });
 
   it("persists only the canonical stored-session shape", () => {
     const localStorage = new MemoryStorage();
-    (globalThis as unknown as { window: { localStorage: MemoryStorage } }).window = {
-      localStorage
-    };
+    vi.stubGlobal("window", { localStorage });
 
-    storeSession({
+    // Assigned to a variable so the extra field passes without an excess-property error.
+    const sessionWithPlayers = {
       roomId: "room-1",
       roomCode: "ABCDE",
       inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
@@ -48,9 +47,9 @@ describe("session storage", () => {
           displayName: "Host"
         }
       ]
-    } as Parameters<typeof storeSession>[0] & {
-      players: Array<{ playerId: string; displayName: string }>;
-    });
+    };
+
+    storeSession(sessionWithPlayers);
 
     expect(localStorage.getItem(SESSION_KEY)).toBe(
       JSON.stringify({
@@ -66,9 +65,7 @@ describe("session storage", () => {
 
   it("drops invalid or over-wide persisted payloads on read", () => {
     const localStorage = new MemoryStorage();
-    (globalThis as unknown as { window: { localStorage: MemoryStorage } }).window = {
-      localStorage
-    };
+    vi.stubGlobal("window", { localStorage });
     const persistence = createBrowserSessionPersistence();
 
     localStorage.setItem(
@@ -149,9 +146,7 @@ describe("session storage", () => {
     }
 
     const installStorage = (localStorage: FailingStorage): void => {
-      (globalThis as unknown as { window: { localStorage: FailingStorage } }).window = {
-        localStorage
-      };
+      vi.stubGlobal("window", { localStorage });
     };
 
     it("does not throw when a session write fails", () => {
