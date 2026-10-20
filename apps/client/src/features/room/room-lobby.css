@@ -292,6 +292,10 @@
   font-size: 18px;
 }
 
+.arcade-lobby .lobby-slot-refresh:hover {
+  color: #f3f7ff;
+}
+
 .arcade-lobby .lobby-action-card.is-join {
   border-top: 1px solid #ffffff1a;
   padding-top: 24px;
