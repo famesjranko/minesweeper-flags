@@ -13,8 +13,9 @@ The deployed resources are:
 - [Frontend](https://dashboard.render.com/static/srv-dbboldss728c7395bvb0)
 - [Key Value](https://dashboard.render.com/r/red-dbboldss728c7395bv90)
 
-The initial deployment runs commit `60f5f38` from
-`t3/deploy-minesweeper-demo`. Both public hostnames match the Blueprint.
+The initial game server runs commit `60f5f38` from
+`t3/deploy-minesweeper-demo`. The frontend and Blueprint headers were updated at
+`1e987e9`. Both public hostnames match the Blueprint.
 
 ## First deployment
 
@@ -52,8 +53,13 @@ Render's free web plan retains only its two most recent previous deploys for the
 dashboard rollback action. Recheck a two-player game after a rollback.
 
 Blueprint synchronization is separate from application deployment. When changing
-`render.yaml`, use **Manual sync** on the Blueprint to apply its configuration.
-For application changes, use each service's **Manual Deploy** menu.
+`render.yaml`, use **Manual sync** on the Blueprint, review the proposed changes,
+and select **Approve** to apply them. For application changes, use each service's
+**Manual Deploy** menu.
+
+Render preserves existing header rules omitted from the Blueprint. When removing
+or changing a rule's path, remove the old rule in the frontend's Headers page too.
+Redeploy the frontend after header changes to clear cached response headers.
 
 ## Free hosting limits
 
