@@ -81,7 +81,19 @@ services:
       - path: /*
         name: Permissions-Policy
         value: accelerometer=(), autoplay=(), camera=(), display-capture=(), fullscreen=(), geolocation=(), microphone=(), payment=(), usb=()
-      - path: /*
+      - path: /
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /lobby
+        name: Cache-Control
+        value: no-cache
+      - path: /invite/*
+        name: Cache-Control
+        value: no-cache
+      - path: /room/*
         name: Cache-Control
         value: no-cache
       - path: /assets/*
