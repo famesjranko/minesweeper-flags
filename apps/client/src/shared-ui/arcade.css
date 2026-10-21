@@ -95,6 +95,52 @@
   max-width: 560px;
 }
 
+.arcade-recovery {
+  width: min(100%, 480px);
+  margin: 100px auto 0;
+  padding: 32px;
+  border: 1px solid #354562;
+  border-radius: 16px;
+  background: #1b2b45;
+  text-align: center;
+}
+
+.arcade-recovery h1 {
+  margin: 0;
+  color: #f3f7ff;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.arcade-recovery p {
+  margin: 12px 0 0;
+  color: #b3c3d9;
+  font-size: 14px;
+}
+
+.arcade-recovery-spinner {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 20px;
+  border: 3px solid #3b536e;
+  border-top-color: #65c7ff;
+  border-radius: 50%;
+  animation: arcade-recovery-spin 1s linear infinite;
+}
+
+@keyframes arcade-recovery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-recovery-spinner {
+    animation: none;
+  }
+}
+
 .arcade-flow-intro {
   margin-bottom: 24px;
 }

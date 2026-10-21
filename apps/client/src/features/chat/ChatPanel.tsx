@@ -15,6 +15,7 @@ interface ChatPanelProps {
   error: string | null;
   helperText?: string;
   className?: string;
+  onClose?: () => void;
   onDraftChange: (value: string) => void;
   onSend: () => void;
 }
@@ -30,6 +31,7 @@ export const ChatPanel = ({
   error,
   helperText,
   className,
+  onClose,
   onDraftChange,
   onSend
 }: ChatPanelProps) => {
@@ -47,9 +49,23 @@ export const ChatPanel = ({
       <header className="chat-panel-header">
         <div>
           <h2>Messenger</h2>
-          <span>Room {roomCode}</span>
+          <p className="chat-room-meta">
+            Room {roomCode}{" "}
+            <span className={`chat-connection-pill is-${connectionStatus}`}>
+              · {connectionStatus}
+            </span>
+          </p>
         </div>
-        <span className={`chat-connection-pill is-${connectionStatus}`}>{connectionStatus}</span>
+        {onClose ? (
+          <button
+            type="button"
+            className="arcade-chat-close"
+            aria-label="Close chat"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        ) : null}
       </header>
 
       <ChatMessageList

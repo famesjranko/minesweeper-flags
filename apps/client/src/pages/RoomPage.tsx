@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { MatchView } from "../features/match/MatchView.js";
 import { HostDirectMatchPanel } from "../features/room/HostDirectMatchPanel.js";
+import { RoomRestoringPanel } from "../features/room/RoomRestoringPanel.js";
 import { RoomUnavailablePanel } from "../features/room/RoomUnavailablePanel.js";
 import { RoomWaitingPanel } from "../features/room/RoomWaitingPanel.js";
+import { useRoomRecovery } from "../features/room/useRoomRecovery.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 export const RoomPage = () => {
@@ -16,23 +18,14 @@ export const RoomPage = () => {
   const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
   const hostSetup = p2pSetup?.host ?? null;
 
-  // Reconnect from the stored record once, when the room opens. A tab that later loses
-  // its session (another tab took the claim, or recovery failed) must not reclaim on
-  // its own: two such tabs would take the claim from each other forever. The user
-  // reclaims with the Reconnect button instead.
-  const bootstrappedRoomCodeRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!roomCode || bootstrappedRoomCodeRef.current === roomCode) {
-      return;
-    }
-
-    bootstrappedRoomCodeRef.current = roomCode;
-
-    if ((!session || session.roomCode !== roomCode) && hasStoredSession(roomCode)) {
-      reconnect(roomCode);
-    }
-  }, [hasStoredSession, reconnect, roomCode, session]);
+  const recovery = useRoomRecovery({
+    roomCode,
+    session,
+    hasMatch: !!match,
+    error,
+    hasStoredSession,
+    reconnect
+  });
 
   if (!roomCode) {
     return null;
@@ -47,6 +40,8 @@ export const RoomPage = () => {
     }
   };
 
+  if (recovery.isRestoring) return <RoomRestoringPanel />;
+
   if (!session || session.roomCode !== roomCode) {
     return (
       <RoomUnavailablePanel
@@ -54,7 +49,7 @@ export const RoomPage = () => {
         error={error}
         isP2PDeployment={isP2PDeployment}
         canReconnect={hasStoredSession(roomCode)}
-        onReconnect={() => reconnect(roomCode)}
+        onReconnect={recovery.reconnect}
       />
     );
   }

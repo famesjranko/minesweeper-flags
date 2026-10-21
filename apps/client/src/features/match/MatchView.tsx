@@ -54,13 +54,6 @@ export const MatchView = (props: MatchViewProps) => {
           onOpenChat={() => chatRef.current?.showModal()}
         />
         <dialog ref={chatRef} className="arcade-chat-region" aria-label="Match chat">
-          <button
-            type="button"
-            className="arcade-chat-close"
-            onClick={() => chatRef.current?.close()}
-          >
-            Close chat
-          </button>
           <ChatPanel
             roomCode={props.roomCode}
             currentPlayerId={currentPlayerId}
@@ -72,6 +65,7 @@ export const MatchView = (props: MatchViewProps) => {
             error={props.chatError}
             helperText={helperText}
             className="arcade-match-chat"
+            onClose={() => chatRef.current?.close()}
             onDraftChange={props.onChatDraftChange}
             onSend={props.onSendChatMessage}
           />
