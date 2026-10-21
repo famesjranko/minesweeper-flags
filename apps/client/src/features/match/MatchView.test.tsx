@@ -365,10 +365,13 @@ describe("MatchView match end", () => {
 
 it("keeps multiplayer header, presence, and chat UI by default", () => {
   // Given a normal multiplayer match without a presentation override
-  const html = renderMatchView(createMatch({ currentTurnPlayerId: "player-1", scores: [3, 1] }));
+  const match = createMatch({ currentTurnPlayerId: "player-1", scores: [3, 1] });
 
   // When the default match view renders
+  const html = renderMatchView(match);
+
   // Then multiplayer-only framing and controls remain present
+  expect(html).toContain('aria-label="Match options"');
   expect(html).toContain("Room ABCDE");
   expect(html).toContain('aria-label="Connected"');
   expect(html).toContain("Chat · 0 messages");

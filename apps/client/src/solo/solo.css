@@ -85,9 +85,22 @@
   width: 100%;
 }
 .solo-match {
-  width: min(100%, calc(100dvh + 48px));
-  max-width: 1132px;
+  /* Reserve height for local status, results, and actions around the square board. */
+  width: min(100%, max(288px, calc(100dvh - 472px)));
   margin: 0 auto;
+}
+.solo-match .arcade-match-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+.solo-match .arcade-match,
+.solo-match .arcade-match-scores,
+.solo-match .arcade-board-stage,
+.solo-match .arcade-match-tools {
+  width: 100%;
+}
+.solo-match .arcade-board-viewport:focus-visible {
+  outline: 3px solid #b5e6ff;
+  outline-offset: 3px;
 }
 .solo-match > .arcade-header {
   min-height: 36px;
