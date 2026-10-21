@@ -1,6 +1,6 @@
 import "../solo/solo.css";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { ArcadeHeader } from "../shared-ui/ArcadeHeader.js";
 
 type Mode = "solo" | "friend";
@@ -13,6 +13,11 @@ const modes: { id: Mode; label: string }[] = [
 export const HomePage = () => {
   const [mode, setMode] = useState<Mode>("solo");
   const labelId = useId();
+  const tabs = useRef<Record<Mode, HTMLButtonElement | null>>({ solo: null, friend: null });
+  const selectMode = (nextMode: Mode, focus = false) => {
+    setMode(nextMode);
+    if (focus) tabs.current[nextMode]?.focus();
+  };
 
   return (
     <main className="page-shell arcade-page-shell solo-home-shell">
@@ -35,11 +40,14 @@ export const HomePage = () => {
                 aria-selected={mode === item.id}
                 aria-controls={`${item.id}-panel`}
                 tabIndex={mode === item.id ? 0 : -1}
-                onClick={() => setMode(item.id)}
+                ref={(element) => {
+                  tabs.current[item.id] = element;
+                }}
+                onClick={() => selectMode(item.id)}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                     event.preventDefault();
-                    setMode(mode === "solo" ? "friend" : "solo");
+                    selectMode(mode === "solo" ? "friend" : "solo", true);
                   }
                 }}
               >

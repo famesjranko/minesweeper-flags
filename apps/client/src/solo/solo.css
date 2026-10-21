@@ -82,7 +82,7 @@
   text-decoration: none;
 }
 .solo-entry-primary {
-  width: fit-content;
+  width: 100%;
 }
 .solo-match {
   width: min(100%, calc(100dvh + 48px));
@@ -101,14 +101,16 @@
 }
 .solo-notice,
 .solo-error,
-.solo-thinking {
+.solo-thinking,
+.solo-local-status {
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 13px;
 }
 .solo-notice,
-.solo-thinking {
+.solo-thinking,
+.solo-local-status {
   background: #182d47;
   color: #b7d8f2;
 }
@@ -121,6 +123,25 @@
   justify-content: center;
   gap: 10px;
   margin-top: 16px;
+}
+.solo-result {
+  display: grid;
+  gap: 4px;
+  margin: 16px auto 0;
+  padding: 14px 18px;
+  border: 1px solid #5a80aa;
+  border-radius: 12px;
+  background: #1b2f4d;
+  color: #e7f2ff;
+  text-align: center;
+}
+.solo-result p {
+  margin: 0;
+  font-size: 15px;
+}
+.solo-result strong {
+  color: #9ddcff;
+  font-variant-numeric: tabular-nums;
 }
 .solo-match-actions button {
   background: #243c59;

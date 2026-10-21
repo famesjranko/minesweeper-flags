@@ -37,9 +37,10 @@ export const getPlayerSlots = (
 interface PlayerPanelProps {
   slot: PlayerSlot;
   match: MatchStateDto;
+  hidePresence?: boolean;
 }
 
-export const PlayerPanel = ({ slot, match }: PlayerPanelProps) => {
+export const PlayerPanel = ({ slot, match, hidePresence = false }: PlayerPanelProps) => {
   const isWinner = match.phase === "finished" && match.winnerPlayerId === slot.player.playerId;
 
   return (
@@ -58,11 +59,13 @@ export const PlayerPanel = ({ slot, match }: PlayerPanelProps) => {
           <span>
             {slot.title} · {slot.isSelf ? "You" : "Opponent"}
           </span>
-          <span
-            className={`arcade-player-presence${slot.player.connected ? " is-online" : ""}`}
-            role="img"
-            aria-label={slot.player.connected ? "Connected" : "Disconnected"}
-          />
+          {!hidePresence ? (
+            <span
+              className={`arcade-player-presence${slot.player.connected ? " is-online" : ""}`}
+              role="img"
+              aria-label={slot.player.connected ? "Connected" : "Disconnected"}
+            />
+          ) : null}
         </header>
         <p className="sidebar-player-name" title={slot.player.displayName}>
           {slot.player.displayName}

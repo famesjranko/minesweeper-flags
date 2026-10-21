@@ -16,6 +16,13 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
     session.getSnapshot
   );
   const isFinished = snapshot.match.phase === "finished";
+  const winner = snapshot.match.players.find(
+    (player) => player.playerId === snapshot.match.winnerPlayerId
+  );
+  const loser = snapshot.match.players.find((player) => player.playerId !== winner?.playerId);
+  const resultTitle = winner?.playerId === snapshot.humanId ? "You won" : "Bot won";
+  const resultScore = winner && loser ? `${winner.score} – ${loser.score}` : "Finished";
+  const resigned = winner && loser && winner.score <= loser.score;
 
   return (
     <main className="page-shell arcade-page-shell arcade-match-page solo-page-shell">
@@ -25,6 +32,9 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
             Leave solo match
           </a>
         </ArcadeHeader>
+        <p className="solo-local-status" role="status">
+          Local match · In this browser
+        </p>
         {snapshot.recoveryNotice ? (
           <p className="solo-notice" role="status">
             {snapshot.recoveryNotice}
@@ -41,28 +51,28 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
           </p>
         ) : null}
         <MatchView
-          roomCode=""
           currentPlayerId={snapshot.humanId}
           match={snapshot.match}
           bombArmed={snapshot.bombArmed}
-          connectionStatus="connected"
-          chatMessages={[]}
-          chatError={null}
-          chatDraft=""
-          chatPending={false}
           onToggleBomb={session.toggleBombMode}
           onCellSelect={session.submitCellAction}
-          onChatDraftChange={() => {}}
-          onSendChatMessage={() => {}}
           onResign={session.resign}
-          onRequestRematch={session.rematch}
-          onCancelRematch={() => {}}
           presentation="solo"
+          onRematch={session.rematch}
         />
+        {isFinished ? (
+          <section className="solo-result" role="status" aria-live="polite">
+            <p>{resultTitle}</p>
+            <strong>
+              {resultScore}
+              {resigned ? " by resignation" : ""}
+            </strong>
+          </section>
+        ) : null}
         <div className="solo-match-actions">
           {isFinished ? (
             <button type="button" name="rematch" onClick={session.rematch}>
-              Rematch
+              Play again
             </button>
           ) : (
             <button type="button" name="resign" onClick={session.resign}>

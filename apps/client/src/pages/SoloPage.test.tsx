@@ -13,11 +13,11 @@ const match = (phase: "live" | "finished", turn: string | null): MatchStateDto =
   roomId: "solo-local",
   phase,
   board: {
-    rows: 2,
-    columns: 2,
-    mineCount: 1,
-    cells: Array.from({ length: 2 }, (_, row) =>
-      Array.from({ length: 2 }, (_, column) => ({
+    rows: 16,
+    columns: 16,
+    mineCount: 51,
+    cells: Array.from({ length: 16 }, (_, row) =>
+      Array.from({ length: 16 }, (_, column) => ({
         row,
         column,
         status: "hidden" as const,
@@ -30,7 +30,7 @@ const match = (phase: "live" | "finished", turn: string | null): MatchStateDto =
     {
       playerId: "solo-human",
       displayName: "You",
-      score: 0,
+      score: phase === "finished" ? 26 : 0,
       bombsRemaining: 1,
       connected: true,
       rematchRequested: false
@@ -38,7 +38,7 @@ const match = (phase: "live" | "finished", turn: string | null): MatchStateDto =
     {
       playerId: "solo-bot",
       displayName: "Bot",
-      score: 0,
+      score: phase === "finished" ? 12 : 0,
       bombsRemaining: 1,
       connected: true,
       rematchRequested: false
@@ -93,8 +93,10 @@ it("disables local input while the bot thinks and disposes its session on unmoun
     // Then bot status is exposed and human controls cannot act
     expect(session.start).toHaveBeenCalledBefore(session.getSnapshot as ReturnType<typeof vi.fn>);
     expect(container.textContent).toContain("Bot is thinking");
+    expect(container.textContent).toContain("Local match · In this browser");
     expect(cell?.disabled).toBe(true);
     expect(container.querySelector(".arcade-chat-toggle")).toBeNull();
+    expect(container.querySelector(".arcade-player-presence")).toBeNull();
   } finally {
     act(() => root.unmount());
     expect(session.dispose).toHaveBeenCalledOnce();
@@ -123,11 +125,14 @@ it("offers a local rematch and restart after the match finishes", () => {
     act(() => container.querySelector<HTMLButtonElement>("button[name='rematch']")?.click());
     act(() => container.querySelector<HTMLButtonElement>("button[name='restart']")?.click());
 
-    // Then both actions stay with the local authority and notices remain visible
+    // Then both actions stay with the local authority, notices, and final result remain visible
     expect(session.rematch).toHaveBeenCalledOnce();
     expect(session.restart).toHaveBeenCalledOnce();
     expect(container.textContent).toContain("Last move was invalid.");
     expect(container.textContent).toContain("Solo progress cannot be saved in this browser.");
+    expect(container.textContent).toContain("You won");
+    expect(container.textContent).toContain("26 – 12");
+    expect(container.textContent).not.toContain("Request Rematch");
   } finally {
     act(() => root.unmount());
     container.remove();

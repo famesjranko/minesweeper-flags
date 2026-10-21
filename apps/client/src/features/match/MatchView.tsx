@@ -44,8 +44,8 @@ export const MatchView = (props: MatchViewProps) => {
           bombArmed={props.bombArmed}
           onCellSelect={props.onCellSelect}
           onToggleBomb={props.onToggleBomb}
-          onRequestRematch={props.onRequestRematch}
-          onCancelRematch={props.onCancelRematch}
+          onRequestRematch={isSolo ? props.onRematch : props.onRequestRematch}
+          onCancelRematch={isSolo ? () => {} : props.onCancelRematch}
           view={view}
           lastMove={getLastMoveMarks(
             lastMoveTrail,
@@ -53,10 +53,11 @@ export const MatchView = (props: MatchViewProps) => {
             match.board.columns,
             view.playerTones
           )}
-          chatMessageCount={props.chatMessages.length}
+          chatMessageCount={isSolo ? 0 : props.chatMessages.length}
           onOpenChat={() => chatRef.current?.showModal()}
           showChat={!isSolo}
           showResultRibbon={!isSolo}
+          hidePresence={isSolo}
         />
         {!isSolo ? (
           <dialog ref={chatRef} className="arcade-chat-region" aria-label="Match chat">
