@@ -8,9 +8,6 @@ type InferenceContext = { match: MatchStateDto; facts: Fact[][]; fallback: numbe
 type ClueInference = "unchanged" | "changed" | "contradiction";
 
 const MAX_PROPAGATION_ROUNDS = BOARD_ROWS * BOARD_COLUMNS;
-export const SOLO_BOT_MAX_OPERATIONS =
-  MAX_PROPAGATION_ROUNDS * BOARD_ROWS * BOARD_COLUMNS * 8 +
-  BOARD_ROWS * BOARD_COLUMNS * (8 * 8 + (BOMB_RADIUS * 2 + 1) ** 2 + 2);
 
 const isHidden = (cell: MatchStateDto["board"]["cells"][number][number]): boolean =>
   cell.status === "hidden";

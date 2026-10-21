@@ -1,6 +1,6 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
-import { chooseSoloAction, SOLO_BOT_MAX_OPERATIONS } from "./solo-bot.js";
+import { chooseSoloAction } from "./solo-bot.js";
 
 const BOT_ID = "bot";
 const HUMAN_ID = "human";
@@ -68,6 +68,23 @@ const claim = (match: MatchStateDto, row: number, column: number): void => {
   };
 };
 
+const countCellReads = (match: MatchStateDto): (() => number) => {
+  let reads = 0;
+  const rows = match.board.cells.map(
+    (row) =>
+      new Proxy(row, {
+        get(target, property, receiver) {
+          if (typeof property === "string" && /^\d+$/.test(property)) {
+            reads += 1;
+          }
+          return Reflect.get(target, property, receiver);
+        }
+      })
+  );
+  match.board.cells = rows as MatchStateDto["board"]["cells"];
+  return () => reads;
+};
+
 describe("chooseSoloAction", () => {
   it("rejects a non-live match, another player's turn, and a non-canonical board", () => {
     // Given public matches that the bot cannot legally play
@@ -128,7 +145,7 @@ describe("chooseSoloAction", () => {
   });
 
   it("ranks ambiguous clue neighbors ahead of the global fallback", () => {
-    // Given a clue whose three hidden neighbors have more mine probability than the board fallback
+    // Given a clue whose eight hidden neighbors have more mine probability than the board fallback
     const match = createMatch();
     match.board.mineCount = 1;
     reveal(match, 5, 5, 1);
@@ -188,14 +205,53 @@ describe("chooseSoloAction", () => {
     expect(actions).toEqual([null, null]);
   });
 
-  it("publishes a fixed operation bound for the capped inference loops", () => {
-    // Given the canonical board dimensions and engine bomb radius
-    const expectedMaximum = 16 * 16 * 16 * 16 * 8 + 16 * 16 * (8 * 8 + 25 + 2);
+  it("settles progressive facts within the bounded inference cap", () => {
+    // Given one late clue that proves a mine and an earlier clue that depends on it
+    const match = createMatch();
+    match.board.mineCount = 13;
+    const claims: [number, number][] = [
+      [4, 4],
+      [4, 5],
+      [5, 4],
+      [6, 4],
+      [6, 5],
+      [6, 6],
+      [5, 7],
+      [5, 8],
+      [6, 8],
+      [7, 6],
+      [7, 7],
+      [7, 8]
+    ];
+    for (const [row, column] of claims) {
+      claim(match, row, column);
+    }
+    reveal(match, 5, 5, 7);
+    reveal(match, 6, 7, 7);
 
-    // When the bot exposes its inference bound
-    const maximum = SOLO_BOT_MAX_OPERATIONS;
+    // When the bot propagates the public clues
+    const action = chooseSoloAction(match, BOT_ID);
 
-    // Then callers can verify a deterministic upper bound without timing tests
-    expect(maximum).toBe(expectedMaximum);
+    // Then it reaches the second-round certain mine instead of failing at the first cap
+    expect(action).toEqual({ type: "select", row: 4, column: 6 });
+  });
+
+  it("keeps dense public-clue evaluation within a deterministic cell-read bound", () => {
+    // Given a fully revealed no-mine board with every local clue available
+    const match = createMatch();
+    match.board.mineCount = 0;
+    for (let row = 0; row < 16; row += 1) {
+      for (let column = 0; column < 16; column += 1) {
+        reveal(match, row, column, 0);
+      }
+    }
+    const getReads = countCellReads(match);
+
+    // When the bot evaluates the dense public board
+    const action = chooseSoloAction(match, BOT_ID);
+
+    // Then it returns no legal move before more than the capped cell-read budget
+    expect(action).toBeNull();
+    expect(getReads()).toBeLessThanOrEqual(25000);
   });
 });
