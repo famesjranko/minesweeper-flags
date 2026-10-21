@@ -161,7 +161,9 @@ make deploy-plan TARGET=all        # resolve origin/main and show the selected s
 make deploy TARGET=all             # deploy server, verify it, then deploy frontend
 ```
 
-Login data stays in `.deploy/auth`; CLI login expires after seven days.
+Login data stays in `.deploy/auth/cli.yaml`; the commands pin both CLI config
+path settings so inherited overrides cannot redirect that file.
+CLI login expires after seven days.
 Run `make deploy-login` again to renew it. Do not commit credentials or create
 permanent deploy hooks for these commands. See
 [Render CLI authentication](https://render.com/docs/cli#authenticate).
@@ -181,7 +183,8 @@ cannot prove compatibility of every application change; review the diff too.
 Set `COMMIT=<full-sha>` to select an older merged release. Render builds the Git
 commit itself; local build output is not uploaded.
 
-Server releases require `/api/health` to report zero rooms. This is a preflight
+Server releases query `/health` directly on the selected API and require zero
+rooms. The frontend's health rewrite does not decide occupancy. This is a preflight
 check, not a lock: a room can be created after it runs. Schedule releases while
 the demo is quiet. Each deployment waits for Render, checks health, and verifies
 its live commit before proceeding. A failure stops the sequence and returns a

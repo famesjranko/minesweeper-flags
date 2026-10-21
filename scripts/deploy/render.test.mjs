@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fixture } from "./test-fixture.mjs";
 
 const mutations = (f) =>
   f.calls().filter((call) => call[0] === "render" && call[1] === "deploys" && call[2] === "create");
+
+test("login keeps credentials private despite an inherited config file override", (t) => {
+  // Given an inherited CLI path that points outside private deployment storage.
+  const f = fixture(t);
+  const outside = join(f.directory, "unignored-login.yaml");
+  writeFileSync(outside, "Existing unrelated configuration\n");
+
+  // When browser login runs with that inherited override.
+  const result = f.run("login", "all", { RENDER_CLI_CONFIG_PATH: outside });
+
+  // Then credentials stay in private storage and the unrelated file remains unchanged.
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readFileSync(outside, "utf8"), "Existing unrelated configuration\n");
+  assert.equal(readFileSync(join(f.repository, ".deploy/auth/cli.yaml"), "utf8"), "fixture auth\n");
+});
 
 test("planning a release shows its exact commit without triggering deployment", (t) => {
   // Given a clean repository and configured free services in the correct workspace.
@@ -67,6 +82,22 @@ test("active rooms prevent a server deployment", (t) => {
   // Then the deployment stops without interrupting the room.
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /empty lobby/);
+  assert.deepEqual(mutations(f), []);
+});
+
+test("active rooms on the selected server block deployment when the frontend reports zero", (t) => {
+  // Given an occupied server and a stale frontend rewrite that reports an empty lobby.
+  const f = fixture(t);
+
+  // When a coordinated release is requested with those conflicting health responses.
+  const result = f.run("deploy", "all", { ACTIVE_ROOMS: "yes", FRONTEND_ACTIVE_ROOMS: "0" });
+
+  // Then the selected API's occupancy stops both deployments.
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /empty lobby/);
+  assert.ok(
+    f.calls().some((call) => call[0] === "fetch" && call[1] === "https://api.example.test/health")
+  );
   assert.deepEqual(mutations(f), []);
 });
 

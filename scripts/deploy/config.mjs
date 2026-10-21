@@ -10,7 +10,8 @@ export const cli =
 export const cliEnvironment = {
   ...process.env,
   DO_NOT_TRACK: "1",
-  RENDER_CLI_CONFIG_DIR: resolve(localDirectory, "auth")
+  RENDER_CLI_CONFIG_DIR: resolve(localDirectory, "auth"),
+  RENDER_CLI_CONFIG_PATH: resolve(localDirectory, "auth/cli.yaml")
 };
 
 export function loadConfig() {

@@ -141,7 +141,7 @@ async function deploy(config, names, sha) {
     ).check_runs
   );
   if (names.includes("server")) {
-    const rooms = await health(`${config.frontend.url}/api/health`, "ok");
+    const rooms = await health(`${config.server.url}/health`, "ok");
     if (!Number.isInteger(rooms.activeRooms) || rooms.activeRooms !== 0) {
       throw new Error(
         "Server deployment requires a verified empty lobby; retry when no rooms are active."

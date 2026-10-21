@@ -17,7 +17,12 @@ const fs=require('node:fs'),p=require('node:path');
 const a=process.argv.slice(2),dir=process.env.FIXTURE_DIR;
 fs.appendFileSync(p.join(dir,'calls.jsonl'),JSON.stringify(['render',...a])+'\n');
 const output=x=>console.log(JSON.stringify(x));
-if(a[0]==='workspace') output({id:'tea-fixture'});
+if(a[0]==='login') {
+ const file=process.env.RENDER_CLI_CONFIG_PATH||p.join(process.env.RENDER_CLI_CONFIG_DIR,'cli.yaml');
+ fs.mkdirSync(p.dirname(file),{recursive:true});
+ fs.writeFileSync(file,'fixture auth\n',{mode:0o600});
+ output({authenticated:true});
+} else if(a[0]==='workspace') output({id:'tea-fixture'});
 else if(a[0]==='services') output(JSON.parse(fs.readFileSync(p.join(dir,'services.json'))));
 else if(a[0]==='deploys'&&a[1]==='list') {
  const f=p.join(dir,a[2]+'.sha');
@@ -37,7 +42,8 @@ const fakeNetwork = String.raw`import{appendFileSync}from'node:fs';import{join}f
 globalThis.fetch=async url=>{
 appendFileSync(join(process.env.FIXTURE_DIR,'calls.jsonl'),JSON.stringify(['fetch',String(url)])+'\n');
 if(!String(url).startsWith('https://api.example.test/')&&!String(url).startsWith('https://frontend.example.test/'))throw Error('Unexpected URL');
-return new Response(JSON.stringify(String(url).endsWith('/ready')?{status:'ready'}:{status:'ok',activeRooms:process.env.ACTIVE_ROOMS==='yes'?1:0,maxRooms:4}));};
+const activeRooms=String(url).startsWith('https://frontend.example.test/')&&process.env.FRONTEND_ACTIVE_ROOMS!==undefined?Number(process.env.FRONTEND_ACTIVE_ROOMS):process.env.ACTIVE_ROOMS==='yes'?1:0;
+return new Response(JSON.stringify(String(url).endsWith('/ready')?{status:'ready'}:{status:'ok',activeRooms,maxRooms:4}));};
 `;
 
 export function fixture(t) {
