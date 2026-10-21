@@ -164,3 +164,27 @@ for (const policy of ["paid server", "automatic deploys"]) {
     assert.deepEqual(mutations(f), []);
   });
 }
+
+test("Git hook environment cannot redirect a fixture into its parent repository", (t) => {
+  // Given a disposable parent repository and the repository paths exported by a Git hook.
+  const parent = fixture(t);
+  const previous = { GIT_DIR: process.env.GIT_DIR, GIT_WORK_TREE: process.env.GIT_WORK_TREE };
+  process.env.GIT_DIR = join(parent.repository, ".git");
+  process.env.GIT_WORK_TREE = parent.repository;
+  let child;
+
+  // When another fixture is created inside that hook environment.
+  try {
+    child = fixture(t);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+
+  // Then its Git directory is separate and the parent commit and files remain unchanged.
+  assert.equal(child.git("rev-parse", "--show-toplevel"), child.repository);
+  assert.equal(parent.git("rev-parse", "HEAD"), parent.sha);
+  assert.equal(parent.git("status", "--porcelain"), "");
+});

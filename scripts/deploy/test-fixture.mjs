@@ -48,9 +48,14 @@ export function fixture(t) {
   mkdirSync(repository);
   mkdirSync(bin);
   mkdirSync(join(repository, ".deploy"));
+  // Git hooks export repository paths; child fixtures must never inherit them.
+  const cleanEnvironment = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))
+  );
   const git = (...args) =>
     execFileSync("git", args, {
       cwd: repository,
+      env: cleanEnvironment,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
     }).trim();
@@ -61,7 +66,10 @@ export function fixture(t) {
   writeFileSync(join(repository, "README.md"), "Initial release\n");
   git("add", ".gitignore", "README.md");
   git("commit", "-m", "Initial release");
-  execFileSync("git", ["init", "--bare", join(directory, "remote")], { stdio: "ignore" });
+  execFileSync("git", ["init", "--bare", join(directory, "remote")], {
+    stdio: "ignore",
+    env: cleanEnvironment
+  });
   git(
     "config",
     `url.${join(directory, "remote")}.insteadOf`,
@@ -89,7 +97,7 @@ export function fixture(t) {
   const preload = join(directory, "network.mjs");
   writeFileSync(preload, fakeNetwork);
   const env = {
-    ...process.env,
+    ...cleanEnvironment,
     PATH: `${bin}:${process.env.PATH}`,
     RENDER_CLI: join(bin, "render"),
     DEPLOY_DIR: join(repository, ".deploy"),
