@@ -24,7 +24,7 @@ export type {
 } from "./solo-session.types.js";
 
 const defaultScheduler: SoloScheduler = {
-  set: (callback) => setTimeout(callback, 0),
+  set: (callback) => setTimeout(callback, 500),
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>)
 };
 

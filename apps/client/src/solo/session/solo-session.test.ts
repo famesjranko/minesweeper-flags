@@ -406,6 +406,42 @@ it("yields between retained mine claims and stops scheduling at a natural win", 
   expect(storage.saved!.actions).toHaveLength(26);
 });
 
+it("paces each retained mine claim with a 500 ms browser delay", () => {
+  // Given a bot turn with two independently selected known mines on a real engine board.
+  vi.useFakeTimers();
+  const mines = boardFor()
+    .filter((cell) => cell.hasMine)
+    .slice(0, 2);
+  const storage = createStorage(replayFor());
+  const chooseAction = vi.fn(() => {
+    const cell = mines[storage.saved!.actions.length]!;
+    return { type: "select" as const, row: cell.row, column: cell.column };
+  });
+  const session = createSoloSession({ storage, chooseAction });
+  session.start();
+
+  // When the first timer is nearly due, then exactly due, then the next timer is nearly due.
+  vi.advanceTimersByTime(499);
+  expect(chooseAction).not.toHaveBeenCalled();
+  expect(session.getSnapshot().match.lastAction).toBeNull();
+  expect(session.getSnapshot().botThinking).toBe(true);
+  vi.advanceTimersByTime(1);
+  const afterFirstMine = session.getSnapshot();
+  vi.advanceTimersByTime(499);
+
+  // Then each mine claim is one action, retains the bot turn, and schedules another full delay.
+  expect(chooseAction).toHaveBeenCalledTimes(1);
+  expect(storage.saved!.actions).toHaveLength(1);
+  expect(afterFirstMine.match.lastAction?.playerId).toBe(SOLO_BOT_ID);
+  expect(afterFirstMine.match.currentTurnPlayerId).toBe(SOLO_BOT_ID);
+  expect(afterFirstMine.botThinking).toBe(true);
+  vi.advanceTimersByTime(1);
+  expect(chooseAction).toHaveBeenCalledTimes(2);
+  expect(storage.saved!.actions).toHaveLength(2);
+  session.dispose();
+  vi.useRealTimers();
+});
+
 it("passes the bot turn after a safe reveal", () => {
   // Given a bot turn and a safe fixture cell selected by the bot.
   const safe = boardFor().find((cell) => !cell.hasMine)!;
