@@ -77,7 +77,11 @@ describe("browser solo storage", () => {
   });
 
   it("round-trips a compact valid replay", () => {
-    // Given a valid record and a browser store that returns its last saved value.
+    // Given a complete valid replay and a browser store that returns its last saved value.
+    const savedRecord = {
+      ...record,
+      actions: [{ type: "select" as const, playerId: "solo-human" as const, row: 0, column: 0 }]
+    };
     let savedValue: string | null = null;
     const setItem = vi.fn((_key: string, value: string) => {
       savedValue = value;
@@ -88,11 +92,12 @@ describe("browser solo storage", () => {
     const storage = createBrowserSoloStorage();
 
     // When it is saved and restored from the same backing store.
-    const notice = storage.write(record);
+    const notice = storage.write(savedRecord);
     const restored = storage.read();
 
     // Then the complete saved record round-trips and remains below the fixed cap.
-    expect(restored.record).toEqual(record);
+    expect(restored.record).toEqual(savedRecord);
+    expect(restored.record?.actions).toEqual(savedRecord.actions);
     expect(notice).toBeNull();
     expect(setItem.mock.calls[0]![1].length).toBeLessThan(SOLO_STORAGE_MAX_BYTES);
   });
