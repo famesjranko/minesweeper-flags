@@ -22,6 +22,8 @@ type PlayProps = Pick<
   lastMove: LastMoveMarks;
   chatMessageCount: number;
   onOpenChat: () => void;
+  showChat?: boolean;
+  showResultRibbon?: boolean;
 };
 
 const MatchBoard = ({ props, zoomed }: { props: PlayProps; zoomed: boolean }) => {
@@ -53,7 +55,7 @@ const MatchBoard = ({ props, zoomed }: { props: PlayProps; zoomed: boolean }) =>
           />
         </div>
       </section>
-      {match.phase === "finished" ? (
+      {match.phase === "finished" && props.showResultRibbon !== false ? (
         <MatchResultRibbon
           match={match}
           currentPlayerId={currentPlayerId}
@@ -118,12 +120,14 @@ export const MatchPlayArea = (props: PlayProps) => {
       </div>
       <MatchBoard props={props} zoomed={zoomed} />
       <MatchTools props={props} zoomed={zoomed} onZoom={() => setZoomed(!zoomed)} />
-      <button type="button" className="arcade-chat-toggle" onClick={props.onOpenChat}>
-        <span>
-          Chat · {props.chatMessageCount} {props.chatMessageCount === 1 ? "message" : "messages"}
-        </span>
-        <span>Open ↗</span>
-      </button>
+      {props.showChat !== false ? (
+        <button type="button" className="arcade-chat-toggle" onClick={props.onOpenChat}>
+          <span>
+            Chat · {props.chatMessageCount} {props.chatMessageCount === 1 ? "message" : "messages"}
+          </span>
+          <span>Open ↗</span>
+        </button>
+      ) : null}
     </section>
   );
 };

@@ -19,4 +19,5 @@ export interface MatchViewProps {
   onResign: () => void;
   onRequestRematch: () => void;
   onCancelRematch: () => void;
+  presentation?: "multiplayer" | "solo";
 }

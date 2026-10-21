@@ -1,0 +1,148 @@
+.solo-home {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+.solo-home-intro {
+  padding: 40px 0 28px;
+}
+.solo-home-intro h1,
+.solo-entry-card h2 {
+  margin: 0;
+}
+.solo-home-intro h1 {
+  font-size: clamp(32px, 5vw, 46px);
+  letter-spacing: -1.1px;
+}
+.solo-home-intro > p:last-child {
+  max-width: 52ch;
+  margin: 12px 0 0;
+  color: #b0bed3;
+}
+.solo-entry-card {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  border: 1px solid #354562;
+  border-radius: 18px;
+  background: #1b2b45;
+}
+.solo-entry-card h2 {
+  font-size: 22px;
+}
+.solo-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border-radius: 12px;
+  background: #101e34;
+}
+.solo-mode-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b8c9df;
+  font: inherit;
+  font-weight: 650;
+}
+.solo-mode-tabs button[aria-selected="true"] {
+  background: #304d6e;
+  color: #f3f7ff;
+  box-shadow: 0 1px 0 #6ecfff66;
+}
+.solo-entry-card [role="tabpanel"] {
+  display: grid;
+  gap: 16px;
+  min-height: 120px;
+  align-content: space-between;
+}
+
+.solo-entry-card [role="tabpanel"][hidden] {
+  display: none;
+}
+.solo-entry-card [role="tabpanel"] p {
+  max-width: 50ch;
+  margin: 0;
+  color: #b8c9df;
+}
+.solo-entry-primary,
+.solo-match-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid #63c8ff;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(#59ccff, #1683d8);
+  color: #062b4e;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+.solo-entry-primary {
+  width: fit-content;
+}
+.solo-match {
+  width: min(100%, calc(100dvh + 48px));
+  max-width: 1132px;
+  margin: 0 auto;
+}
+.solo-match > .arcade-header {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  margin-bottom: 20px;
+}
+.solo-leave-link {
+  color: #c2d3e9;
+  font-size: 13px;
+}
+.solo-notice,
+.solo-error,
+.solo-thinking {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.solo-notice,
+.solo-thinking {
+  background: #182d47;
+  color: #b7d8f2;
+}
+.solo-error {
+  background: #422d35;
+  color: #ffd3ca;
+}
+.solo-match-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.solo-match-actions button {
+  background: #243c59;
+  border-color: #526888;
+  color: #dfedff;
+}
+.solo-match-actions button[name="rematch"] {
+  background: #304d6e;
+  border-color: #63c8ff;
+}
+@media (max-width: 680px) {
+  .solo-home-intro {
+    padding: 28px 0 22px;
+  }
+  .solo-entry-card {
+    padding: 20px;
+  }
+  .solo-match-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .solo-match-actions button {
+    width: 100%;
+  }
+}

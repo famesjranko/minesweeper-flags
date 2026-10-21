@@ -22,18 +22,21 @@ export const MatchView = (props: MatchViewProps) => {
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
   const view = getMatchPresentation(props);
   const chatRef = useMatchChat();
+  const isSolo = props.presentation === "solo";
   const helperText = view.opponent
     ? `${view.opponent.displayName} is ${view.opponent.connected ? "online" : "offline"}.`
     : "Waiting for the second player to join chat.";
 
   return (
     <div className="arcade-match">
-      <MatchHeader
-        roomCode={props.roomCode}
-        match={match}
-        connectionStatus={props.connectionStatus}
-        onResign={props.onResign}
-      />
+      {!isSolo ? (
+        <MatchHeader
+          roomCode={props.roomCode}
+          match={match}
+          connectionStatus={props.connectionStatus}
+          onResign={props.onResign}
+        />
+      ) : null}
       <div className="arcade-match-main">
         <MatchPlayArea
           match={match}
@@ -52,24 +55,28 @@ export const MatchView = (props: MatchViewProps) => {
           )}
           chatMessageCount={props.chatMessages.length}
           onOpenChat={() => chatRef.current?.showModal()}
+          showChat={!isSolo}
+          showResultRibbon={!isSolo}
         />
-        <dialog ref={chatRef} className="arcade-chat-region" aria-label="Match chat">
-          <ChatPanel
-            roomCode={props.roomCode}
-            currentPlayerId={currentPlayerId}
-            playerTones={view.playerTones}
-            connectionStatus={props.connectionStatus}
-            messages={props.chatMessages}
-            draft={props.chatDraft}
-            pending={props.chatPending}
-            error={props.chatError}
-            helperText={helperText}
-            className="arcade-match-chat"
-            onClose={() => chatRef.current?.close()}
-            onDraftChange={props.onChatDraftChange}
-            onSend={props.onSendChatMessage}
-          />
-        </dialog>
+        {!isSolo ? (
+          <dialog ref={chatRef} className="arcade-chat-region" aria-label="Match chat">
+            <ChatPanel
+              roomCode={props.roomCode}
+              currentPlayerId={currentPlayerId}
+              playerTones={view.playerTones}
+              connectionStatus={props.connectionStatus}
+              messages={props.chatMessages}
+              draft={props.chatDraft}
+              pending={props.chatPending}
+              error={props.chatError}
+              helperText={helperText}
+              className="arcade-match-chat"
+              onClose={() => chatRef.current?.close()}
+              onDraftChange={props.onChatDraftChange}
+              onSend={props.onSendChatMessage}
+            />
+          </dialog>
+        ) : null}
       </div>
     </div>
   );
