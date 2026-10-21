@@ -59,10 +59,58 @@ const GameClientContext = createContext<GameClientContextValue | null>(null);
 const subscribeToEmptySnapshot = (_listener: () => void) => () => {};
 const getEmptyP2PSnapshot = (): null => null;
 
+const useSlotAvailability = () => {
+  const slotRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slotRefreshAbortRef = useRef<AbortController | null>(null);
+  const [slotAvailability, setSlotAvailability] = useState<SlotAvailability | null>(null);
+
+  const cancelSlotRefresh = useCallback(() => {
+    if (slotRefreshTimerRef.current !== null) {
+      clearTimeout(slotRefreshTimerRef.current);
+      slotRefreshTimerRef.current = null;
+    }
+    slotRefreshAbortRef.current?.abort();
+    slotRefreshAbortRef.current = null;
+  }, []);
+
+  const refreshSlotCount = useCallback(() => {
+    slotRefreshAbortRef.current?.abort();
+    const abortController = new AbortController();
+    slotRefreshAbortRef.current = abortController;
+
+    fetch(SERVER_HEALTH_URL, { signal: abortController.signal })
+      .then((res) => res.json())
+      .then((data: { activeRooms?: number; maxRooms?: number }) => {
+        if (
+          !abortController.signal.aborted &&
+          typeof data.activeRooms === "number" &&
+          typeof data.maxRooms === "number"
+        ) {
+          setSlotAvailability({ activeRooms: data.activeRooms, maxRooms: data.maxRooms });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (slotRefreshAbortRef.current === abortController) {
+          slotRefreshAbortRef.current = null;
+        }
+      });
+  }, []);
+
+  const scheduleSlotRefresh = useCallback(() => {
+    if (slotRefreshTimerRef.current !== null) {
+      clearTimeout(slotRefreshTimerRef.current);
+    }
+    slotRefreshTimerRef.current = setTimeout(refreshSlotCount, 500);
+  }, [refreshSlotCount]);
+
+  return { cancelSlotRefresh, refreshSlotCount, scheduleSlotRefresh, slotAvailability };
+};
+
 export const GameClientProvider = ({ children }: PropsWithChildren) => {
   const runtimeRef = useRef<GameClientRuntime | null>(null);
-  const slotRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [slotAvailability, setSlotAvailability] = useState<SlotAvailability | null>(null);
+  const { cancelSlotRefresh, refreshSlotCount, scheduleSlotRefresh, slotAvailability } =
+    useSlotAvailability();
 
   if (!runtimeRef.current) {
     runtimeRef.current = createGameClientRuntime();
@@ -80,28 +128,14 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     runtime.p2p?.getSnapshot ?? getEmptyP2PSnapshot
   );
 
-  const refreshSlotCount = useCallback(() => {
-    fetch(SERVER_HEALTH_URL)
-      .then((res) => res.json())
-      .then((data: { activeRooms?: number; maxRooms?: number }) => {
-        if (typeof data.activeRooms === "number" && typeof data.maxRooms === "number") {
-          setSlotAvailability({ activeRooms: data.activeRooms, maxRooms: data.maxRooms });
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   // LobbyPage calls openLobby from an effect keyed on its identity, and
   // openLobby updates the store. A new function on every render would loop.
   const openLobby = useCallback(() => {
     runtime.controller.openLobby();
     if (DEPLOYMENT_MODE === "server") {
-      if (slotRefreshTimerRef.current !== null) {
-        clearTimeout(slotRefreshTimerRef.current);
-      }
-      slotRefreshTimerRef.current = setTimeout(refreshSlotCount, 500);
+      scheduleSlotRefresh();
     }
-  }, [runtime, refreshSlotCount]);
+  }, [runtime, scheduleSlotRefresh]);
 
   useEffect(() => {
     runtime.controller.start();
@@ -110,13 +144,10 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
     }
 
     return () => {
-      if (slotRefreshTimerRef.current !== null) {
-        clearTimeout(slotRefreshTimerRef.current);
-        slotRefreshTimerRef.current = null;
-      }
+      cancelSlotRefresh();
       runtime.controller.dispose();
     };
-  }, [runtime, refreshSlotCount]);
+  }, [cancelSlotRefresh, runtime, refreshSlotCount]);
 
   return (
     <GameClientContext.Provider

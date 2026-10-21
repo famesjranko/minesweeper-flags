@@ -301,4 +301,59 @@ describe("GameClientProvider", () => {
       vi.useRealTimers();
     }
   });
+
+  it("aborts stale health requests so an older response cannot replace newer availability", async () => {
+    // Given a provider with two controllable health responses
+    let resolveFirstResponse: ((value: { json: () => Promise<unknown> }) => void) | null = null;
+    let resolveSecondResponse: ((value: { json: () => Promise<unknown> }) => void) | null = null;
+    const signals: AbortSignal[] = [];
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      signals.push(init?.signal as AbortSignal);
+      return new Promise<{ json: () => Promise<unknown> }>((resolve) => {
+        if (!resolveFirstResponse) {
+          resolveFirstResponse = resolve;
+        } else {
+          resolveSecondResponse = resolve;
+        }
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { runtime } = createFakeRuntime();
+    vi.mocked(createGameClientRuntime).mockReturnValue(runtime);
+    let client: GameClientHookValue | null = null;
+    const Consumer = () => {
+      client = useGameClient();
+      return <div data-testid="availability">{client.slotAvailability?.activeRooms ?? "none"}</div>;
+    };
+
+    try {
+      const { root } = renderIntoRoot(
+        <GameClientProvider>
+          <Consumer />
+        </GameClientProvider>
+      );
+
+      // When a later health request finishes before the earlier request
+      act(() => {
+        client?.refreshSlotCount();
+      });
+      await act(async () => {
+        resolveSecondResponse?.({ json: async () => ({ activeRooms: 2, maxRooms: 3 }) });
+      });
+      await act(async () => {
+        resolveFirstResponse?.({ json: async () => ({ activeRooms: 1, maxRooms: 3 }) });
+      });
+
+      // Then the aborted response cannot overwrite the latest availability
+      expect(signals).toHaveLength(2);
+      expect(signals[0]?.aborted).toBe(true);
+      expect(document.querySelector("[data-testid='availability']")?.textContent).toBe("2");
+
+      act(() => {
+        root.unmount();
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
