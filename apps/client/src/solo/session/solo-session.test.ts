@@ -1,3 +1,4 @@
+import { createMatchState } from "@minesweeper-flags/game-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SoloStorage } from "../storage/solo-storage.js";
 import { createSoloSession } from "./solo-session.js";
@@ -212,5 +213,79 @@ describe("solo session", () => {
     // Then the match stays finished and no bot callback is scheduled.
     expect(restored.getSnapshot().match.phase).toBe("finished");
     expect(restored.getSnapshot().match.winnerPlayerId).toBe(SOLO_BOT_ID);
+  });
+
+  it("restores a naturally won replay with deterministic action times", () => {
+    // Given a replay that claims every winning mine on one retained human turn.
+    const raw = createMatchState({
+      roomId: "solo-local",
+      players: [
+        { playerId: SOLO_HUMAN_ID, displayName: "You" },
+        { playerId: SOLO_BOT_ID, displayName: "Bot" }
+      ],
+      seed: 11,
+      createdAt: 20,
+      startingPlayerId: SOLO_HUMAN_ID
+    });
+    const actions = raw.board.cells
+      .flat()
+      .filter((cell) => cell.hasMine)
+      .slice(0, 26)
+      .map((cell) => ({
+        type: "select" as const,
+        playerId: SOLO_HUMAN_ID,
+        row: cell.row,
+        column: cell.column
+      }));
+    const replay = {
+      version: 1 as const,
+      seed: 11,
+      createdAt: 20,
+      starter: "human" as const,
+      actions
+    };
+
+    // When two sessions restore it with different wall clocks.
+    const first = createSoloSession({
+      storage: createStorage(replay),
+      scheduler: createScheduler(),
+      now: () => 999
+    });
+    const second = createSoloSession({
+      storage: createStorage(replay),
+      scheduler: createScheduler(),
+      now: () => 4
+    });
+    first.start();
+    second.start();
+
+    // Then both retain the finished game and the public result is identical.
+    expect(first.getSnapshot().match.phase).toBe("finished");
+    expect(second.getSnapshot()).toEqual(first.getSnapshot());
+  });
+
+  it("keeps the cached snapshot and storage unchanged after disposal", () => {
+    // Given a started session that is disposed.
+    const storage = createStorage();
+    const session = createSoloSession({
+      storage,
+      scheduler: createScheduler(),
+      nextSeed: () => 12
+    });
+    session.start();
+    const before = session.getSnapshot();
+    const saved = storage.saved;
+    session.dispose();
+
+    // When every mutating command is attempted after navigation.
+    session.restart();
+    session.rematch();
+    session.resign();
+    session.toggleBombMode();
+    session.submitCellAction(0, 0);
+
+    // Then observable state retains stable identity and persistence is untouched.
+    expect(session.getSnapshot()).toBe(before);
+    expect(storage.saved).toEqual(saved);
   });
 });

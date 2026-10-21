@@ -103,12 +103,13 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   let bombArmed = false;
   let error: string | null = null;
   let recoveryNotice: string | null = null;
+  let cachedSnapshot: SoloSnapshot | null = null;
 
   const snapshot = (): SoloSnapshot => {
     if (!state) {
       throw new Error("Solo session has not started.");
     }
-    return {
+    cachedSnapshot ??= {
       match: toMatchStateDto(state),
       humanId: SOLO_HUMAN_ID,
       bombArmed,
@@ -117,9 +118,11 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       error,
       recoveryNotice
     };
+    return cachedSnapshot;
   };
 
   const notify = (): void => {
+    cachedSnapshot = null;
     listeners.forEach((listener) => {
       listener();
     });
@@ -147,7 +150,11 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     if (!state || !record) {
       return false;
     }
-    const result = resolveAction(state, { ...action, playerId }, now());
+    const result = resolveAction(
+      state,
+      { ...action, playerId },
+      record.createdAt + record.actions.length + 1
+    );
     if (!result.ok) {
       if (!replaying) {
         error = result.error;
@@ -213,10 +220,8 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       if (state.phase !== "live" || !state.players.some((player) => player.playerId === playerId)) {
         return null;
       }
-      state = resignMatch(state, playerId, now());
+      state = resignMatch(state, playerId, record.createdAt + record.actions.length + 1);
       record.resignedBy = candidate.resignedBy;
-    } else if (state.phase === "finished") {
-      return null;
     }
     return state;
   };
@@ -290,6 +295,11 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       ) {
         return;
       }
+      const human = state.players.find((player) => player.playerId === SOLO_HUMAN_ID);
+      const bot = state.players.find((player) => player.playerId === SOLO_BOT_ID);
+      if (!human || !bot || human.bombsRemaining === 0 || bot.score - human.score < 4) {
+        return;
+      }
       bombArmed = !bombArmed;
       error = null;
       notify();
@@ -299,14 +309,22 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
         return;
       }
       cancelBot();
-      state = resignMatch(state, SOLO_HUMAN_ID, now());
+      state = resignMatch(state, SOLO_HUMAN_ID, record.createdAt + record.actions.length + 1);
       record.resignedBy = "human";
       bombArmed = false;
       persist();
       notify();
     },
-    restart: () => beginFresh("human", null),
-    rematch: () => beginFresh(starter === "human" ? "bot" : "human", null),
+    restart: () => {
+      if (!disposed) {
+        beginFresh("human", null);
+      }
+    },
+    rematch: () => {
+      if (!disposed) {
+        beginFresh(starter === "human" ? "bot" : "human", null);
+      }
+    },
     dispose: () => {
       if (disposed) {
         return;
