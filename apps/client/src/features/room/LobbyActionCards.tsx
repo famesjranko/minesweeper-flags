@@ -53,20 +53,26 @@ interface SlotIndicatorProps {
   onRefreshSlots: () => void;
 }
 
-const SlotIndicator = ({
+export const SlotIndicator = ({
   slotAvailability,
   slotsFull,
   refreshing,
   onRefreshSlots
 }: SlotIndicatorProps) => (
   <span className="lobby-slot-indicator">
-    <span className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}>
-      {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
+    <span
+      className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}
+      role="status"
+      aria-label="Rooms in use"
+      title={`${slotAvailability.activeRooms} of ${slotAvailability.maxRooms} rooms in use`}
+    >
+      {slotAvailability.activeRooms}/{slotAvailability.maxRooms}
     </span>
     <button
       type="button"
       className={`lobby-slot-refresh${refreshing ? " is-refreshing" : ""}`}
       onClick={onRefreshSlots}
+      aria-label="Refresh room availability"
       title="Refresh slot count"
     >
       &#x21bb;
@@ -75,10 +81,7 @@ const SlotIndicator = ({
 );
 
 interface ServerMatchActionCardsProps extends CreateActionProps {
-  slotAvailability: SlotAvailability | null;
   slotsFull: boolean;
-  refreshing: boolean;
-  onRefreshSlots: () => void;
   inviteValue: string;
   onInviteValueChange: (value: string) => void;
   canJoinRoom: boolean;
@@ -88,10 +91,7 @@ interface ServerMatchActionCardsProps extends CreateActionProps {
 export const ServerMatchActionCards = ({
   canCreateRoom,
   onCreateRoom,
-  slotAvailability,
   slotsFull,
-  refreshing,
-  onRefreshSlots,
   inviteValue,
   onInviteValueChange,
   canJoinRoom,
@@ -117,14 +117,6 @@ export const ServerMatchActionCards = ({
       <p className="lobby-create-description">
         {slotsFull ? "All room slots are in use." : "Host a room and share a private invite link."}
       </p>
-      {slotAvailability !== null && (
-        <SlotIndicator
-          slotAvailability={slotAvailability}
-          slotsFull={slotsFull}
-          refreshing={refreshing}
-          onRefreshSlots={onRefreshSlots}
-        />
-      )}
     </form>
 
     <form

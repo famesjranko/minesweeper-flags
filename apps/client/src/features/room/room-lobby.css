@@ -129,6 +129,14 @@
   gap: 20px;
 }
 
+.lobby-identity-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .arcade-lobby .lobby-field span {
   color: #bacbe4;
   font-size: 13px;
@@ -212,6 +220,7 @@
 
 .arcade-lobby .lobby-slot-indicator {
   justify-content: space-between;
+  gap: 2px;
   min-height: 44px;
 }
 
@@ -221,6 +230,7 @@
   color: #afc0d9;
   font-size: 12px;
   font-weight: 400;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
@@ -347,7 +357,7 @@
   }
 
   .arcade-lobby .lobby-control-panel {
-    gap: 20px;
+    gap: 16px;
     border-radius: 16px;
     padding: 20px;
   }
@@ -357,7 +367,7 @@
   }
 
   .arcade-lobby .lobby-action-card.is-join {
-    padding-top: 20px;
+    padding-top: 16px;
   }
 
   .arcade-lobby .lobby-action-button {

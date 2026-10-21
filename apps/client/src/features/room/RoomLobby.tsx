@@ -6,7 +6,11 @@ import type { SlotAvailability } from "../../app/providers/GameClientProvider.js
 import type { DeploymentMode } from "../../lib/config/env.js";
 import { ArcadeHeader } from "../../shared-ui/ArcadeHeader.js";
 import { extractInviteToken } from "./invite-link.js";
-import { DirectMatchActionCards, ServerMatchActionCards } from "./LobbyActionCards.js";
+import {
+  DirectMatchActionCards,
+  ServerMatchActionCards,
+  SlotIndicator
+} from "./LobbyActionCards.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
 
 interface RoomLobbyProps {
@@ -109,7 +113,17 @@ export const RoomLobby = ({
 
         <section className="lobby-control-panel">
           <div className="lobby-identity-card">
-            <h2>Play with a friend</h2>
+            <div className="lobby-identity-heading">
+              <h2>Play with a friend</h2>
+              {!isP2PDeployment && slotAvailability !== null && (
+                <SlotIndicator
+                  slotAvailability={slotAvailability}
+                  slotsFull={slotsFull}
+                  refreshing={refreshing}
+                  onRefreshSlots={handleRefreshSlots}
+                />
+              )}
+            </div>
 
             <label className="field lobby-field">
               <span>Display name</span>
@@ -132,10 +146,7 @@ export const RoomLobby = ({
               <ServerMatchActionCards
                 canCreateRoom={canCreateRoom}
                 onCreateRoom={handleCreateRoom}
-                slotAvailability={slotAvailability}
                 slotsFull={slotsFull}
-                refreshing={refreshing}
-                onRefreshSlots={handleRefreshSlots}
                 inviteValue={inviteValue}
                 onInviteValueChange={setInviteValue}
                 canJoinRoom={canJoinRoom}
