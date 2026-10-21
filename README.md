@@ -21,7 +21,7 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 
 - On the home page, choose **Solo** for a local match or **With a friend** to create or join a room.
 - A solo match is you against the bot on a 16×16 board. The bot uses revealed clues and claimed mines to make certain claims where it can, then ranks likely mines. Its bounded heuristic can make estimated moves instead of fully solving every position.
-- Solo matches run in the browser. They need no API, model download, or game backend. Progress is kept in `sessionStorage`, so it can survive a reload in the same tab. Denied storage or an invalid saved record starts a fresh match, and closing the tab ends that session.
+- Solo matches run in the browser. They need no API, model download, or game backend. Progress is kept in `sessionStorage`, so it can survive a reload in the same tab. A saved record that cannot be restored starts a fresh match. If the browser cannot save progress, the current match continues without reload recovery. Closing the tab ends that session.
 - One player creates a friend room or hosts a direct match.
 - The other player joins with an invite link, an invite token, or a direct-match join URL.
 - Both players share a 16×16 board with 51 mines and take turns.
@@ -29,7 +29,7 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 - Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 4 or more.
 - Chat stays with the room through reconnects and rematches.
 
-Solo is browser-local, not an offline-first or PWA mode. A static frontend still needs its first download.
+A static frontend still needs its first download.
 
 <p align="center">
   <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with create and join options, beside a live match with a red and blue score sidebar, a half-cleared board, and room chat.">
