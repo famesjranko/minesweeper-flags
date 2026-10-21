@@ -222,65 +222,138 @@ describe("AppRouter", () => {
     }
   );
 
-  it("keeps multiplayer alive between friend routes and disposes it before solo", async () => {
-    // Given an active server friend route with an issued health request and scheduled refresh
-    const originalUrl = window.location.href;
-    vi.useFakeTimers();
-    const healthRequests: AbortSignal[] = [];
-    let resolveLatestHealth: ((value: { json: () => Promise<unknown> }) => void) | null = null;
-    const sockets: { close: ReturnType<typeof vi.fn> }[] = [];
-    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
-      healthRequests.push(init?.signal as AbortSignal);
-      return new Promise((resolve) => {
-        resolveLatestHealth = resolve;
+  (DEPLOYMENT_MODE === "server" ? it : it.skip)(
+    "keeps server multiplayer alive between friend routes and disposes it before solo",
+    async () => {
+      // Given an active server friend route with an issued health request and scheduled refresh
+      const originalUrl = window.location.href;
+      vi.useFakeTimers();
+      const healthRequests: AbortSignal[] = [];
+      let resolveLatestHealth: ((value: { json: () => Promise<unknown> }) => void) | null = null;
+      const sockets: { close: ReturnType<typeof vi.fn> }[] = [];
+      const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+        healthRequests.push(init?.signal as AbortSignal);
+        return new Promise((resolve) => {
+          resolveLatestHealth = resolve;
+        });
       });
-    });
-    class TrackingWebSocket {
-      static readonly CONNECTING = 0;
-      static readonly OPEN = 1;
-      readonly close = vi.fn();
-      readonly addEventListener = vi.fn();
-      readonly send = vi.fn();
-      readyState = TrackingWebSocket.CONNECTING;
+      class TrackingWebSocket {
+        static readonly CONNECTING = 0;
+        static readonly OPEN = 1;
+        readonly close = vi.fn();
+        readonly addEventListener = vi.fn();
+        readonly send = vi.fn();
+        readyState = TrackingWebSocket.CONNECTING;
 
-      constructor() {
-        sockets.push(this);
+        constructor() {
+          sockets.push(this);
+        }
+      }
+      vi.stubGlobal("fetch", fetchMock);
+      vi.stubGlobal("WebSocket", TrackingWebSocket);
+      window.history.replaceState(null, "", "/lobby");
+      let app: ReturnType<typeof renderApp> | null = null;
+
+      try {
+        // When the visitor changes friend routes and chooses solo while that refresh is pending
+        app = renderApp();
+        const startedSocketCount = sockets.length;
+        expect(startedSocketCount).toBeGreaterThan(0);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
+        navigate("/room/ABCDE");
+        navigate("/solo");
+        await act(async () => {
+          resolveLatestHealth?.({ json: async () => ({ activeRooms: 1, maxRooms: 3 }) });
+        });
+        act(() => {
+          vi.advanceTimersByTime(1000);
+        });
+
+        // Then the friend provider survives the friend route, then cannot recreate transport or health work
+        expect(sockets).toHaveLength(startedSocketCount);
+        expect(sockets.some((socket) => socket.close.mock.calls.length > 0)).toBe(true);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(healthRequests.at(-1)?.aborted).toBe(true);
+        expect(vi.getTimerCount()).toBe(0);
+        expect(app.container.querySelector(".solo-local-status")?.textContent).toContain(
+          "Local match"
+        );
+      } finally {
+        app?.dispose();
+        vi.useRealTimers();
+        window.history.replaceState(null, "", originalUrl);
       }
     }
-    vi.stubGlobal("fetch", fetchMock);
-    vi.stubGlobal("WebSocket", TrackingWebSocket);
-    window.history.replaceState(null, "", "/lobby");
-    let app: ReturnType<typeof renderApp> | null = null;
+  );
 
-    try {
-      // When the visitor changes friend routes and chooses solo while that refresh is pending
-      app = renderApp();
-      const startedSocketCount = sockets.length;
-      expect(startedSocketCount).toBeGreaterThan(0);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(vi.getTimerCount()).toBeGreaterThan(0);
-      navigate("/room/ABCDE");
-      navigate("/solo");
-      await act(async () => {
-        resolveLatestHealth?.({ json: async () => ({ activeRooms: 1, maxRooms: 3 }) });
-      });
-      act(() => {
-        vi.advanceTimersByTime(1000);
-      });
+  (DEPLOYMENT_MODE === "p2p" ? it : it.skip)(
+    "starts a direct friend setup from the lobby and disposes it before solo",
+    async () => {
+      // Given a direct-match lobby with browser WebRTC and signaling boundaries.
+      const originalUrl = window.location.href;
+      const fetchMock = vi.fn((_url: string) => new Promise(() => {}));
+      const peers: { close: ReturnType<typeof vi.fn> }[] = [];
+      class TrackingDataChannel {
+        readonly addEventListener = vi.fn();
+        readonly close = vi.fn();
+        readonly send = vi.fn();
+        readyState = "connecting";
+      }
+      class TrackingPeerConnection {
+        readonly addEventListener = vi.fn();
+        readonly removeEventListener = vi.fn();
+        readonly close = vi.fn();
+        readonly createDataChannel = vi.fn(() => new TrackingDataChannel());
+        connectionState: RTCPeerConnectionState = "new";
+        iceGatheringState: RTCIceGatheringState = "complete";
+        localDescription: RTCSessionDescriptionInit | null = null;
 
-      // Then the friend provider survives the friend route, then cannot recreate transport or health work
-      expect(sockets).toHaveLength(startedSocketCount);
-      expect(sockets.some((socket) => socket.close.mock.calls.length > 0)).toBe(true);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(healthRequests.at(-1)?.aborted).toBe(true);
-      expect(vi.getTimerCount()).toBe(0);
-      expect(app.container.querySelector(".solo-local-status")?.textContent).toContain(
-        "Local match"
-      );
-    } finally {
-      app?.dispose();
-      vi.useRealTimers();
-      window.history.replaceState(null, "", originalUrl);
+        constructor() {
+          peers.push(this);
+        }
+
+        createOffer = async (): Promise<RTCSessionDescriptionInit> => ({
+          type: "offer",
+          sdp: "test-offer"
+        });
+
+        setLocalDescription = async (description: RTCSessionDescriptionInit): Promise<void> => {
+          this.localDescription = description;
+        };
+      }
+      vi.stubGlobal("fetch", fetchMock);
+      vi.stubGlobal("RTCPeerConnection", TrackingPeerConnection);
+      window.history.replaceState(null, "", "/lobby");
+      let app: ReturnType<typeof renderApp> | null = null;
+
+      try {
+        app = renderApp();
+
+        // When the visitor starts the existing direct-match action and then chooses solo.
+        await act(async () => {
+          app?.container
+            .querySelector("form.lobby-action-card.is-create")
+            ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+        navigate("/solo");
+
+        // Then setup reaches WebRTC and signaling, then the friend runtime is disposed for solo.
+        expect(peers).toHaveLength(1);
+        expect(fetchMock).toHaveBeenCalledWith(
+          "http://signaling.test/signaling/sessions",
+          expect.objectContaining({ method: "POST" })
+        );
+        expect(peers[0]?.close).toHaveBeenCalledTimes(1);
+        expect(app.container.querySelector(".solo-local-status")?.textContent).toContain(
+          "Local match"
+        );
+      } finally {
+        app?.dispose();
+        window.history.replaceState(null, "", originalUrl);
+      }
     }
-  });
+  );
 });
