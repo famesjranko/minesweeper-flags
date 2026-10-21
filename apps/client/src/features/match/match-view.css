@@ -438,6 +438,14 @@
   display: none;
 }
 
+@media (min-width: 1001px) and (min-height: 501px) {
+  .arcade-chat-region {
+    /* Let the board size the shared row; chat history must scroll inside it. */
+    contain: size;
+    height: auto;
+  }
+}
+
 .arcade-match .arcade-match-chat {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
