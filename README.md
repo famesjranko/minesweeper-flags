@@ -82,7 +82,8 @@ make help       # list every target
 make format     # apply formatting and safe lint fixes (Biome)
 make lint       # check formatting, lint rules, and size and complexity limits
 make typecheck  # type-check every workspace, tests included
-make test       # all workspace tests (Vitest)
+make build      # build every workspace locally
+make test       # workspace tests and deployment safeguards
 make check      # all of the above, the build, and Compose config validation; CI runs this
 make images     # build every Docker image, including the p2p client; CI runs this too
 ```
@@ -100,7 +101,7 @@ Before a public deploy, test a parity stack. These stacks match the public deplo
 
 - [`docs/config-reference.md`](docs/config-reference.md) lists every environment variable, make target, Compose stack, and health endpoint, with recipes.
 - [`deploy/container/README.md`](deploy/container/README.md) covers the public and parity Compose overlays.
-- [`docs/render-demo.md`](docs/render-demo.md) covers the free hosted demo, manual releases, limits, and deploying a fork with your own URLs.
+- [`docs/render-demo.md`](docs/render-demo.md) covers the free hosted demo, local `make deploy-plan` / `make deploy` controls, limits, and deploying a fork with your own URLs.
 - Example env files: [`apps/server/.env.example`](apps/server/.env.example), [`apps/client/.env.example`](apps/client/.env.example), [`apps/client/.env.production.example`](apps/client/.env.production.example), [`deploy/container/public.env.example`](deploy/container/public.env.example), and [`deploy/container/public.p2p.env.example`](deploy/container/public.p2p.env.example).
 
 Public mode (`DEPLOYMENT_MODE=public`) fails fast unless Redis, an explicit origin allowlist, and `TRUST_PROXY=true` are set.

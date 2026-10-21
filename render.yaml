@@ -1,3 +1,4 @@
+# Public example. Configure your own hosts before deploying. See docs/render-demo.md.
 previews:
   generation: "off"
 
@@ -39,7 +40,7 @@ services:
       - key: TRUST_PROXY
         value: "true"
       - key: WEBSOCKET_ALLOWED_ORIGINS
-        value: https://minesweeper-flags-demo.onrender.com
+        value: https://frontend.invalid
       - key: MAX_CONCURRENT_ROOMS
         value: "4"
 
@@ -47,7 +48,7 @@ services:
     name: minesweeper-flags-demo
     runtime: static
     autoDeployTrigger: "off"
-    buildCommand: npm ci && npm run build -w @minesweeper-flags/game-engine -w @minesweeper-flags/shared -w @minesweeper-flags/client
+    buildCommand: npm ci && node scripts/deploy/template.mjs && npm run build -w @minesweeper-flags/game-engine -w @minesweeper-flags/shared -w @minesweeper-flags/client
     staticPublishPath: ./apps/client/dist
     envVars:
       - key: NODE_VERSION
@@ -57,18 +58,18 @@ services:
       - key: VITE_DEPLOYMENT_MODE
         value: server
       - key: VITE_SOCKET_URL
-        value: wss://minesweeper-flags-api.onrender.com/ws
+        value: wss://api.invalid/ws
     routes:
       - type: rewrite
         source: /api/health
-        destination: https://minesweeper-flags-api.onrender.com/health
+        destination: https://api.invalid/health
       - type: rewrite
         source: /*
         destination: /index.html
     headers:
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; connect-src 'self' https://minesweeper-flags-api.onrender.com wss://minesweeper-flags-api.onrender.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';"
+        value: "default-src 'self'; connect-src 'self' https://api.invalid wss://api.invalid; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';"
       - path: /*
         name: X-Content-Type-Options
         value: nosniff

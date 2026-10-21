@@ -1,0 +1,12 @@
+{
+  "workspaceId": "tea-replace",
+  "repository": "YOUR_ACCOUNT/YOUR_REPOSITORY",
+  "frontend": {
+    "serviceId": "srv-replacefrontend",
+    "url": "https://frontend.invalid"
+  },
+  "server": {
+    "serviceId": "srv-replaceserver",
+    "url": "https://api.invalid"
+  }
+}
