@@ -161,10 +161,15 @@ Example templates:
 | `VITE_P2P_STUN_URLS` | unset | no | Comma-separated STUN URLs used by WebRTC in `p2p` builds. |
 | `VITE_P2P_SIGNALING_URL` | unset | required when `VITE_DEPLOYMENT_MODE=p2p` | Base URL for the automated signaling service, such as `https://signal.example.com`. |
 
+Solo has no environment variables. It runs as a browser-local human-versus-bot match, without an API, model download, or backend game service. The home page's Solo and With a friend choices are separate from the `server` and `p2p` operator build choices.
+
 ### Deployment-Aware Client Rules
 
 - `VITE_DEPLOYMENT_MODE=server` keeps the current hosted WebSocket flow.
 - `VITE_DEPLOYMENT_MODE=p2p` removes the hosted room flow from the product UI and requires `VITE_P2P_SIGNALING_URL`.
+- `/solo` starts locally and does not create a friend-play transport. The bot uses public revealed clues and claimed mines, makes certain claims when possible, and otherwise uses bounded probability estimates. It may make estimated moves rather than fully solve a position.
+- Solo progress uses `sessionStorage`, so it can survive a reload in the same tab. If storage is denied or the saved progress is corrupt, the client resets it and starts a fresh match. Closing the tab ends that session.
+- Solo is not an offline-first or PWA mode. A static frontend still needs its first download.
 - `p2p` builds do not require `VITE_SOCKET_URL`.
 - Direct matches still use STUN only in this version.
 - Live direct matches recover after host or guest refresh by using browser-local recovery data plus reconnect control sessions in signaling. The host browser stays the gameplay authority across the refresh.
