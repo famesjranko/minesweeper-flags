@@ -7,7 +7,8 @@ export interface StoredSession {
   sessionToken: string;
 }
 
-const createSessionKey = (roomCode: string) => `msf:session:${roomCode}`;
+const SESSION_KEY_PREFIX = "msf:session:";
+const createSessionKey = (roomCode: string) => `${SESSION_KEY_PREFIX}${roomCode}`;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -118,4 +119,23 @@ export const removeStoredSession = (roomCode: string): void => {
 
 export const getStoredSession = (roomCode: string): StoredSession | null => {
   return browserSessionPersistence.read(roomCode);
+};
+
+export const getStoredRoomForInvite = (inviteToken: string): string | null => {
+  const keys = tryStorage(
+    () =>
+      Array.from({ length: window.localStorage.length }, (_, index) =>
+        window.localStorage.key(index)
+      ),
+    []
+  );
+
+  for (const key of keys) {
+    if (!key?.startsWith(SESSION_KEY_PREFIX)) continue;
+    const roomCode = key.slice(SESSION_KEY_PREFIX.length);
+    const session = getStoredSession(roomCode);
+    if (session?.roomCode === roomCode && session.inviteToken === inviteToken) return roomCode;
+  }
+
+  return null;
 };

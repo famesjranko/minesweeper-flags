@@ -1,0 +1,397 @@
+.page-shell.arcade-page-shell {
+  padding: 28px 48px;
+  background: #101c31;
+  color: #f3f7ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+.arcade-header,
+.arcade-brand,
+.arcade-header-actions,
+.arcade-connection {
+  display: flex;
+  align-items: center;
+}
+
+.arcade-header {
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 53px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ffffff1a;
+}
+
+.arcade-brand {
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.4px;
+  white-space: nowrap;
+}
+
+.arcade-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #5bcaff;
+}
+
+.arcade-header-actions {
+  gap: 20px;
+}
+
+.arcade-connection {
+  gap: 7px;
+  color: #d0daeb;
+  font-size: 12px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.arcade-connection::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef9e91;
+}
+
+.arcade-connection.is-connected::before {
+  background: #60c99c;
+}
+
+.arcade-connection.is-connecting::before {
+  background: #ffd079;
+}
+
+.arcade-room-code {
+  color: #a9bed8;
+  font:
+    11px ui-monospace,
+    monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.arcade-page-shell :is(button, input, summary, a):focus-visible {
+  outline: 3px solid #b5e6ff;
+  outline-offset: 3px;
+}
+
+.arcade-flow-shell {
+  width: min(100%, 1024px);
+  margin: 0 auto;
+}
+
+.arcade-flow {
+  width: min(100%, 640px);
+  margin: 32px auto 0;
+}
+
+.arcade-flow.is-error {
+  max-width: 560px;
+}
+
+.arcade-recovery {
+  width: min(100%, 480px);
+  margin: 100px auto 0;
+  padding: 32px;
+  border: 1px solid #354562;
+  border-radius: 16px;
+  background: #1b2b45;
+  text-align: center;
+}
+
+.arcade-recovery h1 {
+  margin: 0;
+  color: #f3f7ff;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.arcade-recovery p {
+  margin: 12px 0 0;
+  color: #b3c3d9;
+  font-size: 14px;
+}
+
+.arcade-recovery-spinner {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 20px;
+  border: 3px solid #3b536e;
+  border-top-color: #65c7ff;
+  border-radius: 50%;
+  animation: arcade-recovery-spin 1s linear infinite;
+}
+
+@keyframes arcade-recovery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-recovery-spinner {
+    animation: none;
+  }
+}
+
+.arcade-flow-intro {
+  margin-bottom: 24px;
+}
+
+.arcade-flow-eyebrow {
+  margin: 0 0 10px;
+  color: #9cb9df;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.arcade-flow h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.16;
+  letter-spacing: -0.7px;
+}
+
+.arcade-flow-intro > p:last-child {
+  margin: 12px 0 0;
+  color: #afc0d9;
+  font-size: 15px;
+  max-width: 48ch;
+}
+
+.arcade-flow-card {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid #354562;
+  border-radius: 18px;
+  background: #1b2b45;
+}
+
+.arcade-flow-card p {
+  margin: 0;
+  color: #b2c4dc;
+}
+
+.arcade-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: #bacbe4;
+  font-size: 13px;
+}
+
+.arcade-field input {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: #101e34;
+  color: #f5f9ff;
+  font-size: 16px;
+}
+
+.arcade-primary,
+.arcade-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+}
+
+.arcade-primary {
+  background: linear-gradient(#59ccff, #1683d8);
+  color: #062b4e;
+  border-color: #42aeeb;
+  box-shadow: 0 2px #075995;
+}
+
+.arcade-secondary {
+  background: #243c59;
+  color: #dfedff;
+}
+
+.arcade-primary:disabled,
+.arcade-secondary:disabled {
+  background: #30445e;
+  color: #a9bbd2;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.arcade-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 16px;
+  color: #afc8e6;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.arcade-people,
+.arcade-flow-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.arcade-flow-actions.is-single {
+  grid-template-columns: 1fr;
+}
+
+.arcade-seat {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #415975;
+  border-radius: 12px;
+}
+
+.arcade-seat.is-open {
+  border-style: dashed;
+}
+
+.arcade-seat strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.arcade-seat span,
+.arcade-flow-status,
+.arcade-flow-card .arcade-flow-note {
+  color: #afc0d9;
+  font-size: 12px;
+}
+
+.arcade-flow-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.arcade-invite-value {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  background: #101e34;
+  color: #bed3ed;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  user-select: all;
+}
+
+.arcade-token-details {
+  border-top: 1px solid #ffffff1a;
+  padding-top: 20px;
+  color: #adbed7;
+  font-size: 13px;
+}
+
+.arcade-token-details summary {
+  cursor: pointer;
+}
+
+.arcade-token-details .arcade-field,
+.arcade-token-details button {
+  margin-top: 12px;
+}
+
+.arcade-flow .arcade-notice {
+  padding: 16px;
+  border: 1px solid #765b49;
+  border-radius: 12px;
+  background: #332a2b;
+  color: #efcab6;
+  font-size: 14px;
+}
+
+.arcade-flow .arcade-flow-error {
+  color: #ffb9a9;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .page-shell.arcade-page-shell {
+    padding: 20px;
+  }
+
+  .arcade-header {
+    gap: 8px;
+    padding-bottom: 16px;
+    min-height: 49px;
+  }
+
+  .arcade-brand {
+    font-size: 15px;
+  }
+
+  .arcade-header-actions {
+    gap: 12px;
+  }
+
+  .arcade-connection {
+    gap: 5px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .arcade-flow {
+    margin-top: 24px;
+  }
+
+  .arcade-flow-intro {
+    margin-bottom: 20px;
+  }
+
+  .arcade-flow h1 {
+    font-size: 30px;
+  }
+
+  .arcade-flow-intro > p:last-child {
+    font-size: 14px;
+  }
+
+  .arcade-flow-card {
+    padding: 20px;
+    gap: 20px;
+    border-radius: 16px;
+  }
+
+  .arcade-people {
+    gap: 12px;
+  }
+
+  .arcade-seat {
+    padding: 12px;
+  }
+
+  .arcade-flow-actions {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

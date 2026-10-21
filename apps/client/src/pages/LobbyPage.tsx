@@ -36,7 +36,7 @@ export const LobbyPage = () => {
   }
 
   return (
-    <main className="page-shell home-page-shell">
+    <main className="page-shell home-page-shell arcade-page-shell">
       <RoomLobby
         connectionStatus={connectionStatus}
         deploymentMode={DEPLOYMENT_MODE}

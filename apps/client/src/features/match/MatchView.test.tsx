@@ -171,23 +171,24 @@ describe("MatchView turn hint", () => {
       />
     );
 
-  it("tells the player on the narrow layout that it is their move", () => {
+  it("tells the player that it is their move", () => {
     // Given a live match where player-1 holds the turn
     // When player-1 views it
     const html = renderFor("player-1");
 
-    // Then the move pill carries the YOU hint and keeps its desktop text
+    // Then the turn status identifies the player and says it is their turn
     expect(html).toContain('data-turn-hint="YOU"');
-    expect(html).toContain("BLUE MOVE</div>");
+    expect(html).toContain("Your turn · First to 26");
   });
 
-  it("tells the player on the narrow layout that the opponent is moving", () => {
+  it("tells the player that the opponent is moving", () => {
     // Given a live match where player-1 holds the turn
     // When player-2 views it
     const html = renderFor("player-2");
 
     // Then the move pill carries the OPPONENT hint
     expect(html).toContain('data-turn-hint="OPPONENT"');
+    expect(html).toContain("Blue is moving.");
   });
 });
 

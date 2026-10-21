@@ -53,20 +53,26 @@ interface SlotIndicatorProps {
   onRefreshSlots: () => void;
 }
 
-const SlotIndicator = ({
+export const SlotIndicator = ({
   slotAvailability,
   slotsFull,
   refreshing,
   onRefreshSlots
 }: SlotIndicatorProps) => (
   <span className="lobby-slot-indicator">
-    <span className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}>
-      {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
+    <span
+      className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}
+      role="status"
+      aria-label="Rooms in use"
+      title={`${slotAvailability.activeRooms} of ${slotAvailability.maxRooms} rooms in use`}
+    >
+      {slotAvailability.activeRooms}/{slotAvailability.maxRooms}
     </span>
     <button
       type="button"
       className={`lobby-slot-refresh${refreshing ? " is-refreshing" : ""}`}
       onClick={onRefreshSlots}
+      aria-label="Refresh room availability"
       title="Refresh slot count"
     >
       &#x21bb;
@@ -75,10 +81,7 @@ const SlotIndicator = ({
 );
 
 interface ServerMatchActionCardsProps extends CreateActionProps {
-  slotAvailability: SlotAvailability | null;
   slotsFull: boolean;
-  refreshing: boolean;
-  onRefreshSlots: () => void;
   inviteValue: string;
   onInviteValueChange: (value: string) => void;
   canJoinRoom: boolean;
@@ -88,10 +91,7 @@ interface ServerMatchActionCardsProps extends CreateActionProps {
 export const ServerMatchActionCards = ({
   canCreateRoom,
   onCreateRoom,
-  slotAvailability,
   slotsFull,
-  refreshing,
-  onRefreshSlots,
   inviteValue,
   onInviteValueChange,
   canJoinRoom,
@@ -105,24 +105,7 @@ export const ServerMatchActionCards = ({
         onCreateRoom();
       }}
     >
-      <div className="lobby-card-heading">
-        <div className="lobby-card-heading-row">
-          <h2>Create a Match</h2>
-          {slotAvailability !== null && (
-            <SlotIndicator
-              slotAvailability={slotAvailability}
-              slotsFull={slotsFull}
-              refreshing={refreshing}
-              onRefreshSlots={onRefreshSlots}
-            />
-          )}
-        </div>
-        <span>
-          {slotsFull
-            ? "All room slots are in use."
-            : "Host a room and share a private invite link."}
-        </span>
-      </div>
+      <h3 className="arcade-create-heading">Create a Match</h3>
 
       <button
         type="submit"
@@ -131,6 +114,9 @@ export const ServerMatchActionCards = ({
       >
         Create Room
       </button>
+      <p className="lobby-create-description">
+        {slotsFull ? "All room slots are in use." : "Host a room and share a private invite link."}
+      </p>
     </form>
 
     <form
@@ -141,33 +127,34 @@ export const ServerMatchActionCards = ({
       }}
     >
       <div className="lobby-card-heading">
-        <h2>Join by Token</h2>
-        <span>Paste the invite token from another player.</span>
+        <h3>Join by Token</h3>
       </div>
 
-      <label className="field lobby-field">
-        <span>Invite token</span>
-        <input
-          className="invite-token-input"
-          value={inviteValue}
-          onChange={(event) => onInviteValueChange(event.target.value)}
-          maxLength={INVITE_TOKEN_LENGTH}
-          placeholder="Paste invite token"
-          spellCheck={false}
-          autoCapitalize="none"
-          autoCorrect="off"
-        />
-      </label>
+      <div className="lobby-join-entry">
+        <label className="field lobby-field">
+          <span>Invite token</span>
+          <input
+            className="invite-token-input"
+            value={inviteValue}
+            onChange={(event) => onInviteValueChange(event.target.value)}
+            maxLength={INVITE_TOKEN_LENGTH}
+            placeholder="Paste invite token"
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+        </label>
 
-      <button
-        type="submit"
-        className={["lobby-action-button", "lobby-join-button", canJoinRoom ? "is-ready" : ""]
-          .filter(Boolean)
-          .join(" ")}
-        disabled={!canJoinRoom}
-      >
-        Join Match
-      </button>
+        <button
+          type="submit"
+          className={["lobby-action-button", "lobby-join-button", canJoinRoom ? "is-ready" : ""]
+            .filter(Boolean)
+            .join(" ")}
+          disabled={!canJoinRoom}
+        >
+          Join Match
+        </button>
+      </div>
     </form>
   </>
 );

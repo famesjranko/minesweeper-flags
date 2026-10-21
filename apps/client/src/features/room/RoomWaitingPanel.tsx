@@ -1,72 +1,9 @@
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { Link } from "react-router-dom";
 import type { GameClientSnapshot } from "../../app/providers/game-client.store.js";
+import { ArcadePage } from "../../shared-ui/ArcadePage.js";
 import { buildInvitePath } from "./invite-link.js";
-import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
 
 type RoomSession = NonNullable<GameClientSnapshot["session"]>;
-
-const getInviteLink = (inviteToken: string | undefined): string | null => {
-  if (!inviteToken) {
-    return null;
-  }
-
-  return typeof window !== "undefined"
-    ? `${window.location.origin}${buildInvitePath(inviteToken)}`
-    : buildInvitePath(inviteToken);
-};
-
-interface ShareCardsProps {
-  inviteLink: string | null;
-  inviteToken: string | null;
-  hasOpponent: boolean;
-  onCopy: (value: string, successMessage: string) => void;
-}
-
-const ShareRoomCards = ({ inviteLink, inviteToken, hasOpponent, onCopy }: ShareCardsProps) => (
-  <div className="lobby-action-cards">
-    <div className="lobby-action-card is-create">
-      <div className="lobby-card-heading">
-        <h2>Share This Room</h2>
-        <span>Copy the private invite link. It already includes the token.</span>
-      </div>
-
-      <button
-        type="button"
-        className="lobby-action-button lobby-create-button"
-        disabled={!inviteLink}
-        onClick={() => (inviteLink ? onCopy(inviteLink, "Invite link copied.") : undefined)}
-      >
-        {inviteLink ? "Copy Invite Link" : "Invite Link Unavailable"}
-      </button>
-    </div>
-
-    <div className="lobby-action-card is-join">
-      <div className="lobby-card-heading">
-        <h2>Copy Invite Token</h2>
-        <span>{hasOpponent ? "Guest connected." : "Manual fallback."}</span>
-      </div>
-
-      <div className="field lobby-field">
-        <span>Invite token</span>
-        <div className="invite-code-readonly invite-token-readonly">
-          {inviteToken ?? "Unavailable"}
-        </div>
-      </div>
-
-      <button
-        type="button"
-        className={["lobby-action-button", "lobby-join-button", inviteToken ? "is-ready" : ""]
-          .filter(Boolean)
-          .join(" ")}
-        disabled={!inviteToken}
-        onClick={() => (inviteToken ? onCopy(inviteToken, "Invite token copied.") : undefined)}
-      >
-        {inviteToken ? "Copy Invite Token" : "Invite Token Unavailable"}
-      </button>
-    </div>
-  </div>
-);
 
 interface RoomWaitingPanelProps {
   roomCode: string;
@@ -77,7 +14,6 @@ interface RoomWaitingPanelProps {
   onCopy: (value: string, successMessage: string) => void;
 }
 
-// The server-hosted waiting room, shown to the host until player two joins.
 export const RoomWaitingPanel = ({
   roomCode,
   connectionStatus,
@@ -89,70 +25,80 @@ export const RoomWaitingPanel = ({
   const host = session.players[0];
   const opponent = session.players[1];
   const inviteToken = session.inviteToken ?? null;
-  const inviteLink = getInviteLink(session.inviteToken);
+  const inviteLink = inviteToken
+    ? typeof window !== "undefined"
+      ? `${window.location.origin}${buildInvitePath(inviteToken)}`
+      : buildInvitePath(inviteToken)
+    : null;
 
   return (
-    <main className="page-shell home-page-shell room-page-shell">
-      <section className="panel hero-panel lobby-panel waiting-lobby-panel">
-        <div className="hero-copy">
-          <p className="eyebrow">MSN-style competitive minesweeper</p>
-          <h1>Minesweeper Flags</h1>
-          <p>
-            Room <strong>{roomCode}</strong> is ready. Share the private invite link and the match
-            will begin as soon as player two joins.
-          </p>
+    <ArcadePage connectionStatus={connectionStatus}>
+      <section className="arcade-flow">
+        <div className="arcade-flow-intro">
+          <p className="arcade-flow-eyebrow">Private match</p>
+          <h1>Your room is ready.</h1>
+          <p>Send a friend the invite link. The game starts when they join.</p>
         </div>
-
-        <div className="lobby-stage">
-          <LobbyPreviewPanel
-            title="Classic duel board"
-            badge="2 players"
-            featurePills={[
-              "Shared 16x16 field",
-              "First to 26 mines",
-              `One comeback bomb at down ${MIN_BOMB_DEFICIT}+`
-            ]}
-          />
-
-          <section className="lobby-control-panel">
-            <div className="lobby-identity-card">
-              <div className="lobby-card-heading">
-                <h2>Room Ready</h2>
-                <span className={`lobby-connection-pill is-${connectionStatus}`}>
-                  {connectionStatus}
-                </span>
-              </div>
-
-              <div className="field lobby-field">
-                <span>Room reference</span>
-                <div className="invite-code-readonly">{roomCode}</div>
+        <div className="arcade-flow-card">
+          <div className="arcade-people">
+            <div className="arcade-seat">
+              <strong title={host?.displayName ?? session.displayName}>
+                {host?.displayName ?? session.displayName}
+              </strong>
+              <span>Host · Ready</span>
+            </div>
+            <div className={`arcade-seat${opponent ? "" : " is-open"}`}>
+              <strong>{opponent?.displayName ?? "Your friend"}</strong>
+              <span>{opponent ? "Guest · Connected" : "Waiting to join"}</span>
+            </div>
+          </div>
+          <div className="arcade-field">
+            <span>Private invite link</span>
+            <div className="arcade-invite-value">{inviteLink ?? "Unavailable"}</div>
+          </div>
+          <button
+            type="button"
+            className="arcade-primary"
+            disabled={!inviteLink}
+            onClick={() => (inviteLink ? onCopy(inviteLink, "Invite link copied.") : undefined)}
+          >
+            Copy Invite Link
+          </button>
+          <div className="arcade-flow-status" role="status">
+            <span>
+              {inviteNotice ?? (opponent ? "Guest connected." : "Waiting for player two.")}
+            </span>
+            <span>Room {roomCode}</span>
+          </div>
+          <details className="arcade-token-details">
+            <summary>Copy a token instead</summary>
+            <div className="arcade-field">
+              <span>Invite token</span>
+              <div className="arcade-invite-value invite-token-readonly">
+                {inviteToken ?? "Unavailable"}
               </div>
             </div>
-
-            <ShareRoomCards
-              inviteLink={inviteLink}
-              inviteToken={inviteToken}
-              hasOpponent={Boolean(opponent)}
-              onCopy={onCopy}
-            />
-          </section>
+            <button
+              type="button"
+              className="arcade-secondary"
+              disabled={!inviteToken}
+              onClick={() =>
+                inviteToken ? onCopy(inviteToken, "Invite token copied.") : undefined
+              }
+            >
+              Copy Invite Token
+            </button>
+          </details>
+          {error ? (
+            <p className="arcade-flow-error" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
-
-        <div className="status-strip lobby-status-strip">
-          <span className="lobby-status-note">
-            {inviteNotice ??
-              (inviteLink ? "Waiting for player two." : "Invite link unavailable on this device.")}
-          </span>
-          <span className="lobby-status-note">
-            Host: {host?.displayName ?? session.displayName}.{" "}
-            {opponent ? `Guest joined as ${opponent.displayName}.` : "Guest slot is open."}
-          </span>
-          <Link className="lobby-status-link" to="/lobby">
-            Back To Lobby
-          </Link>
-          {error ? <span className="error-text">{error}</span> : null}
-        </div>
+        <Link className="arcade-back" to="/lobby">
+          ← Back To Lobby
+        </Link>
       </section>
-    </main>
+    </ArcadePage>
   );
 };

@@ -146,15 +146,18 @@ export const BoardGrid = ({
       )
     : null;
 
+  const gridStyle = {
+    "--board-columns": match.board.columns,
+    gridTemplateColumns: `repeat(${match.board.columns}, minmax(0, 1fr))`
+  };
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: mouse leave only clears the hover preview; the cells are buttons.
     <div
       className={["board-grid", shouldShowBombPreview ? "is-bomb-preview-active" : ""]
         .filter(Boolean)
         .join(" ")}
-      style={{
-        gridTemplateColumns: `repeat(${match.board.columns}, minmax(0, 1fr))`
-      }}
+      style={gridStyle}
       onMouseLeave={() => setHoveredCell(null)}
     >
       {shouldShowBombPreview && previewBounds ? (

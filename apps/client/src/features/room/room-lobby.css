@@ -1,0 +1,384 @@
+.arcade-lobby {
+  width: min(100%, 1024px);
+  margin: 0 auto;
+  color: #f3f7ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+.arcade-footer {
+  display: flex;
+  align-items: center;
+}
+
+.arcade-stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.arcade-introduction {
+  padding: 32px 0 28px;
+}
+
+.arcade-eyebrow {
+  margin: 0 0 10px;
+  color: #9cb9df;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.arcade-introduction h1 {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.15;
+  letter-spacing: -1.2px;
+}
+
+.arcade-introduction h1 span {
+  color: #65c7ff;
+}
+
+.arcade-description {
+  margin: 12px 0 0;
+  color: #b0bed3;
+  font-size: 15px;
+}
+
+.arcade-illustration {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #354562;
+  border-radius: 18px;
+  background: #1b2b45;
+}
+
+.arcade-board-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #adbed7;
+  font-size: 12px;
+}
+
+.arcade-lobby .lobby-preview-card,
+.arcade-lobby .lobby-preview-window {
+  display: block;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.arcade-lobby .lobby-preview-header,
+.arcade-lobby .lobby-preview-sidebar {
+  display: none;
+}
+
+.arcade-lobby .lobby-preview-board {
+  gap: 5px;
+  border: 1px solid #687b9c;
+  border-radius: 13px;
+  padding: 9px;
+  background: #080f1d;
+  box-shadow: none;
+}
+
+.arcade-lobby .lobby-preview-cell {
+  font-size: 24px;
+}
+
+.arcade-lobby .lobby-control-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid #354562;
+  border-radius: 18px;
+  background: #1b2b45;
+  box-shadow: none;
+}
+
+.arcade-lobby .lobby-identity-card,
+.arcade-lobby .lobby-action-card.is-create,
+.arcade-lobby .lobby-action-card.is-join {
+  min-width: 0;
+  gap: 12px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.arcade-lobby .lobby-identity-card h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
+}
+
+.arcade-lobby .lobby-identity-card {
+  gap: 20px;
+}
+
+.lobby-identity-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.arcade-lobby .lobby-field span {
+  color: #bacbe4;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.arcade-lobby .lobby-field {
+  gap: 8px;
+}
+
+.arcade-lobby .lobby-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid #526888;
+  border-radius: 12px;
+  padding: 12px;
+  background: #101e34;
+  box-shadow: none;
+  color: #f5f9ff;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
+.arcade-lobby input::placeholder {
+  color: #9aafcc;
+  opacity: 1;
+}
+
+.arcade-lobby .lobby-action-card.is-join .lobby-field input.invite-token-input {
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.arcade-lobby .lobby-action-cards {
+  display: contents;
+}
+
+.arcade-create-heading,
+.arcade-lobby .lobby-join-entry .lobby-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.arcade-lobby .lobby-action-button {
+  min-height: 48px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.arcade-lobby .lobby-create-button {
+  background: linear-gradient(#59ccff, #1683d8);
+  box-shadow: 0 3px 0 #075995;
+  color: #062b4e;
+}
+
+.arcade-lobby .lobby-action-button:disabled {
+  background: #30445e;
+  box-shadow: none;
+  color: #a9bbd2;
+}
+
+.arcade-lobby .lobby-create-description,
+.arcade-lobby .waiting-room-copy,
+.arcade-lobby .lobby-card-heading > span {
+  margin: 0;
+  color: #afc0d9;
+  font-size: 13px;
+}
+
+.arcade-lobby .lobby-slot-indicator {
+  justify-content: space-between;
+  gap: 2px;
+  min-height: 44px;
+}
+
+.arcade-lobby .lobby-slot-pill {
+  padding: 0;
+  background: none;
+  color: #afc0d9;
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.arcade-lobby .lobby-slot-pill.is-full {
+  color: #ffb9a9;
+}
+
+.arcade-lobby .lobby-slot-refresh {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  color: #afc0d9;
+  font-size: 18px;
+}
+
+.arcade-lobby .lobby-slot-refresh:hover {
+  color: #f3f7ff;
+}
+
+.arcade-lobby .lobby-action-card.is-join {
+  border-top: 1px solid #ffffff1a;
+  padding-top: 24px;
+}
+
+.arcade-lobby .lobby-card-heading {
+  display: block;
+}
+
+.arcade-lobby .lobby-card-heading h2,
+.arcade-lobby .lobby-card-heading h3 {
+  margin: 0;
+  color: #f3f7ff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.arcade-lobby .lobby-join-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.arcade-lobby .lobby-join-button,
+.arcade-lobby .lobby-join-button.is-ready {
+  border: 1px solid #60789a;
+  background: #304764;
+  box-shadow: none;
+  color: #e0ebfa;
+  white-space: nowrap;
+}
+
+.arcade-lobby :is(button, input, summary):focus-visible {
+  outline: 3px solid #b5e6ff;
+  outline-offset: 3px;
+}
+
+.arcade-footer {
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid #ffffff1a;
+  margin-top: 28px;
+  padding: 20px 0 4px;
+  color: #afc0d9;
+  font-size: 12px;
+}
+
+.arcade-footer p {
+  margin: 0;
+}
+
+.arcade-footer details {
+  max-width: 40ch;
+}
+
+.arcade-footer summary {
+  cursor: pointer;
+}
+
+.arcade-footer details p {
+  margin-top: 12px;
+}
+
+.arcade-error {
+  border: 1px solid #b96b63;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #ffd3ca;
+  background: #422d35;
+}
+
+@media (max-width: 900px) {
+  .arcade-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .arcade-introduction {
+    padding: 24px 0;
+  }
+
+  .arcade-eyebrow {
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+
+  .arcade-introduction h1 {
+    font-size: 32px;
+  }
+
+  .arcade-introduction h1 span {
+    display: block;
+  }
+
+  .arcade-description {
+    max-width: 39ch;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  .arcade-illustration {
+    display: none;
+  }
+
+  .arcade-lobby .lobby-control-panel {
+    gap: 16px;
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .arcade-lobby .lobby-identity-card h2 {
+    font-size: 18px;
+  }
+
+  .arcade-lobby .lobby-action-card.is-join {
+    padding-top: 16px;
+  }
+
+  .arcade-lobby .lobby-action-button {
+    padding-right: 12px;
+    padding-left: 12px;
+    font-size: 14px;
+  }
+
+  .arcade-footer {
+    align-items: start;
+    margin-top: 24px;
+    font-size: 11px;
+  }
+}

@@ -15,6 +15,8 @@
 
 This is an homage to the MSN Messenger game I used to play with friends back in the day. It is realtime two-player competitive Minesweeper with room chat, and it runs in the browser.
 
+[Play the live demo](https://minesweeper-flags-demo.onrender.com/). The free server can take about a minute to wake up. Invite a friend or use two browser sessions.
+
 ## How to play
 
 - One player creates a room or hosts a direct match.
@@ -98,6 +100,7 @@ Before a public deploy, test a parity stack. These stacks match the public deplo
 
 - [`docs/config-reference.md`](docs/config-reference.md) lists every environment variable, make target, Compose stack, and health endpoint, with recipes.
 - [`deploy/container/README.md`](deploy/container/README.md) covers the public and parity Compose overlays.
+- [`deploy/render/README.md`](deploy/render/README.md) covers the free hosted demo and manual updates on Render.
 - Example env files: [`apps/server/.env.example`](apps/server/.env.example), [`apps/client/.env.example`](apps/client/.env.example), [`apps/client/.env.production.example`](apps/client/.env.production.example), [`deploy/container/public.env.example`](deploy/container/public.env.example), and [`deploy/container/public.p2p.env.example`](deploy/container/public.p2p.env.example).
 
 Public mode (`DEPLOYMENT_MODE=public`) fails fast unless Redis, an explicit origin allowlist, and `TRUST_PROXY=true` are set.

@@ -1,8 +1,9 @@
 import { inviteTokenSchema } from "@minesweeper-flags/shared";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
-import { LobbyPreviewPanel } from "../features/room/LobbyPreviewPanel.js";
+import { getStoredRoomForInvite } from "../lib/socket/session-storage.js";
+import { ArcadePage } from "../shared-ui/ArcadePage.js";
 
 type InviteErrorState = "full" | "invalid";
 
@@ -40,27 +41,25 @@ const InviteErrorPanel = ({
   hasInviteToken: boolean;
   error: string | null;
 }) => (
-  <main className="page-shell home-page-shell">
-    <section className="panel hero-panel lobby-panel invite-panel invite-error-panel">
-      <div className="hero-copy invite-hero-copy">
-        <p className="eyebrow">Private invite</p>
+  <ArcadePage>
+    <section className="arcade-flow is-error">
+      <div className="arcade-flow-intro">
+        <p className="arcade-flow-eyebrow">Private invitation</p>
         <h1>{errorState === "full" ? "Match already claimed" : "Invite unavailable"}</h1>
         <p>{getInviteErrorMessage(errorState, hasInviteToken)}</p>
       </div>
-
-      <div className="waiting-action-row">
-        <Link className="primary-button link-button" to="/lobby">
+      <div className="arcade-flow-card">
+        <Link className="arcade-primary" to="/lobby">
           Back To Lobby
         </Link>
+        {error && hasInviteToken ? (
+          <p className="arcade-flow-error" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
-
-      <p className="waiting-room-note">
-        Invite links are the only public join path now. Room codes are shown only after you enter
-        the room.
-      </p>
-      {error && hasInviteToken ? <span className="error-text">{error}</span> : null}
     </section>
-  </main>
+  </ArcadePage>
 );
 
 export const InvitePage = () => {
@@ -69,7 +68,6 @@ export const InvitePage = () => {
   const activeInviteToken = parsedInviteToken.success ? parsedInviteToken.data : null;
   const { connectionStatus, error, session, joinRoom, clearError } = useGameClient();
   const [displayName, setDisplayName] = useState("Captain Sweeper");
-  const joinFormId = useId();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: clear a stale error only when the invite token changes.
   useEffect(() => {
@@ -79,6 +77,9 @@ export const InvitePage = () => {
   if (session?.roomCode) {
     return <Navigate to={`/room/${session.roomCode}`} replace />;
   }
+
+  const savedRoomCode = activeInviteToken ? getStoredRoomForInvite(activeInviteToken) : null;
+  if (savedRoomCode) return <Navigate to={`/room/${savedRoomCode}`} replace />;
 
   const trimmedDisplayName = displayName.trim();
   const canJoin = trimmedDisplayName.length > 0 && activeInviteToken !== null;
@@ -95,107 +96,47 @@ export const InvitePage = () => {
   }
 
   return (
-    <main className="page-shell home-page-shell">
-      <section className="panel hero-panel lobby-panel invite-panel">
-        <div className="hero-copy invite-hero-copy">
-          <p className="eyebrow">Private room invitation</p>
-          <h1>Join Minesweeper Flags</h1>
-          <div className="invite-room-banner">
-            <span className="invite-room-banner-label">Invite link loaded</span>
-            <strong>Guest seat</strong>
+    <ArcadePage connectionStatus={connectionStatus}>
+      <section className="arcade-flow">
+        <div className="arcade-flow-intro">
+          <p className="arcade-flow-eyebrow">Private invitation</p>
+          <h1>A friend invited you.</h1>
+          <p>Choose a display name to join their game.</p>
+        </div>
+        <form
+          className="arcade-flow-card"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (canJoin && activeInviteToken) joinRoom(trimmedDisplayName, activeInviteToken);
+          }}
+        >
+          <div className="arcade-flow-status">
+            <span>Invite link loaded</span>
+            <span>Guest seat</span>
           </div>
-          <p>
-            Someone shared a private match with you. Pick a display name and claim the open guest
-            seat with this invite link.
-          </p>
-        </div>
-
-        <div className="lobby-stage invite-stage">
-          <LobbyPreviewPanel
-            title="Incoming match"
-            badge="invite"
-            featurePills={["Private invite link", "Shared 16x16 field", "First to 26 mines"]}
-          />
-
-          <section className="lobby-control-panel invite-control-panel">
-            <div className="lobby-identity-card invite-summary-card">
-              <div className="lobby-card-heading">
-                <h2>Join This Room</h2>
-                <span className={`lobby-connection-pill is-${connectionStatus}`}>
-                  {connectionStatus}
-                </span>
-              </div>
-
-              <div className="invite-room-readout invite-private-readout">
-                <span className="invite-room-readout-label">Access model</span>
-                <strong>Token-based invite</strong>
-              </div>
-
-              <label className="field lobby-field">
-                <span>Display name</span>
-                {/* The field sits outside the join form for layout; `form` keeps Enter submitting it. */}
-                <input
-                  form={joinFormId}
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  maxLength={20}
-                  placeholder="Enter your display name"
-                />
-              </label>
-            </div>
-
-            <form
-              id={joinFormId}
-              className="lobby-action-card is-join invite-join-card"
-              onSubmit={(event) => {
-                event.preventDefault();
-
-                if (!canJoin || !activeInviteToken) {
-                  return;
-                }
-
-                joinRoom(trimmedDisplayName, activeInviteToken);
-              }}
-            >
-              <div className="lobby-card-heading">
-                <h2>Join Game</h2>
-                <span>This link is the room's join credential.</span>
-              </div>
-
-              <p className="invite-info-copy">
-                The match starts as soon as both players are connected. Room codes are shown after
-                entry as a reference, not as a public join key.
-              </p>
-
-              <button
-                type="submit"
-                className={["lobby-action-button", "lobby-join-button", canJoin ? "is-ready" : ""]
-                  .filter(Boolean)
-                  .join(" ")}
-                disabled={!canJoin}
-              >
-                Join Game
-              </button>
-
-              <div className="invite-secondary-actions">
-                <Link className="secondary-button link-button" to="/lobby">
-                  Back To Lobby
-                </Link>
-              </div>
-            </form>
-          </section>
-        </div>
-
-        <div className="status-strip lobby-status-strip invite-status-strip">
-          <span className="lobby-status-note">A private invite link is loaded for this tab.</span>
-          <span className="lobby-status-note">
-            {canJoin
-              ? "Ready to join. Press Join Game."
-              : "Pick a display name to unlock Join Game."}
-          </span>
-          {error ? <span className="error-text">{error}</span> : null}
-        </div>
+          <label className="arcade-field">
+            <span>Display name</span>
+            <input
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              maxLength={20}
+              placeholder="Enter your display name"
+            />
+          </label>
+          <button type="submit" className="arcade-primary" disabled={!canJoin}>
+            Join Game
+          </button>
+          <p className="arcade-flow-note">Shared 16×16 board · First to 26 mines</p>
+          {error ? (
+            <p className="arcade-flow-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </form>
+        <Link className="arcade-back" to="/lobby">
+          ← Back To Lobby
+        </Link>
       </section>
-    </main>
+    </ArcadePage>
   );
 };

@@ -1,0 +1,101 @@
+previews:
+  generation: "off"
+
+services:
+  - type: keyvalue
+    name: minesweeper-flags-state
+    plan: free
+    region: frankfurt
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: minesweeper-flags-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./apps/server/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /ready
+    envVars:
+      - key: DEPLOYMENT_MODE
+        value: public
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "3001"
+      - key: WS_PATH
+        value: /ws
+      - key: STATE_BACKEND
+        value: redis
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: minesweeper-flags-state
+          property: connectionString
+      - key: REDIS_KEY_PREFIX
+        value: minesweeper-flags-demo
+      - key: TRUST_PROXY
+        value: "true"
+      - key: WEBSOCKET_ALLOWED_ORIGINS
+        value: https://minesweeper-flags-demo.onrender.com
+      - key: MAX_CONCURRENT_ROOMS
+        value: "4"
+
+  - type: web
+    name: minesweeper-flags-demo
+    runtime: static
+    autoDeployTrigger: "off"
+    buildCommand: npm ci && npm run build -w @minesweeper-flags/game-engine -w @minesweeper-flags/shared -w @minesweeper-flags/client
+    staticPublishPath: ./apps/client/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.23.3
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+      - key: VITE_DEPLOYMENT_MODE
+        value: server
+      - key: VITE_SOCKET_URL
+        value: wss://minesweeper-flags-api.onrender.com/ws
+    routes:
+      - type: rewrite
+        source: /api/health
+        destination: https://minesweeper-flags-api.onrender.com/health
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; connect-src 'self' https://minesweeper-flags-api.onrender.com wss://minesweeper-flags-api.onrender.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Permissions-Policy
+        value: accelerometer=(), autoplay=(), camera=(), display-capture=(), fullscreen=(), geolocation=(), microphone=(), payment=(), usb=()
+      - path: /
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /lobby
+        name: Cache-Control
+        value: no-cache
+      - path: /invite/*
+        name: Cache-Control
+        value: no-cache
+      - path: /room/*
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

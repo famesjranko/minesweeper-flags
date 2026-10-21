@@ -55,7 +55,7 @@ const getRematchState = (currentPlayer: Player, opponent: Player | null) => {
 };
 
 // The result sits over the finished board, in the winner's colour, with the rematch action
-// beside it, so the end of a match is stated where the player is already looking.
+// below it, so the end of a match is stated where the player is already looking.
 export const MatchResultRibbon = ({
   match,
   currentPlayerId,
@@ -78,8 +78,8 @@ export const MatchResultRibbon = ({
     <div className="match-result-overlay">
       <section className={`match-result-ribbon is-${tone}`} role="status" aria-live="polite">
         <p className="match-result-title">{getResultTitle(match, currentPlayerId)}</p>
-        <div className="match-result-row">
-          <span className="match-result-score">{score}</span>
+        <p className="match-result-score">{score}</p>
+        <div className="arcade-result-actions">
           <button
             type="button"
             className="match-result-button"
@@ -87,6 +87,9 @@ export const MatchResultRibbon = ({
           >
             {rematch.label}
           </button>
+          <a href="/lobby" className="arcade-result-back">
+            Back to lobby
+          </a>
         </div>
         {rematch.status ? <p className="match-result-status">{rematch.status}</p> : null}
       </section>

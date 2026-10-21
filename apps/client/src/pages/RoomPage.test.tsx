@@ -2,6 +2,7 @@
 
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -78,6 +79,10 @@ vi.mock("../features/connection/useGameClient.js", () => ({
   useGameClient: () => mockState.current
 }));
 
+vi.mock("../features/match/MatchView.js", () => ({
+  MatchView: () => <div>Recovered board</div>
+}));
+
 import { RoomPage } from "./RoomPage.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -121,6 +126,112 @@ describe("RoomPage", () => {
     resetMockState();
   });
 
+  it("shows recovery on the first paint when a saved seat is available", () => {
+    // Given a fresh page with a saved seat but no in-memory session
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+
+    // When the page renders before its reconnect effect runs
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={["/room/DIRECT"]}>
+        <Routes>
+          <Route path="/room/:roomCode" element={<RoomPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Then recovery is visible without an unavailable-room flash
+    expect(html).toContain("Restoring your game…");
+    expect(html).not.toContain("Reconnect to your game.");
+    expect(mockState.current.reconnect).not.toHaveBeenCalled();
+  });
+
+  it("keeps recovery visible between the restored seat and the board snapshot", () => {
+    // Given a saved game whose seat and board arrive in separate events
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+    const rerender = () =>
+      act(() =>
+        root.render(
+          <MemoryRouter initialEntries={["/room/DIRECT"]}>
+            <Routes>
+              <Route path="/room/:roomCode" element={<RoomPage />} />
+            </Routes>
+          </MemoryRouter>
+        )
+      );
+
+    // When only the two-player seat has been restored
+    resetMockState();
+    mockState.current.session!.players = [
+      { playerId: "host-1", displayName: "Host" },
+      { playerId: "guest-1", displayName: "Guest" }
+    ];
+    rerender();
+
+    // Then recovery stays visible until the board arrives
+    expect(container.textContent).toContain("Restoring your game…");
+    expect(container.textContent).not.toContain("Host Direct Match");
+    mockState.current.match = {};
+    rerender();
+    expect(container.textContent).toContain("Recovered board");
+    expect(container.textContent).not.toContain("Restoring your game…");
+    act(() => root.unmount());
+  });
+
+  it("leaves recovery for the waiting room when the restored seat has no opponent", () => {
+    // Given a saved waiting room
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+    expect(container.textContent).toContain("Restoring your game…");
+
+    // When the server restores its single host seat
+    resetMockState();
+    act(() =>
+      root.render(
+        <MemoryRouter initialEntries={["/room/DIRECT"]}>
+          <Routes>
+            <Route path="/room/:roomCode" element={<RoomPage />} />
+          </Routes>
+        </MemoryRouter>
+      )
+    );
+
+    // Then the real waiting room is shown
+    expect(container.textContent).toContain("Host Direct Match");
+    expect(container.textContent).not.toContain("Restoring your game…");
+    act(() => root.unmount());
+  });
+
+  it("shows the failure when saved-seat recovery is rejected", () => {
+    // Given a pending saved-seat recovery
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+
+    // When the server rejects the saved credential
+    mockState.current.hasStoredSession = () => false;
+    mockState.current.error = "Your saved room session is no longer valid. Join the room again.";
+    act(() =>
+      root.render(
+        <MemoryRouter initialEntries={["/room/DIRECT"]}>
+          <Routes>
+            <Route path="/room/:roomCode" element={<RoomPage />} />
+          </Routes>
+        </MemoryRouter>
+      )
+    );
+
+    // Then recovery stops and the actual failure is visible
+    expect(container.textContent).toContain("Room unavailable");
+    expect(container.textContent).toContain("Your saved room session is no longer valid.");
+    expect(container.textContent).not.toContain("Restoring your game…");
+    expect(mockState.current.reconnect).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
   it("shows the host direct-match waiting room in p2p mode", () => {
     const { container, root } = renderRoomPage();
 
@@ -142,13 +253,13 @@ describe("RoomPage", () => {
 
     const { container, root } = renderRoomPage();
 
-    expect(container.textContent).toContain("Room unavailable");
+    expect(container.textContent).toContain("Reconnect to your game.");
     expect(container.textContent).toContain("active in another tab or window");
     expect(container.textContent).toContain(
       "Another tab has claimed control. Close other tabs for this room, or reconnect to reclaim control."
     );
 
-    const reconnectButton = container.querySelector("button.primary-button");
+    const reconnectButton = container.querySelector("button.arcade-primary");
     expect(reconnectButton).not.toBeNull();
     expect(reconnectButton?.textContent).toBe("Reconnect");
 
@@ -213,7 +324,7 @@ describe("RoomPage", () => {
       "Recovery data was cleared. You can start a fresh direct match from the lobby."
     );
 
-    const buttons = Array.from(container.querySelectorAll("button.primary-button"));
+    const buttons = Array.from(container.querySelectorAll("button.arcade-primary"));
     const reconnectButton = buttons.find((button) => button.textContent === "Reconnect");
     expect(reconnectButton).toBeUndefined();
 
@@ -232,7 +343,7 @@ describe("RoomPage", () => {
     expect(container.textContent).toContain("Room unavailable");
     expect(container.textContent).toContain("now have control");
 
-    const buttons = Array.from(container.querySelectorAll("button.primary-button"));
+    const buttons = Array.from(container.querySelectorAll("button.arcade-primary"));
     const reconnectButton = buttons.find((button) => button.textContent === "Reconnect");
     expect(reconnectButton).toBeUndefined();
 
@@ -249,12 +360,14 @@ describe("RoomPage", () => {
 
     const { container, root } = renderRoomPage();
 
-    const reconnectButton = container.querySelector("button.primary-button");
+    const reconnectButton = container.querySelector("button.arcade-primary");
 
+    mockState.current.reconnect.mockClear();
     act(() => {
       reconnectButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
+    expect(mockState.current.reconnect).toHaveBeenCalledTimes(1);
     expect(mockState.current.reconnect).toHaveBeenCalledWith("DIRECT");
 
     act(() => {

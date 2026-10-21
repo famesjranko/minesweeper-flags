@@ -12,6 +12,8 @@ import type { RealtimeServices } from "./realtime-services.js";
 import { sendServerError } from "./socket-events.js";
 import type { SocketHeartbeatMonitor } from "./socket-heartbeat.js";
 
+const ABANDONED_ROOM_GRACE_MS = 30_000;
+
 interface ConnectionHandlerDependencies {
   services: RealtimeServices;
   stateStores: StateStores;
@@ -29,10 +31,19 @@ const getCloseReason = (reasonBuffer: Buffer): string | undefined => {
 
 /**
  * Owns each WebSocket connection from open to close: admission, session refresh
- * on heartbeat, and disconnect handling that removes rooms nobody is connected to.
+ * on heartbeat, and disconnect handling with a brief grace period for reloads.
  */
 export class RealtimeConnectionHandler {
+  private readonly cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private disposed = false;
+
   constructor(private readonly dependencies: ConnectionHandlerDependencies) {}
+
+  dispose(): void {
+    this.disposed = true;
+    for (const timer of this.cleanupTimers.values()) clearTimeout(timer);
+    this.cleanupTimers.clear();
+  }
 
   accept(socket: WebSocket, request: IncomingMessage): void {
     const { abusePrevention } = this.dependencies.services;
@@ -141,7 +152,7 @@ export class RealtimeConnectionHandler {
         null,
         await commandService.disconnectPlayer(session)
       );
-      await this.deleteRoomIfAbandoned(session.roomCode);
+      this.scheduleAbandonedRoomCleanup(session.roomCode);
     })().catch((error) => {
       logger.error("realtime.connection_close_failed", {
         error,
@@ -151,6 +162,19 @@ export class RealtimeConnectionHandler {
         playerId: session.playerId
       });
     });
+  }
+
+  private scheduleAbandonedRoomCleanup(roomCode: string): void {
+    if (this.disposed) return;
+    clearTimeout(this.cleanupTimers.get(roomCode));
+    const timer = setTimeout(() => {
+      this.cleanupTimers.delete(roomCode);
+      void this.deleteRoomIfAbandoned(roomCode).catch((error) => {
+        logger.error("realtime.empty_room_cleanup_failed", { roomCode, error });
+      });
+    }, ABANDONED_ROOM_GRACE_MS);
+    timer.unref();
+    this.cleanupTimers.set(roomCode, timer);
   }
 
   private async deleteRoomIfAbandoned(roomCode: string): Promise<void> {

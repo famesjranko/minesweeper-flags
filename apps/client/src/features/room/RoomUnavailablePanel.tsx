@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArcadePage } from "../../shared-ui/ArcadePage.js";
 
 const isDisplacedError = (error: string | null): boolean =>
   error?.includes("active in another tab or window") ?? false;
@@ -11,16 +12,16 @@ const isClaimVictoryError = (error: string | null): boolean =>
   (error.includes("now have control") || error.includes("now have an active claim"));
 
 const ConflictGuidance = ({ error }: { error: string | null }) => (
-  <div className="conflict-guidance">
-    <p className="conflict-message">{error}</p>
+  <div className="arcade-notice">
+    <p className="arcade-flow-note">{error}</p>
     {isDisplacedError(error) && (
-      <p className="conflict-action">
+      <p className="arcade-flow-note">
         Another tab has claimed control. Close other tabs for this room, or reconnect to reclaim
         control.
       </p>
     )}
     {isRecoveryUnavailableError(error) && (
-      <p className="conflict-action">
+      <p className="arcade-flow-note">
         Recovery data was cleared. You can start a fresh direct match from the lobby.
       </p>
     )}
@@ -49,30 +50,38 @@ export const RoomUnavailablePanel = ({
     : "Create or join the room from the home page first.";
 
   return (
-    <main className="page-shell room-page-shell">
-      <section className="panel waiting-panel room-unavailable-panel">
-        <h1>Room unavailable</h1>
-        <p>
-          This browser is not currently attached to room <strong>{roomCode}</strong>.
-        </p>
-        {showConflictGuidance && <ConflictGuidance error={error} />}
-        {showClaimVictory && (
-          <div className="claim-victory-notice">
-            <p>{error}</p>
+    <ArcadePage>
+      <section className="arcade-flow is-error">
+        <div className="arcade-flow-intro">
+          <p className="arcade-flow-eyebrow">Room {roomCode}</p>
+          <h1>
+            {canReconnect && !showClaimVictory ? "Reconnect to your game." : "Room unavailable"}
+          </h1>
+          <p>
+            This browser is not currently attached to room <strong>{roomCode}</strong>.
+          </p>
+        </div>
+        <div className="arcade-flow-card">
+          {showConflictGuidance && <ConflictGuidance error={error} />}
+          {showClaimVictory && <p className="arcade-notice">{error}</p>}
+          {!showConflictGuidance && !showClaimVictory && <p>{error ?? fallbackMessage}</p>}
+          <div
+            className={`arcade-flow-actions${canReconnect && !showClaimVictory ? "" : " is-single"}`}
+          >
+            {canReconnect && !showClaimVictory ? (
+              <button type="button" className="arcade-primary" onClick={onReconnect}>
+                Reconnect
+              </button>
+            ) : null}
+            <Link
+              className={canReconnect && !showClaimVictory ? "arcade-secondary" : "arcade-primary"}
+              to="/lobby"
+            >
+              Go To Lobby
+            </Link>
           </div>
-        )}
-        {!showConflictGuidance && !showClaimVictory && <p>{error ?? fallbackMessage}</p>}
-        <div className="waiting-action-row">
-          {canReconnect && !showClaimVictory && (
-            <button type="button" className="primary-button" onClick={onReconnect}>
-              Reconnect
-            </button>
-          )}
-          <Link className="primary-button link-button" to="/lobby">
-            Go To Lobby
-          </Link>
         </div>
       </section>
-    </main>
+    </ArcadePage>
   );
 };
