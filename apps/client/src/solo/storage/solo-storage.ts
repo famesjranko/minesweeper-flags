@@ -36,6 +36,7 @@ const hasControlCharacter = (value: string): boolean => {
   return false;
 };
 
+// Reserve deterministic timestamps for a full replay and a final resignation.
 export const validateSoloReplay = (value: unknown): SoloReplayRecord | null => {
   if (
     !isPlainObject(value) ||
@@ -48,7 +49,7 @@ export const validateSoloReplay = (value: unknown): SoloReplayRecord | null => {
   if (
     value.version !== 1 ||
     !isInteger(value.seed, 0, 0xffffffff) ||
-    !isInteger(value.createdAt, 0, Number.MAX_SAFE_INTEGER) ||
+    !isInteger(value.createdAt, 0, Number.MAX_SAFE_INTEGER - SOLO_STORAGE_MAX_ACTIONS - 1) ||
     (value.starter !== "human" && value.starter !== "bot") ||
     !Array.isArray(value.actions) ||
     value.actions.length > SOLO_STORAGE_MAX_ACTIONS ||

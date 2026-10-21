@@ -176,7 +176,6 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     }
     const scheduledGeneration = generation;
     botTimer = scheduler.set(() => {
-      botTimer = null;
       if (
         disposed ||
         scheduledGeneration !== generation ||
@@ -186,6 +185,8 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       ) {
         return;
       }
+      // A cancelled callback must not erase the current generation's timer handle.
+      botTimer = null;
       const publicMatch = toMatchStateDto(state);
       let selected: SoloAction | null = null;
       try {
