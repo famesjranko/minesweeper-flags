@@ -1,5 +1,5 @@
 import type { ChatMessageDto } from "@minesweeper-flags/shared";
-import { useEffect, useRef } from "react";
+import { useChatScroll } from "./useChatScroll.js";
 
 interface ChatMessageListProps {
   currentPlayerId: string;
@@ -48,38 +48,7 @@ export const ChatMessageList = ({
   playerTones,
   messages
 }: ChatMessageListProps) => {
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const shouldStickToBottomRef = useRef(true);
-
-  useEffect(() => {
-    const list = listRef.current;
-
-    if (!list) {
-      return;
-    }
-
-    const handleScroll = () => {
-      shouldStickToBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 28;
-    };
-
-    handleScroll();
-    list.addEventListener("scroll", handleScroll);
-
-    return () => {
-      list.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a new message is what triggers the scroll.
-  useEffect(() => {
-    const list = listRef.current;
-
-    if (!list || !shouldStickToBottomRef.current) {
-      return;
-    }
-
-    list.scrollTop = list.scrollHeight;
-  }, [messages]);
+  const { listRef, onScroll } = useChatScroll(messages);
 
   if (messages.length === 0) {
     return (
@@ -91,7 +60,13 @@ export const ChatMessageList = ({
   }
 
   return (
-    <div ref={listRef} className="chat-message-list" role="log" aria-live="polite">
+    <div
+      ref={listRef}
+      onScroll={onScroll}
+      className="chat-message-list"
+      role="log"
+      aria-live="polite"
+    >
       {messages.map((message) => {
         const isSelf = message.playerId === currentPlayerId;
         const playerTone = playerTones[message.playerId] ?? "blue";
