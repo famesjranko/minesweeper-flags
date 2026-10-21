@@ -85,8 +85,7 @@
   width: 100%;
 }
 .solo-match {
-  /* Reserve height for local status, results, and actions around the square board. */
-  width: min(100%, max(288px, calc(100dvh - 472px)));
+  width: min(100%, 760px);
   margin: 0 auto;
 }
 .solo-match .arcade-match-main {
@@ -114,7 +113,6 @@
 }
 .solo-notice,
 .solo-error,
-.solo-thinking,
 .solo-local-status {
   margin: 0 0 12px;
   padding: 10px 12px;
@@ -122,7 +120,6 @@
   font-size: 13px;
 }
 .solo-notice,
-.solo-thinking,
 .solo-local-status {
   background: #182d47;
   color: #b7d8f2;

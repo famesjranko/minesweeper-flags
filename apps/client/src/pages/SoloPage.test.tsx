@@ -51,8 +51,9 @@ const match = (phase: "live" | "finished", turn: string | null): MatchStateDto =
   lastAction: null
 });
 
-const sessionFor = (snapshot: SoloSnapshot) => {
+const sessionFor = (initialSnapshot: SoloSnapshot) => {
   const listeners = new Set<() => void>();
+  let snapshot = initialSnapshot;
   const session: SoloSession = {
     getSnapshot: vi.fn(() => snapshot),
     subscribe: vi.fn((listener) => {
@@ -67,12 +68,20 @@ const sessionFor = (snapshot: SoloSnapshot) => {
     rematch: vi.fn(),
     dispose: vi.fn()
   };
-  return session;
+  return {
+    session,
+    setSnapshot: (nextSnapshot: SoloSnapshot) => {
+      snapshot = nextSnapshot;
+      listeners.forEach((listener) => {
+        listener();
+      });
+    }
+  };
 };
 
 it("disables local input while the bot thinks and disposes its session on unmount", () => {
   // Given a started local session while the bot owns the turn
-  const session = sessionFor({
+  const { session } = sessionFor({
     match: match("live", "solo-bot"),
     humanId: "solo-human",
     bombArmed: false,
@@ -92,8 +101,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
 
     // Then bot status is exposed and human controls cannot act
     expect(session.start).toHaveBeenCalledBefore(session.getSnapshot as ReturnType<typeof vi.fn>);
-    expect(container.textContent).toContain("Bot is thinking");
-    expect(container.textContent).toContain("Local match · In this browser");
+    expect(container.textContent).toContain("Local match · Bot thinking");
     expect(cell?.disabled).toBe(true);
     expect(container.querySelector(".arcade-chat-toggle")).toBeNull();
     expect(container.querySelector(".arcade-player-presence")).toBeNull();
@@ -106,7 +114,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
 
 it("offers a local rematch and restart after the match finishes", () => {
   // Given a finished local session
-  const session = sessionFor({
+  const { session } = sessionFor({
     match: match("finished", null),
     humanId: "solo-human",
     bombArmed: false,
@@ -141,7 +149,7 @@ it("offers a local rematch and restart after the match finishes", () => {
 
 it("creates a fresh session when Strict Mode reactivates the effect", () => {
   // Given Strict Mode and two sessions that cannot restart after disposal
-  const first = sessionFor({
+  const { session: first } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
     bombArmed: false,
@@ -149,7 +157,7 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
     error: null,
     recoveryNotice: null
   });
-  const second = sessionFor({
+  const { session: second } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
     bombArmed: false,
@@ -180,6 +188,66 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
   } finally {
     act(() => root.unmount());
     expect(second.dispose).toHaveBeenCalledOnce();
+    container.remove();
+  }
+});
+
+it("updates the persistent local status in place while bot input is disabled", () => {
+  // Given a started local session where the human owns the turn
+  const { session, setSnapshot } = sessionFor({
+    match: match("live", "solo-human"),
+    humanId: "solo-human",
+    bombArmed: false,
+    botThinking: false,
+    error: null,
+    recoveryNotice: null
+  });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  document.body.append(container);
+
+  act(() => root.render(<SoloPage createSession={() => session} />));
+
+  try {
+    const status = container.querySelector(".solo-local-status");
+    const cell = container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']");
+
+    // When the deterministic local session moves to the bot turn
+    act(() =>
+      setSnapshot({
+        match: match("live", "solo-bot"),
+        humanId: "solo-human",
+        bombArmed: false,
+        botThinking: true,
+        error: null,
+        recoveryNotice: null
+      })
+    );
+
+    // Then the same status row announces the bot state and disables human input
+    expect(status?.textContent).toContain("Bot thinking");
+    expect(container.querySelector(".solo-thinking")).toBeNull();
+    expect(cell?.disabled).toBe(true);
+
+    // When the bot finishes and the match ends
+    act(() =>
+      setSnapshot({
+        match: match("finished", null),
+        humanId: "solo-human",
+        bombArmed: false,
+        botThinking: false,
+        error: null,
+        recoveryNotice: null
+      })
+    );
+
+    // Then the same status row announces the finished state without a transient card
+    expect(container.querySelector(".solo-local-status")).toBe(status);
+    expect(status?.textContent).toContain("Match finished");
+    expect(container.querySelector(".solo-thinking")).toBeNull();
+  } finally {
+    act(() => root.unmount());
+    expect(session.dispose).toHaveBeenCalledOnce();
     container.remove();
   }
 });

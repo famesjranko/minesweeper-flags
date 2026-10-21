@@ -23,6 +23,11 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
   const resultTitle = winner?.playerId === snapshot.humanId ? "You won" : "Bot won";
   const resultScore = winner && loser ? `${winner.score} – ${loser.score}` : "Finished";
   const resigned = winner && loser && winner.score <= loser.score;
+  const localStatus = isFinished
+    ? "Match finished"
+    : snapshot.botThinking
+      ? "Bot thinking…"
+      : "Your turn";
 
   return (
     <main className="page-shell arcade-page-shell arcade-match-page solo-page-shell">
@@ -33,7 +38,7 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
           </a>
         </ArcadeHeader>
         <p className="solo-local-status" role="status">
-          Local match · In this browser
+          Local match · {localStatus}
         </p>
         {snapshot.recoveryNotice ? (
           <p className="solo-notice" role="status">
@@ -43,11 +48,6 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
         {snapshot.error ? (
           <p className="solo-error" role="alert">
             {snapshot.error}
-          </p>
-        ) : null}
-        {snapshot.botThinking ? (
-          <p className="solo-thinking" role="status">
-            Bot is thinking…
           </p>
         ) : null}
         <MatchView
