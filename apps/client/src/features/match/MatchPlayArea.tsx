@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import type { LastMoveMarks } from "../../entities/board/last-move.js";
+import { ZoomIcon } from "../../shared-ui/ZoomIcon.js";
 import { MatchResultRibbon } from "./MatchResultRibbon.js";
 import type { MatchPresentation } from "./match-presentation.js";
 import type { MatchViewProps } from "./match-view.types.js";
-import { PlayerBombButton, PlayerPanel } from "./PlayerPanel.js";
+import { PlayerBombButton } from "./PlayerBombButton.js";
+import { PlayerPanel } from "./PlayerPanel.js";
 
 type PlayProps = Pick<
   MatchViewProps,
@@ -90,11 +92,16 @@ const MatchTools = ({
           bombArmed={props.bombArmed}
           canAct={props.view.canAct}
           canBomb={props.view.canBomb}
+          finished={props.match.phase === "finished"}
           onToggleBomb={props.onToggleBomb}
         />
       ) : null}
       <button type="button" className="arcade-zoom-button" aria-pressed={zoomed} onClick={onZoom}>
-        {zoomed ? "Fit board" : "Zoom 150%"}
+        <ZoomIcon zoomed={zoomed} />
+        <span className="arcade-tool-copy">
+          <strong>{zoomed ? "Fit board" : "Zoom board"}</strong>
+          <small>{zoomed ? "Return to full view" : "Enlarge to 150%"}</small>
+        </span>
       </button>
     </div>
   </div>

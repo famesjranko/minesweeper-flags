@@ -1,5 +1,4 @@
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
-import { BombIcon } from "../../shared-ui/BombIcon.js";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { CrownIcon } from "../../shared-ui/CrownIcon.js";
 
 export interface PlayerSlot {
@@ -33,40 +32,6 @@ export const getPlayerSlots = (
       isTurn: match.currentTurnPlayerId === redPlayer.playerId
     }
   ];
-};
-
-interface BombState {
-  bombArmed: boolean;
-  // The slot is the current player, it is their turn, and the bomb rules allow a bomb.
-  isReady: boolean;
-}
-
-const getBombVariant = (slot: PlayerSlot, { bombArmed, isReady }: BombState) => {
-  if (slot.player.bombsRemaining === 0) {
-    return "spent";
-  }
-
-  if (slot.isSelf && bombArmed) {
-    return "armed";
-  }
-
-  return isReady ? "ready" : "idle";
-};
-
-const getBombLabel = (slot: PlayerSlot, { bombArmed, isReady }: BombState): string => {
-  if (slot.player.bombsRemaining === 0) {
-    return `${slot.isSelf ? "Your" : "Opponent"} bomb is spent.`;
-  }
-
-  if (isReady) {
-    return bombArmed
-      ? "Bomb armed. Pick the center of a 5x5 blast."
-      : "Bomb ready. Click to arm a 5x5 blast.";
-  }
-
-  return slot.isSelf
-    ? `Bomb unused. It becomes available while trailing by ${MIN_BOMB_DEFICIT} or more on your turn.`
-    : "Opponent bomb status.";
 };
 
 interface PlayerPanelProps {
@@ -108,57 +73,5 @@ export const PlayerPanel = ({ slot, match }: PlayerPanelProps) => {
         <strong>{slot.player.score}</strong>
       </div>
     </section>
-  );
-};
-
-interface PlayerBombButtonProps {
-  slot: PlayerSlot;
-  bombArmed: boolean;
-  canAct: boolean;
-  canBomb: boolean;
-  onToggleBomb: () => void;
-}
-
-export const PlayerBombButton = ({
-  slot,
-  bombArmed,
-  canAct,
-  canBomb,
-  onToggleBomb
-}: PlayerBombButtonProps) => {
-  const bombState = { bombArmed, isReady: slot.isSelf && canAct && canBomb };
-  const spent = slot.player.bombsRemaining === 0;
-
-  return (
-    <button
-      type="button"
-      aria-label={getBombLabel(slot, bombState)}
-      aria-pressed={bombArmed}
-      className={[
-        "sidebar-bomb-pill",
-        bombState.isReady ? "is-ready" : "",
-        bombArmed ? "is-armed" : ""
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      onClick={onToggleBomb}
-      disabled={!canAct || !canBomb}
-      title={
-        bombState.isReady
-          ? "Bomb ready: click to arm a 5x5 blast."
-          : `Bomb: one use only, and only while trailing by ${MIN_BOMB_DEFICIT} or more.`
-      }
-    >
-      <BombIcon className="sidebar-bomb-icon" variant={getBombVariant(slot, bombState)} size={19} />
-      <span>
-        {spent
-          ? "Bomb used"
-          : bombArmed
-            ? "Disarm bomb"
-            : bombState.isReady
-              ? "Use bomb"
-              : "Bomb locked"}
-      </span>
-    </button>
   );
 };
