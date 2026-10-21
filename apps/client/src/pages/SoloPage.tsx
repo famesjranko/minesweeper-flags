@@ -79,9 +79,6 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
               Resign match
             </button>
           )}
-          <button type="button" name="restart" onClick={session.restart}>
-            Restart
-          </button>
         </div>
       </div>
     </main>

@@ -112,7 +112,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
   }
 });
 
-it("offers a local rematch and restart after the match finishes", () => {
+it("offers only a local rematch after the match finishes", () => {
   // Given a finished local session
   const { session } = sessionFor({
     match: match("finished", null),
@@ -129,18 +129,48 @@ it("offers a local rematch and restart after the match finishes", () => {
   act(() => root.render(<SoloPage createSession={() => session} />));
 
   try {
-    // When the player requests another local game and a restart
+    // When the player requests another local game
     act(() => container.querySelector<HTMLButtonElement>("button[name='rematch']")?.click());
-    act(() => container.querySelector<HTMLButtonElement>("button[name='restart']")?.click());
 
-    // Then both actions stay with the local authority, notices, and final result remain visible
+    // Then only rematch stays with the local authority, notices, and final result remain visible
     expect(session.rematch).toHaveBeenCalledOnce();
-    expect(session.restart).toHaveBeenCalledOnce();
+    expect(container.querySelector("button[name='resign']")).toBeNull();
+    expect(container.querySelector("button[name='restart']")).toBeNull();
     expect(container.textContent).toContain("Last move was invalid.");
     expect(container.textContent).toContain("Solo progress cannot be saved in this browser.");
     expect(container.textContent).toContain("You won");
     expect(container.textContent).toContain("26 – 12");
     expect(container.textContent).not.toContain("Request Rematch");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
+it("offers only resign while a local match is live", () => {
+  // Given a live local session
+  const { session } = sessionFor({
+    match: match("live", "solo-human"),
+    humanId: "solo-human",
+    bombArmed: false,
+    botThinking: false,
+    error: null,
+    recoveryNotice: null
+  });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  document.body.append(container);
+
+  act(() => root.render(<SoloPage createSession={() => session} />));
+
+  try {
+    // When the player resigns the live local match
+    act(() => container.querySelector<HTMLButtonElement>("button[name='resign']")?.click());
+
+    // Then resign uses the local authority and rematch or restart are unavailable
+    expect(session.resign).toHaveBeenCalledOnce();
+    expect(container.querySelector("button[name='rematch']")).toBeNull();
+    expect(container.querySelector("button[name='restart']")).toBeNull();
   } finally {
     act(() => root.unmount());
     container.remove();
