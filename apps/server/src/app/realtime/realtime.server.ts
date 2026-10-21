@@ -96,6 +96,16 @@ export const createRealtimeServer = async ({
   });
   httpServer.on("upgrade", createUpgradeHandler({ websocketPath, webSocketServer, lifecycle }));
 
+  const connectionHandler = new RealtimeConnectionHandler({
+    services,
+    stateStores: activeStateStores,
+    socketContexts,
+    heartbeatMonitor,
+    dispatchExecution,
+    messageRouter: new RealtimeMessageRouter({ ...services, lifecycle, dispatchExecution })
+  });
+  httpServer.once("close", () => connectionHandler.dispose());
+
   const shutdown = createShutdown({
     lifecycle,
     httpServer,
@@ -104,21 +114,13 @@ export const createRealtimeServer = async ({
     stopBackgroundTasks: () => {
       stopCleanupInterval();
       stopHeartbeat();
+      connectionHandler.dispose();
     },
     releaseStateStores: async () => {
       if (ownsStateStores) {
         await activeStateStores.dispose();
       }
     }
-  });
-
-  const connectionHandler = new RealtimeConnectionHandler({
-    services,
-    stateStores: activeStateStores,
-    socketContexts,
-    heartbeatMonitor,
-    dispatchExecution,
-    messageRouter: new RealtimeMessageRouter({ ...services, lifecycle, dispatchExecution })
   });
 
   webSocketServer.on("connection", (socket, request) => {

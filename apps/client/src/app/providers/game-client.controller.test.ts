@@ -152,6 +152,35 @@ const createHarness = ({ sessions = [] }: { sessions?: StoredSession[] } = {}) =
 };
 
 describe("game client controller", () => {
+  it("persists the invitation used to join so a reload can find the guest seat", () => {
+    // Given a guest joining through a valid invitation
+    const { controller, transport, persistence } = createHarness();
+    controller.start();
+    controller.joinRoom("Guest", "AbCdEfGhIjKlMnOpQrStUw");
+    transport.emitStatus({ status: "connected" });
+
+    // When the server confirms the join without echoing the consumed invitation
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomJoined,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        self: { playerId: "guest-1", displayName: "Guest", sessionToken: "guest-session" },
+        players: [
+          { playerId: "host-1", displayName: "Host" },
+          { playerId: "guest-1", displayName: "Guest" }
+        ]
+      }
+    });
+
+    // Then the saved guest seat includes the invitation as well as the reconnect credential
+    expect(persistence.read("ABCDE")).toMatchObject({
+      inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
+      playerId: "guest-1",
+      sessionToken: "guest-session"
+    });
+  });
+
   it("queues offline room bootstrap commands until the transport reconnects", () => {
     const { controller, store, transport } = createHarness();
 

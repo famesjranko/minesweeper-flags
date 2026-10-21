@@ -59,6 +59,7 @@ export class GameClientController {
   private readonly chatRecovery: ChatDraftRecovery;
 
   private pendingBootstrapEvent: ClientEvent | null = null;
+  private joiningInviteToken: string | null = null;
   private reconnectAttempt: StoredSession | null = null;
   private reconnectAttemptCount = 0;
   private reconnectTimeoutId: number | null = null;
@@ -116,6 +117,7 @@ export class GameClientController {
 
   joinRoom = (displayName: string, inviteToken: string): void => {
     this.startLobbyTransition();
+    this.joiningInviteToken = inviteToken;
     this.sendEvent({
       type: CLIENT_EVENT_NAMES.roomJoin,
       payload: { displayName, inviteToken }
@@ -348,7 +350,15 @@ export class GameClientController {
       case SERVER_EVENT_NAMES.roomCreated:
       case SERVER_EVENT_NAMES.roomJoined: {
         this.clearReconnectAttempt();
-        const nextSession = buildSessionFromRoomEvent(event);
+        const nextSession = {
+          ...buildSessionFromRoomEvent(event),
+          // A browser can reopen the original invite when changing its display mode.
+          // Keep its association with the seat; reconnect still uses the session token.
+          ...(event.type === SERVER_EVENT_NAMES.roomJoined && this.joiningInviteToken
+            ? { inviteToken: this.joiningInviteToken }
+            : {})
+        };
+        this.joiningInviteToken = null;
         this.store.setSession(nextSession);
         this.persistence.write(nextSession);
         this.store.clearTransientRoomState();
@@ -486,6 +496,7 @@ export class GameClientController {
   }
 
   private clearActiveRoomState(): void {
+    this.joiningInviteToken = null;
     this.clearReconnectAttempt();
     this.store.setSession(null);
     this.store.clearTransientRoomState();

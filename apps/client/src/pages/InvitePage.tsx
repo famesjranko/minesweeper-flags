@@ -2,6 +2,7 @@ import { inviteTokenSchema } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
+import { getStoredRoomForInvite } from "../lib/socket/session-storage.js";
 import { ArcadePage } from "../shared-ui/ArcadePage.js";
 
 type InviteErrorState = "full" | "invalid";
@@ -76,6 +77,9 @@ export const InvitePage = () => {
   if (session?.roomCode) {
     return <Navigate to={`/room/${session.roomCode}`} replace />;
   }
+
+  const savedRoomCode = activeInviteToken ? getStoredRoomForInvite(activeInviteToken) : null;
+  if (savedRoomCode) return <Navigate to={`/room/${savedRoomCode}`} replace />;
 
   const trimmedDisplayName = displayName.trim();
   const canJoin = trimmedDisplayName.length > 0 && activeInviteToken !== null;

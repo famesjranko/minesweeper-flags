@@ -32,7 +32,7 @@ class FakeSocket extends EventEmitter {
   readonly close = vi.fn();
   readonly ping = vi.fn();
   readonly terminate = vi.fn();
-  readyState = WebSocket.OPEN;
+  readyState: WebSocket["readyState"] = WebSocket.OPEN;
 
   send(data: RawData): void {
     this.sentMessages.push(typeof data === "string" ? data : data.toString());
@@ -148,6 +148,83 @@ describe("realtime server", () => {
     expect(readinessAfterReady).toEqual({
       statusCode: 200,
       payload: { status: "ready" }
+    });
+  });
+
+  it("restores a waiting host after a reload without deleting their room", async () => {
+    // Given a waiting room whose host has a reconnect credential
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+    const host = connectSocket(activeServer);
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host" }
+    });
+    const created = readSentEvents(host)[0]!;
+
+    // When a reload closes the old socket and reconnects with the same seat
+    host.readyState = WebSocket.CLOSED;
+    host.emit("close", 1001, Buffer.from(""));
+    await flushAsyncWork();
+    const replacement = connectSocket(activeServer);
+    await emitClientEvent(replacement, {
+      type: CLIENT_EVENT_NAMES.playerReconnect,
+      payload: {
+        roomCode: created.payload.roomCode,
+        sessionToken: created.payload.self.sessionToken
+      }
+    });
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    // Then the original player is restored and remains present after the cleanup grace period
+    expect(readSentEvents(replacement)[0]).toMatchObject({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomCode: created.payload.roomCode,
+        players: [{ playerId: created.payload.self.playerId }]
+      }
+    });
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(1);
+  });
+
+  it("releases an abandoned room only after the reconnect grace period", async () => {
+    // Given a waiting room whose host disconnects
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+    const host = connectSocket(activeServer);
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host" }
+    });
+    const created = readSentEvents(host)[0]!;
+    host.readyState = WebSocket.CLOSED;
+    host.emit("close", 1001, Buffer.from(""));
+    await flushAsyncWork();
+
+    // When the room remains empty for less than thirty seconds
+    await vi.advanceTimersByTimeAsync(29_999);
+
+    // Then the slot is reserved for reconnecting
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(1);
+
+    // When the grace period ends and nobody has returned
+    await vi.advanceTimersByTimeAsync(1);
+    const replacement = connectSocket(activeServer);
+    await emitClientEvent(replacement, {
+      type: CLIENT_EVENT_NAMES.playerReconnect,
+      payload: {
+        roomCode: created.payload.roomCode,
+        sessionToken: created.payload.self.sessionToken
+      }
+    });
+
+    // Then the slot is free and its old reconnect credential is invalid
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(0);
+    expect(readSentEvents(replacement)[0]).toMatchObject({
+      type: SERVER_EVENT_NAMES.serverError,
+      payload: { message: "That session is not valid for this room." }
     });
   });
 
