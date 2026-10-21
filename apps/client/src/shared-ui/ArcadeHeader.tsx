@@ -21,7 +21,7 @@ export const ArcadeHeader = ({ connectionStatus, roomCode, children }: ArcadeHea
       {roomCode ? <span className="arcade-room-code">Room {roomCode}</span> : null}
       {connectionStatus ? (
         <span className={`arcade-connection is-${connectionStatus}`} role="status">
-          {connectionStatus}
+          {connectionStatus === "connecting" ? "Connecting…" : connectionStatus}
         </span>
       ) : null}
       {children}

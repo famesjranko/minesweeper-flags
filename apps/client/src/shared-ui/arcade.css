@@ -55,6 +55,7 @@
   content: "";
   width: 7px;
   height: 7px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: #ef9e91;
 }
@@ -64,7 +65,13 @@
 }
 
 .arcade-connection.is-connecting::before {
-  background: #ffd079;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ffd07938;
+  border-top-color: #ffd079;
+  border-right-color: #ffd079;
+  background: transparent;
+  animation: arcade-spinner-spin 1s linear infinite;
 }
 
 .arcade-room-code {
@@ -126,16 +133,17 @@
   border: 3px solid #3b536e;
   border-top-color: #65c7ff;
   border-radius: 50%;
-  animation: arcade-recovery-spin 1s linear infinite;
+  animation: arcade-spinner-spin 1s linear infinite;
 }
 
-@keyframes arcade-recovery-spin {
+@keyframes arcade-spinner-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .arcade-connection.is-connecting::before,
   .arcade-recovery-spinner {
     animation: none;
   }
