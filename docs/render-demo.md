@@ -21,11 +21,11 @@ Last verified on 21 October 2026:
 
 | Service | Deployed commit | Deployment date |
 | --- | --- | --- |
-| Frontend | [`62a0d94`](https://github.com/famesjranko/minesweeper-flags/commit/62a0d94ccd3c94f369903bf2a397aa27868eb20a) | 21 October 2026 |
-| Game server | [`64101fa`](https://github.com/famesjranko/minesweeper-flags/commit/64101fad54b1848ad400903fca51ec9baea15b34) | 21 October 2026 |
+| Frontend | [`ba7c5ef`](https://github.com/famesjranko/minesweeper-flags/commit/ba7c5efc6ebcb7765d55358a83ee19c8bd1144de) | 21 October 2026 |
+| Game server | [`ba7c5ef`](https://github.com/famesjranko/minesweeper-flags/commit/ba7c5efc6ebcb7765d55358a83ee19c8bd1144de) | 21 October 2026 |
 
-The frontend update changed only the UI; server code and the shared protocol are
-identical at these commits. Both services track `main`, with auto-deploys and
+Both services run the same commit after a verified release through
+`make deploy TARGET=all`. Both services track `main`, with auto-deploys and
 previews disabled. The original Blueprint was disconnected on 21 October 2026;
 its resources and settings were retained. Public template changes cannot sync
 into these services. GitHub Actions runs checks and image builds; it does not
