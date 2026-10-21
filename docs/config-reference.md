@@ -34,7 +34,7 @@ The project currently has six configuration layers:
 3. Client build-time variables.
 4. Convenience local Docker Compose defaults.
 5. Parity/public Docker Compose defaults.
-6. Repo-level `Makefile` shortcuts for dev and testing.
+6. Repo-level `Makefile` shortcuts for development, testing, and manual releases.
 
 The server reads environment variables at process start.
 The signaling service also reads environment variables at process start.
@@ -63,6 +63,21 @@ Run these from the repo root:
 - `make test-server` runs the server test suite.
 - `make test-signaling` runs the signaling test suite.
 - `make build` builds all workspaces.
+- `make test-deploy` tests release guards without contacting hosted resources.
+- `make deploy-template-check` validates the public Render example structure and permits placeholders.
+- `make deploy-login` authenticates the Render CLI using private local storage.
+- `make deploy-status` checks the configured services and public health endpoints.
+- `make deploy-plan TARGET=frontend|server|all` shows the merged commit and existing services selected for release.
+- `make deploy TARGET=frontend|server|all` deploys after CI and policy checks; `COMMIT` defaults to `origin/main`.
+
+See [the Render runbook](render-demo.md#local-release-controls) for setup and release limits.
+Deployment settings are read from ignored `.deploy/config.json`, or from
+`$DEPLOY_DIR/config.json` when `DEPLOY_DIR` is set. Start with
+[`deploy/render/config.example.json`](../deploy/render/config.example.json).
+`RENDER_CLI` selects an executable; otherwise the commands use `.deploy/bin/render`
+(or `$DEPLOY_DIR/bin/render`) when present, then `render` on `PATH`.
+CLI authentication is stored under the same private directory in `auth/`.
+These commands do not load application `.env` files or modify Render settings.
 - `make compose-up` starts the local Docker Compose stack.
 - `make compose-p2p-up` starts the local p2p `client + signaling` stack.
 - `make compose-down` stops the local Docker Compose stack.

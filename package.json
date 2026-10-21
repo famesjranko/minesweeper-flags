@@ -21,6 +21,7 @@
     "lint": "biome check --error-on-warnings --diagnostic-level=warn .",
     "prepare": "husky",
     "test": "npm run test --workspaces --if-present",
+    "test:deploy": "node --test scripts/deploy/*.test.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
@@ -37,7 +38,8 @@
     "tsx": "^4.20.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "yaml": "2.9.1"
   },
   "license": "MIT"
 }

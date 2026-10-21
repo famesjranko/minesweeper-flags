@@ -6,9 +6,10 @@ second browser session.
 
 ## Deployment
 
-The root [`render.yaml`](../render.yaml) defines three resources on a Hobby
-workspace. This demo uses hosted-server mode; direct matches and the signaling
-service are not deployed.
+The demo runs three resources on a Hobby workspace. It uses hosted-server mode;
+direct matches and the signaling service are not deployed. The root
+[`render.yaml`](../render.yaml) is a reusable example with placeholder URLs.
+The live demo is managed separately through Render service settings.
 
 | Resource | Purpose | Hosting |
 | --- | --- | --- |
@@ -24,9 +25,11 @@ Last verified on 21 October 2026:
 | Game server | [`64101fa`](https://github.com/famesjranko/minesweeper-flags/commit/64101fad54b1848ad400903fca51ec9baea15b34) | 21 October 2026 |
 
 The frontend update changed only the UI; server code and the shared protocol are
-identical at these commits. The Blueprint and both services track `main`.
-Releases are manual: service auto-deploys, Blueprint auto-sync, and previews are
-disabled. GitHub Actions runs checks and image builds; it does not deploy to Render.
+identical at these commits. Both services track `main`, with auto-deploys and
+previews disabled. The original Blueprint was disconnected on 21 October 2026;
+its resources and settings were retained. Public template changes cannot sync
+into these services. GitHub Actions runs checks and image builds; it does not
+deploy to Render.
 
 ## Demo limits
 
@@ -89,94 +92,135 @@ create count against your workspace's allowances and billing. See
 [Render's Blueprint setup](https://render.com/docs/infrastructure-as-code#setup)
 and [service references](https://render.com/docs/blueprint-spec#referencing-service-properties).
 
-The checked-in `render.yaml` contains the public demo's hostnames. Deploying it
-unchanged would leave your frontend targeting the original demo API. Game
-connections from your different browser origin are rejected by the demo's
-allowlist, but health requests still reach the original API and can consume its
-free allowance. The API is public; the origin check is not authentication.
+The checked-in template uses `frontend.invalid` and `api.invalid`. Its frontend
+build stops until you replace them. An unchanged fork has no route to the
+original demo API. The validator also rejects the original demo hostnames if
+they are copied back into the template. This prevents accidental configuration;
+it does not restrict deliberate access to a public API. Origin checks are not
+authentication.
 
-Replace these four settings in your fork's `render.yaml` with your own assigned
-hostnames, then sync the Blueprint and redeploy:
+## First deployment of your own copy
 
-| Setting | Value for your deployment |
-| --- | --- |
-| Server `WEBSOCKET_ALLOWED_ORIGINS` | Your frontend's HTTPS origin |
-| Frontend `VITE_SOCKET_URL` | Your server's `wss://` URL ending in `/ws` |
-| Frontend `/api/health` rewrite destination | Your server's HTTPS URL ending in `/health` |
-| Frontend CSP `connect-src` | `'self'` and your server's HTTPS and `wss://` origins |
+1. Create a Blueprint from your fork's `main` branch using `render.yaml`.
+   Keep the workspace on Hobby. Check that the server and Key Value plans say
+   Free. The first frontend build will fail while placeholder URLs remain.
+2. Set Blueprint **Auto Sync** to **No**. Service auto-deploys and previews are
+   already disabled by the template. Record the assigned frontend and API URLs;
+   Render can add suffixes when names are taken.
+3. Replace these settings in your fork's `render.yaml`:
 
-Check the actual hostnames in Render; a name collision can add a suffix. If you
-rename services, also update their `fromService.name` references. Before opening
-the new frontend, confirm that this search finds no original demo hostnames in
-your fork's deployment configuration:
+   | Setting | Value for your deployment |
+   | --- | --- |
+   | Server `WEBSOCKET_ALLOWED_ORIGINS` | Your frontend's HTTPS origin |
+   | Frontend `VITE_SOCKET_URL` | Your server's `wss://` URL ending in `/ws` |
+   | Frontend `/api/health` rewrite destination | Your server's HTTPS URL ending in `/health` |
+   | Frontend CSP `connect-src` | `'self'` and your server's HTTPS and `wss://` origins |
+
+4. Run `npm ci` and `node scripts/deploy/template.mjs`. Commit the configured
+   template to your fork. If you rename services, update `fromService.name` too.
+5. Use **Manual sync**, review the proposed changes, and approve them. Deploy
+   both applications after the settings are applied. The frontend build runs
+   the same URL validator. `make deploy-template-check` only checks the example's
+   structure and permits placeholders; it is not a deployment readiness check.
+6. Check the server's `/ready` and frontend's `/api/health`. Use two browser
+   sessions to test joining, moves, chat, rematches, and refresh recovery.
+
+Render injects the Key Value connection URL through its service reference.
+External Key Value access is disabled. Keep connection strings, hooks, API keys,
+and player session tokens out of Git, issues, and screenshots.
+
+## Local release controls
+
+Use Node 22, Git, Make, authenticated `gh`, and the
+[Render CLI](https://render.com/docs/cli) (tested with v2.30.0).
+Install the CLI from Render's official instructions. The scripts find `render`
+on `PATH`, or an executable at `.deploy/bin/render`. `RENDER_CLI` can select
+another executable.
+
+Create private settings from the public example:
 
 ```bash
-rg -n 'minesweeper-flags-(api|demo)\.onrender\.com' render.yaml
+umask 077
+mkdir -p .deploy
+cp deploy/render/config.example.json .deploy/config.json
+chmod 700 .deploy
+chmod 600 .deploy/config.json
 ```
 
-Use the setup and verification steps below with your own URLs. Forking alone
-does not redirect the README's live-demo link; change that link if you publish
-your own demo.
+Edit `.deploy/config.json` with your workspace ID, repository, two service IDs,
+and public HTTPS origins, without trailing slashes. These settings select
+existing resources; the commands do not provision resources. The whole
+`.deploy/` directory is ignored by Git. Keep its contents out of PR attachments.
+For a separate private directory, set `DEPLOY_DIR` to its absolute path.
 
-## First deployment
+```bash
+make deploy-login                 # browser login, then select the configured workspace
+make build                        # compile all workspaces locally
+make deploy-status                # inspect releases and health; can wake a sleeping server
+make deploy-plan TARGET=all        # resolve origin/main and show the selected services
+make deploy TARGET=all             # deploy server, verify it, then deploy frontend
+```
 
-1. Sign in to Render. Use your repository's public Git URL when creating the
-   Blueprint, or connect GitHub with access to your repository. For a fork, follow
-   the hostname changes above before using the new frontend.
-2. Create a Blueprint from `main`, using `render.yaml`. Keep the workspace
-   on Hobby and check that the server and Key Value plans both say Free.
-3. In the Blueprint's Settings, set **Auto Sync** to **No**. Service auto-deploys
-   and Blueprint auto-sync are separate settings; both must stay off for manual
-   releases.
-4. Check the assigned public addresses. If Render adds a suffix to either service
-   hostname, update the origin allowlist, socket URL, health rewrite, and CSP in
-   `render.yaml` to use those actual addresses. Sync the Blueprint and deploy again.
-5. Confirm that the server's `/ready` endpoint returns HTTP 200. Open the frontend
-   and check that `/api/health` returns JSON with room availability.
-6. Create a room and join from another browser session. Check moves, chat,
-   rematches, and reconnecting after a page refresh.
+Login data stays in `.deploy/auth`; CLI login expires after seven days.
+Run `make deploy-login` again to renew it. Do not commit credentials or create
+permanent deploy hooks for these commands. See
+[Render CLI authentication](https://render.com/docs/cli#authenticate).
 
-Render injects the Key Value connection URL through the Blueprint's service
-reference. External Key Value access is disabled. Keep connection strings,
-deploy/sync hooks, API keys, and player session tokens out of the repository,
-issues, and screenshots. See the [configuration reference](config-reference.md)
-for environment variables.
+`make deploy` requires a clean checkout, a commit merged into `origin/main`,
+and successful GitHub Actions `check` and `images` checks for that exact commit.
+It verifies the configured workspace, repository, service types, URLs, free
+server plan, disabled previews, and disabled auto-deploys before deploying.
+The script does not check workspace billing allowances or Key Value pricing;
+check those in Render before each release.
 
-## Manual updates
+`TARGET=frontend` and `TARGET=server` select one application. The command rejects
+single-service releases if shared code or root dependencies differ from the
+other live service. Frontend-only releases also require unchanged server code.
+Use `TARGET=all` when this check requests a coordinated release. The comparison
+cannot prove compatibility of every application change; review the diff too.
+Set `COMMIT=<full-sha>` to select an older merged release. Render builds the Git
+commit itself; local build output is not uploaded.
 
-1. Merge the change into `main`. Run `make check` and confirm that GitHub Actions
-   checks and image builds pass for the selected release commit.
-2. Check `/api/health` on the frontend for room occupancy. Avoid deploying during
-   a game; server deployments interrupt connections.
-3. For server or shared-protocol changes, deploy the game server first. In its
-   Render dashboard, use **Manual Deploy → Deploy a specific commit** and select
-   the checked commit. Wait for success, then confirm that
-   [the server's `/ready` endpoint](https://minesweeper-flags-api.onrender.com/ready)
-   returns HTTP 200.
-4. Deploy the frontend at the same commit. A frontend-only release can leave the
-   server at its existing commit when server code and the shared protocol are
-   unchanged. Check
-   [`/api/health`](https://minesweeper-flags-demo.onrender.com/api/health) for JSON
-   with `status`, `activeRooms`, and `maxRooms`.
-5. Use two browser sessions to check joining, moves, chat, refresh recovery,
-   reopening the invite, and rematches. Inspect desktop, tablet, and mobile
-   layouts, including chat scrolling and board zoom.
-6. Close the test sessions, check usage in Billing, and update each affected
-   service's deployment commit and date above.
+Server releases require `/api/health` to report zero rooms. This is a preflight
+check, not a lock: a room can be created after it runs. Schedule releases while
+the demo is quiet. Each deployment waits for Render, checks health, and verifies
+its live commit before proceeding. A failure stops the sequence and returns a
+nonzero exit code; there is no automatic rollback.
 
-To roll back, restore the recorded compatible pair of frontend and server commits.
-For a frontend-only release, restore the previous frontend commit without
-restarting the unchanged server.
-Render's free web plan retains only its two most recent previous deploys for the
-dashboard rollback action. Recheck a two-player game after a rollback.
+## Managing the live demo
 
-Blueprint synchronization is separate from application deployment. When changing
-`render.yaml`, use **Manual sync** on the Blueprint, review the proposed changes,
-and select **Approve** to apply them. For application changes, use each service's
-**Manual Deploy** menu.
+Live configuration stays in Render. Before disconnecting the Blueprint, the
+operator saved local private copies of its YAML, service settings, and release
+records. Ignored files are not backed up by Git; keep a separate private backup
+if they are needed for recovery. Credentials must remain separate from public
+documentation and examples.
 
-Render preserves existing header rules omitted from the Blueprint. When removing
-or changing a rule's path, remove the old rule in the frontend's Headers page too.
-Redeploy the frontend after header changes to clear cached response headers.
-See the [Blueprint reference](https://render.com/docs/blueprint-spec) for supported
-settings.
+The live static site's build command uses its configured `VITE_SOCKET_URL`:
+
+```bash
+npm ci && npm run build -w @minesweeper-flags/game-engine -w @minesweeper-flags/shared -w @minesweeper-flags/client
+```
+
+It omits the public template validator because the live service uses dashboard
+settings while the repository contains placeholders. Keep that distinction
+when editing the live build command. Do not reconnect or sync the public example
+into the live demo. Configure origins, environment values, the health rewrite,
+and headers directly in the service dashboard. Do not copy secrets into YAML.
+
+Before a release, run `make check`, confirm CI for the selected commit, and
+check workspace usage in Billing. Use `make deploy-plan` to inspect the target,
+then `make deploy`. The dashboard's **Manual Deploy → Deploy a specific commit**
+is also available, but bypasses the local safeguards.
+
+After a release, use two browser sessions to check joining, moves, chat,
+refresh recovery, reopening the invite, and rematches. Inspect desktop, tablet,
+and mobile layouts. Close test sessions and update the release record above.
+After header changes, redeploy the frontend to clear cached response headers.
+
+To roll back, restore a recorded compatible pair of commits. A frontend-only
+rollback can leave an unchanged server running. The CLI commands accept an older
+merged `COMMIT` if its checks still pass, subject to the same compatibility and
+empty-lobby safeguards. The dashboard rollback action retains only the two most
+recent previous deploys for a free web service. Recheck a two-player game after
+rollback. Disconnecting a Blueprint keeps resources running; see
+[Render's resource lifecycle documentation](https://render.com/docs/infrastructure-as-code#deleting-resources).

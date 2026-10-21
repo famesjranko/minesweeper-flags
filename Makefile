@@ -7,6 +7,9 @@ DEPLOYMENT_STYLE ?= server
 P2P_STUN_URLS ?= stun:stun.l.google.com:19302
 P2P_SIGNALING_PORT ?= 3002
 P2P_SIGNALING_URL ?= http://localhost:$(P2P_SIGNALING_PORT)
+TARGET ?=
+COMMIT ?= origin/main
+export TARGET COMMIT
 
 SERVER_WORKSPACE := @minesweeper-flags/server
 SIGNALING_WORKSPACE := @minesweeper-flags/signaling
@@ -72,6 +75,8 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	compose-public-logs \
 	compose-public-ps
 
+.PHONY: deploy-login deploy-plan deploy deploy-status deploy-template-check test-deploy
+
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "%-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
@@ -104,6 +109,24 @@ client-dev: ## Run the Vite client dev server for the selected deployment style
 build: ## Build all workspaces
 	$(NPM) run build
 
+deploy-login: ## Log in to Render; keep credentials in ignored local storage
+	node scripts/deploy/render.mjs login
+
+deploy-plan: ## Show the configured workspace, services and merged COMMIT; set TARGET
+	node scripts/deploy/render.mjs plan
+
+deploy: ## Deploy merged COMMIT after CI; set TARGET=frontend|server|all
+	node scripts/deploy/render.mjs deploy
+
+deploy-status: ## Check configured releases and public health endpoints
+	node scripts/deploy/render.mjs status
+
+deploy-template-check: ## Validate public example structure without using live services
+	node scripts/deploy/template.mjs --example
+
+test-deploy: ## Test deployment guards and command behavior without hosted resources
+	$(NPM) run test:deploy
+
 build-server: ## Build the server workspace
 	$(NPM) run build -w $(SERVER_WORKSPACE)
 
@@ -133,6 +156,7 @@ typecheck: ## Type-check all workspaces, including tests
 
 test: ## Run all workspace tests
 	$(NPM) run test
+	$(MAKE) test-deploy
 
 test-server: ## Run the server test suite
 	$(NPM) run test -w $(SERVER_WORKSPACE)
@@ -157,6 +181,7 @@ signaling-start: build-signaling ## Build and run the compiled signaling service
 
 check: ## Run the main local verification flow
 	$(MAKE) lint
+	$(MAKE) deploy-template-check
 	$(MAKE) typecheck
 	$(MAKE) test
 	$(MAKE) build
