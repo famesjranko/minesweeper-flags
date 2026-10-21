@@ -15,7 +15,7 @@
 
 This is an homage to the MSN Messenger game I used to play with friends back in the day. It is realtime two-player competitive Minesweeper with room chat, and it runs in the browser.
 
-[Play the live demo](https://minesweeper-flags-demo.onrender.com/). The free server can take about a minute to wake up. Invite a friend or use two browser sessions.
+[Play the live demo](https://minesweeper-flags-demo.onrender.com/). Invite a friend or use two browser sessions. It runs on Render's free tier, with space for four rooms. The server can take about a minute to wake up, and games and chat can be lost when the free state store restarts. See the [demo deployment and limits](deploy/render/README.md) for details.
 
 ## How to play
 
