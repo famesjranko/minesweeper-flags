@@ -28,6 +28,7 @@ export interface MultiplayerMatchViewProps extends CommonMatchViewProps {
 export interface SoloMatchViewProps extends CommonMatchViewProps {
   presentation: "solo";
   onRematch: () => void;
+  botThinking?: boolean;
 }
 
 export type MatchViewProps = MultiplayerMatchViewProps | SoloMatchViewProps;

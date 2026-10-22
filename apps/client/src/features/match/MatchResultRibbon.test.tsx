@@ -1,7 +1,7 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { MatchResultRibbon } from "./MatchResultRibbon.js";
+import { MatchRematchAction, MatchResultRibbon } from "./MatchResultRibbon.js";
 
 const createFinishedMatch = (
   overrides: Partial<MatchStateDto["players"][number]>[] = []
@@ -53,10 +53,14 @@ const tones = { "player-1": "blue", "player-2": "red" } as const;
 
 const render = (match: MatchStateDto, currentPlayerId: string) =>
   renderToStaticMarkup(
-    <MatchResultRibbon
+    <MatchResultRibbon match={match} currentPlayerId={currentPlayerId} playerTones={tones} />
+  );
+
+const renderRematch = (match: MatchStateDto, currentPlayerId: string) =>
+  renderToStaticMarkup(
+    <MatchRematchAction
       match={match}
       currentPlayerId={currentPlayerId}
-      playerTones={tones}
       onRequestRematch={() => {}}
       onCancelRematch={() => {}}
     />
@@ -118,7 +122,7 @@ describe("MatchResultRibbon", () => {
     const match = createFinishedMatch();
 
     // When the ribbon renders
-    const html = render(match, "player-2");
+    const html = renderRematch(match, "player-2");
 
     // Then it offers to request one
     expect(html).toContain("Request Rematch");
@@ -129,7 +133,7 @@ describe("MatchResultRibbon", () => {
     const match = createFinishedMatch([{ rematchRequested: true }]);
 
     // When player-1's screen renders the ribbon
-    const html = render(match, "player-1");
+    const html = renderRematch(match, "player-1");
 
     // Then it says it is waiting for the opponent and offers to cancel
     expect(html).toContain("Waiting for Guest");
@@ -141,7 +145,7 @@ describe("MatchResultRibbon", () => {
     const match = createFinishedMatch([{ rematchRequested: true }]);
 
     // When player-2's screen renders the ribbon
-    const html = render(match, "player-2");
+    const html = renderRematch(match, "player-2");
 
     // Then it says the opponent wants a rematch and offers to accept
     expect(html).toContain("Host wants a rematch");

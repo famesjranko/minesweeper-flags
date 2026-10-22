@@ -329,7 +329,7 @@ const renderMatchView = (match: MatchStateDto, currentPlayerId = "player-1") =>
   );
 
 describe("MatchView match end", () => {
-  it("crowns only the winner's score once the match ends", () => {
+  it("crowns only the winner beside their name once the match ends", () => {
     // Given a finished match that red (player-2) won
     const match: MatchStateDto = {
       ...createMatch({ currentTurnPlayerId: "player-1", scores: [24, 26] }),
@@ -342,12 +342,18 @@ describe("MatchView match end", () => {
     // When the match view renders
     const html = renderMatchView(match);
 
-    // Then exactly one score carries the crown, and it is red's
+    // Then exactly one name carries the crown, and it is red's
     expect(html.match(/winner-crown/g)?.length).toBe(1);
-    expect(html).toMatch(/sidebar-player-panel-red[\s\S]*sidebar-score-pill is-winner/);
+    expect(html).toMatch(
+      /sidebar-player-panel-red is-card-winner[\s\S]*player-crown-slot[\s\S]*winner-crown/
+    );
 
-    // And the result is shown over the board
-    expect(html).toMatch(/classic-board-frame[\s\S]*match-result-ribbon/);
+    // And the single result strip precedes the scores and board without an overlay
+    expect(html).toMatch(
+      /match-result-summary[\s\S]*arcade-match-scores[\s\S]*classic-board-frame/
+    );
+    expect(html.match(/match-result-summary/g)).toHaveLength(1);
+    expect(html).not.toContain("match-result-overlay");
   });
 
   it("shows no crown or result while the match is live", () => {

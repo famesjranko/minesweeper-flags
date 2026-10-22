@@ -101,7 +101,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
 
     // Then bot status is exposed and human controls cannot act
     expect(session.start).toHaveBeenCalledBefore(session.getSnapshot as ReturnType<typeof vi.fn>);
-    expect(container.textContent).toContain("Local match · Bot thinking");
+    expect(container.textContent).toContain("Bot thinking");
     expect(cell?.disabled).toBe(true);
     expect(container.querySelector(".arcade-chat-toggle")).toBeNull();
     expect(container.querySelector(".arcade-player-presence")).toBeNull();
@@ -140,6 +140,9 @@ it("offers only a local rematch after the match finishes", () => {
     expect(container.textContent).toContain("Solo progress cannot be saved in this browser.");
     expect(container.textContent).toContain("You won");
     expect(container.textContent).toContain("26 – 12");
+    expect(container.querySelectorAll(".arcade-play-area [role=status]")).toHaveLength(1);
+    expect(container.querySelectorAll(".match-primary-action")).toHaveLength(1);
+    expect(container.querySelector(".solo-result")).toBeNull();
     expect(container.textContent).not.toContain("Request Rematch");
   } finally {
     act(() => root.unmount());
@@ -239,7 +242,7 @@ it("updates the persistent local status in place while bot input is disabled", (
   act(() => root.render(<SoloPage createSession={() => session} />));
 
   try {
-    const status = container.querySelector(".solo-local-status");
+    const status = container.querySelector(".arcade-turn-hint");
     const cell = container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']");
 
     // When the deterministic local session moves to the bot turn
@@ -255,6 +258,7 @@ it("updates the persistent local status in place while bot input is disabled", (
     );
 
     // Then the same status row announces the bot state and disables human input
+    expect(container.querySelector(".arcade-turn-hint")).toBe(status);
     expect(status?.textContent).toContain("Bot thinking");
     expect(container.querySelector(".solo-thinking")).toBeNull();
     expect(cell?.disabled).toBe(true);
@@ -272,8 +276,8 @@ it("updates the persistent local status in place while bot input is disabled", (
     );
 
     // Then the same status row announces the finished state without a transient card
-    expect(container.querySelector(".solo-local-status")).toBe(status);
-    expect(status?.textContent).toContain("Match finished");
+    expect(container.querySelector(".arcade-turn-hint")).toBe(status);
+    expect(status?.textContent).toContain("You won");
     expect(container.querySelector(".solo-thinking")).toBeNull();
   } finally {
     act(() => root.unmount());

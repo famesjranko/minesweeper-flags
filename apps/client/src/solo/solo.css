@@ -66,8 +66,7 @@
   margin: 0;
   color: #b8c9df;
 }
-.solo-entry-primary,
-.solo-match-actions button {
+.solo-entry-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -85,82 +84,33 @@
   width: 100%;
 }
 .solo-match {
-  width: min(100%, 760px);
+  width: min(100%, 500px);
   margin: 0 auto;
 }
-.solo-match .arcade-match-main {
-  grid-template-columns: minmax(0, 1fr);
-}
-.solo-match .arcade-match,
-.solo-match .arcade-match-scores,
-.solo-match .arcade-board-stage,
-.solo-match .arcade-match-tools {
-  width: 100%;
-}
-.solo-match .arcade-board-viewport:focus-visible {
-  outline: 3px solid #b5e6ff;
-  outline-offset: 3px;
-}
 .solo-match > .arcade-header {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0;
   border: 0;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .solo-leave-link {
   color: #c2d3e9;
   font-size: 13px;
 }
 .solo-notice,
-.solo-error,
-.solo-local-status {
+.solo-error {
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 13px;
 }
-.solo-notice,
-.solo-local-status {
+.solo-notice {
   background: #182d47;
   color: #b7d8f2;
 }
 .solo-error {
   background: #422d35;
   color: #ffd3ca;
-}
-.solo-match-actions {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 16px;
-}
-.solo-result {
-  display: grid;
-  gap: 4px;
-  margin: 16px auto 0;
-  padding: 14px 18px;
-  border: 1px solid #5a80aa;
-  border-radius: 12px;
-  background: #1b2f4d;
-  color: #e7f2ff;
-  text-align: center;
-}
-.solo-result p {
-  margin: 0;
-  font-size: 15px;
-}
-.solo-result strong {
-  color: #9ddcff;
-  font-variant-numeric: tabular-nums;
-}
-.solo-match-actions button {
-  background: #243c59;
-  border-color: #526888;
-  color: #dfedff;
-}
-.solo-match-actions button[name="rematch"] {
-  background: #304d6e;
-  border-color: #63c8ff;
 }
 @media (max-width: 680px) {
   .solo-home-intro {
@@ -169,11 +119,15 @@
   .solo-entry-card {
     padding: 20px;
   }
-  .solo-match-actions {
-    align-items: stretch;
-    flex-direction: column;
+}
+
+@media (max-width: 1000px) {
+  .solo-match {
+    width: min(100%, 624px);
   }
-  .solo-match-actions button {
-    width: 100%;
+}
+@media (max-width: 600px) {
+  .solo-match {
+    width: min(100%, 760px);
   }
 }

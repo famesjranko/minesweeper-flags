@@ -2,7 +2,9 @@ import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import type { MatchViewProps } from "./match-view.types.js";
 import { getPlayerSlots } from "./PlayerPanel.js";
 
-type PresentationInput = Pick<MatchViewProps, "match" | "currentPlayerId" | "bombArmed">;
+type PresentationInput = Pick<MatchViewProps, "match" | "currentPlayerId" | "bombArmed"> & {
+  connectionStatus?: "disconnected" | "connecting" | "connected";
+};
 
 interface TurnHintInput {
   finished: boolean;
@@ -23,7 +25,7 @@ const getTurnHint = ({
 }: TurnHintInput) => {
   if (finished) return "Match finished";
   if (!canAct) return `${opponentName} is moving.`;
-  if (bombArmed) return "Bomb armed. Pick center.";
+  if (bombArmed) return "Bomb armed · select a square or cancel.";
   if (canBomb) return "Your turn · Bomb ready.";
   if (scoreDeficit > 0 && scoreDeficit < MIN_BOMB_DEFICIT) {
     return `Your turn · Bomb unlocks at down ${MIN_BOMB_DEFICIT}.`;
@@ -31,11 +33,19 @@ const getTurnHint = ({
   return "Your turn · First to 26";
 };
 
-export const getMatchPresentation = ({ match, currentPlayerId, bombArmed }: PresentationInput) => {
+export const getMatchPresentation = ({
+  match,
+  currentPlayerId,
+  bombArmed,
+  connectionStatus
+}: PresentationInput) => {
   const playerSlots = getPlayerSlots(match, currentPlayerId);
   const selfSlot = playerSlots.find((slot) => slot.isSelf);
   const opponent = playerSlots.find((slot) => !slot.isSelf)?.player;
-  const canAct = match.phase === "live" && match.currentTurnPlayerId === currentPlayerId;
+  const canAct =
+    match.phase === "live" &&
+    match.currentTurnPlayerId === currentPlayerId &&
+    (connectionStatus === undefined || connectionStatus === "connected");
   const scoreDeficit = selfSlot && opponent ? opponent.score - selfSlot.player.score : 0;
   const canBomb = Boolean(
     selfSlot && opponent && selfSlot.player.bombsRemaining === 1 && scoreDeficit >= MIN_BOMB_DEFICIT

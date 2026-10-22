@@ -1,4 +1,5 @@
 import "./match-view.css";
+import "./match-controls.css";
 
 import { useState } from "react";
 import {
@@ -28,7 +29,7 @@ export const MatchView = (props: MatchViewProps) => {
     : "Waiting for the second player to join chat.";
 
   return (
-    <div className="arcade-match">
+    <div className={`arcade-match${isSolo ? " is-solo" : ""}`}>
       {!isSolo ? (
         <MatchHeader
           roomCode={props.roomCode}
@@ -56,7 +57,11 @@ export const MatchView = (props: MatchViewProps) => {
           chatMessageCount={isSolo ? 0 : props.chatMessages.length}
           onOpenChat={() => chatRef.current?.showModal()}
           showChat={!isSolo}
-          showResultRibbon={!isSolo}
+          solo={
+            props.presentation === "solo"
+              ? { botThinking: props.botThinking ?? false, onResign: props.onResign }
+              : undefined
+          }
           hidePresence={isSolo}
         />
         {!isSolo ? (
