@@ -16,10 +16,9 @@ type PlayProps = {
   onCancelRematch: () => void;
   view: MatchPresentation;
   lastMove: LastMoveMarks;
-  chatMessageCount: number;
-  onOpenChat: () => void;
-  showChat?: boolean;
-  solo?: { botThinking: boolean; onResign: () => void } | undefined;
+  onResign: () => void;
+  resignDisabled?: boolean;
+  solo?: { botThinking: boolean } | undefined;
   hidePresence?: boolean;
 };
 
@@ -110,33 +109,35 @@ export const MatchPlayArea = (props: PlayProps) => {
         ))}
       </div>
       <MatchBoard props={props} zoomed={zoomed} />
-      {props.solo ? (
+      {props.match.phase === "live" ? (
         <button
           type="button"
-          name={props.match.phase === "finished" ? "rematch" : "resign"}
-          className={
-            props.match.phase === "finished" ? "match-primary-action" : "match-resign-action"
-          }
-          onClick={props.match.phase === "finished" ? props.onRequestRematch : props.solo.onResign}
+          name="resign"
+          className="match-resign-action"
+          disabled={props.resignDisabled}
+          onClick={() => {
+            if (window.confirm("Resign this match?")) props.onResign();
+          }}
         >
-          {props.match.phase === "finished" ? "Play again" : "Resign match"}
+          Resign match
         </button>
-      ) : props.match.phase === "finished" ? (
+      ) : props.solo ? (
+        <button
+          type="button"
+          name="rematch"
+          className="match-primary-action"
+          onClick={props.onRequestRematch}
+        >
+          Play again
+        </button>
+      ) : (
         <MatchRematchAction
           match={props.match}
           currentPlayerId={props.currentPlayerId}
           onRequestRematch={props.onRequestRematch}
           onCancelRematch={props.onCancelRematch}
         />
-      ) : null}
-      {props.showChat !== false ? (
-        <button type="button" className="arcade-chat-toggle" onClick={props.onOpenChat}>
-          <span>
-            Chat · {props.chatMessageCount} {props.chatMessageCount === 1 ? "message" : "messages"}
-          </span>
-          <span>Open ↗</span>
-        </button>
-      ) : null}
+      )}
     </section>
   );
 };

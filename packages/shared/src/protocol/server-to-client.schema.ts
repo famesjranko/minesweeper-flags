@@ -40,6 +40,14 @@ export const roomJoinedEventSchema = z.object({
   })
 });
 
+export const roomCancelledEventSchema = z.object({
+  type: z.literal(SERVER_EVENT_NAMES.roomCancelled),
+  payload: z.object({
+    roomCode: roomCodeSchema,
+    requestId: z.string().min(1)
+  })
+});
+
 export const roomStateEventSchema = z.object({
   type: z.literal(SERVER_EVENT_NAMES.roomState),
   payload: z.object({
@@ -145,6 +153,7 @@ export const serverErrorEventSchema = z.object({
 export const serverEventSchema = z.discriminatedUnion("type", [
   roomCreatedEventSchema,
   roomJoinedEventSchema,
+  roomCancelledEventSchema,
   roomStateEventSchema,
   chatHistoryEventSchema,
   chatMessageEventSchema,

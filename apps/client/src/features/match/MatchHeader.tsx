@@ -6,29 +6,13 @@ const closeOptions = (details: HTMLDetailsElement) => {
   details.querySelector("summary")?.focus();
 };
 
-const ResignButton = ({ disabled, onResign }: { disabled: boolean; onResign: () => void }) => (
-  <button
-    type="button"
-    className="sidebar-resign-button"
-    disabled={disabled}
-    onClick={() => {
-      if (window.confirm("Resign this match?")) {
-        onResign();
-      }
-    }}
-  >
-    Resign match
-  </button>
-);
-
 interface MatchHeaderProps {
   roomCode: string;
   connectionStatus: string;
   match: MatchStateDto;
-  onResign: () => void;
 }
 
-export const MatchHeader = ({ roomCode, connectionStatus, match, onResign }: MatchHeaderProps) => (
+export const MatchHeader = ({ roomCode, connectionStatus, match }: MatchHeaderProps) => (
   <>
     <ArcadeHeader connectionStatus={connectionStatus} roomCode={roomCode}>
       <details
@@ -68,7 +52,6 @@ export const MatchHeader = ({ roomCode, connectionStatus, match, onResign }: Mat
             </span>
           </div>
           <a href="/lobby">Back to lobby</a>
-          <ResignButton disabled={match.phase !== "live"} onResign={onResign} />
         </div>
       </details>
     </ArcadeHeader>

@@ -24,6 +24,7 @@ export interface GameClientRuntimeController {
   resignMatch: () => void;
   requestRematch: () => void;
   cancelRematch: () => void;
+  cancelRoom: () => void;
   clearError: () => void;
 }
 

@@ -16,9 +16,27 @@ interface ChatPanelProps {
   helperText?: string;
   className?: string;
   onClose?: () => void;
+  onExpand?: () => void;
   onDraftChange: (value: string) => void;
   onSend: () => void;
 }
+
+const getStatusMessage = ({
+  error,
+  pending,
+  connectionStatus,
+  helperText
+}: {
+  error: string | null;
+  pending: boolean;
+  connectionStatus: ConnectionStatus;
+  helperText: string | undefined;
+}) => {
+  if (error) return error;
+  if (pending) return "Sending...";
+  if (connectionStatus !== "connected") return "Chat offline. You can keep typing.";
+  return helperText ?? "Press Enter to send.";
+};
 
 export const ChatPanel = ({
   roomCode,
@@ -32,30 +50,32 @@ export const ChatPanel = ({
   helperText,
   className,
   onClose,
+  onExpand,
   onDraftChange,
   onSend
 }: ChatPanelProps) => {
   const sendDisabled = connectionStatus !== "connected" || pending || !draft.trim();
-  const statusMessage = error
-    ? error
-    : pending
-      ? "Sending..."
-      : connectionStatus !== "connected"
-        ? "Chat offline. You can keep typing."
-        : (helperText ?? "Press Enter to send.");
+  const statusMessage = getStatusMessage({ error, pending, connectionStatus, helperText });
 
   return (
     <section className={["classic-chat-frame", className].filter(Boolean).join(" ")}>
       <header className="chat-panel-header">
         <div>
-          <h2>Messenger</h2>
-          <p className="chat-room-meta">
-            Room {roomCode}{" "}
-            <span className={`chat-connection-pill is-${connectionStatus}`}>
-              · {connectionStatus}
-            </span>
-          </p>
+          <h2>{onExpand ? "Chat" : "Messenger"}</h2>
+          {!onExpand ? (
+            <p className="chat-room-meta">
+              Room {roomCode}{" "}
+              <span className={`chat-connection-pill is-${connectionStatus}`}>
+                · {connectionStatus}
+              </span>
+            </p>
+          ) : null}
         </div>
+        {onExpand ? (
+          <button type="button" className="chat-expand" aria-haspopup="dialog" onClick={onExpand}>
+            Full chat ↗
+          </button>
+        ) : null}
         {onClose ? (
           <button
             type="button"
@@ -71,7 +91,7 @@ export const ChatPanel = ({
       <ChatMessageList
         currentPlayerId={currentPlayerId}
         playerTones={playerTones}
-        messages={messages}
+        messages={onExpand ? messages.slice(-2) : messages}
       />
 
       <form
@@ -96,9 +116,11 @@ export const ChatPanel = ({
         </button>
       </form>
 
-      <p className={["chat-inline-status", error ? "is-error" : ""].filter(Boolean).join(" ")}>
-        {statusMessage}
-      </p>
+      {!onExpand || error || pending || connectionStatus !== "connected" ? (
+        <p className={["chat-inline-status", error ? "is-error" : ""].filter(Boolean).join(" ")}>
+          {statusMessage}
+        </p>
+      ) : null}
     </section>
   );
 };

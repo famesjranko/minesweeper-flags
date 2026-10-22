@@ -30,6 +30,8 @@ interface GameClientContextValue {
   chatError: string | null;
   chatDraft: string;
   chatPending: boolean;
+  roomCancelPending: boolean;
+  roomCancelAttempted: boolean;
   slotAvailability: SlotAvailability | null;
   refreshSlotCount: () => void;
   hasStoredSession: (roomCode: string) => boolean;
@@ -44,6 +46,7 @@ interface GameClientContextValue {
   resignMatch: () => void;
   requestRematch: () => void;
   cancelRematch: () => void;
+  cancelRoom: () => void;
   clearError: () => void;
   p2pSetup: P2PSetupSnapshot | null;
   openGuestSetupSession: (sessionId: string) => void;
@@ -107,7 +110,10 @@ const useSlotAvailability = () => {
   return { cancelSlotRefresh, refreshSlotCount, scheduleSlotRefresh, slotAvailability };
 };
 
-export const GameClientProvider = ({ children }: PropsWithChildren) => {
+export const GameClientProvider = ({
+  children,
+  enabled = true
+}: PropsWithChildren<{ enabled?: boolean }>) => {
   const runtimeRef = useRef<GameClientRuntime | null>(null);
   const { cancelSlotRefresh, refreshSlotCount, scheduleSlotRefresh, slotAvailability } =
     useSlotAvailability();
@@ -138,6 +144,9 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
   }, [runtime, scheduleSlotRefresh]);
 
   useEffect(() => {
+    // The shared lobby stays mounted while solo is selected; networking starts on friend intent.
+    if (!enabled) return;
+
     runtime.controller.start();
     if (DEPLOYMENT_MODE === "server") {
       refreshSlotCount();
@@ -147,7 +156,20 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
       cancelSlotRefresh();
       runtime.controller.dispose();
     };
-  }, [cancelSlotRefresh, runtime, refreshSlotCount]);
+  }, [cancelSlotRefresh, runtime, refreshSlotCount, enabled]);
+
+  const previousCancellation = useRef(false);
+  useEffect(() => {
+    if (
+      previousCancellation.current &&
+      !snapshot.roomCancelPending &&
+      !snapshot.session &&
+      DEPLOYMENT_MODE === "server"
+    ) {
+      refreshSlotCount();
+    }
+    previousCancellation.current = snapshot.roomCancelPending;
+  }, [refreshSlotCount, snapshot.roomCancelPending, snapshot.session]);
 
   return (
     <GameClientContext.Provider
@@ -161,6 +183,8 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         chatError: snapshot.chatError,
         chatDraft: snapshot.chatDraft,
         chatPending: snapshot.chatPendingText !== null,
+        roomCancelPending: snapshot.roomCancelPending,
+        roomCancelAttempted: snapshot.roomCancelAttempted,
         slotAvailability,
         refreshSlotCount,
         hasStoredSession: runtime.controller.hasStoredSession,
@@ -175,6 +199,7 @@ export const GameClientProvider = ({ children }: PropsWithChildren) => {
         resignMatch: runtime.controller.resignMatch,
         requestRematch: runtime.controller.requestRematch,
         cancelRematch: runtime.controller.cancelRematch,
+        cancelRoom: runtime.controller.cancelRoom,
         clearError: runtime.controller.clearError,
         p2pSetup: p2pSetupSnapshot,
         openGuestSetupSession: runtime.p2p?.controller.openGuestSetupSession ?? (() => {}),

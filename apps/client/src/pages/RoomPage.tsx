@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { MatchView } from "../features/match/MatchView.js";
 import { HostDirectMatchPanel } from "../features/room/HostDirectMatchPanel.js";
@@ -9,12 +9,32 @@ import { RoomWaitingPanel } from "../features/room/RoomWaitingPanel.js";
 import { useRoomRecovery } from "../features/room/useRoomRecovery.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: Route recovery and waiting state share one page.
 export const RoomPage = () => {
   const { roomCode = "" } = useParams();
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+  const navigate = useNavigate();
   const gameClient = useGameClient();
-  const { connectionStatus, error, session, match, hasStoredSession, reconnect, p2pSetup } =
-    gameClient;
+  const {
+    connectionStatus,
+    error,
+    session,
+    match,
+    hasStoredSession,
+    reconnect,
+    p2pSetup,
+    cancelRoom,
+    roomCancelPending
+  } = gameClient;
+  const wasCancelling = useRef(false);
+  const cancellationDestination = useRef("/lobby");
+
+  useEffect(() => {
+    if (roomCancelPending) wasCancelling.current = true;
+    if (wasCancelling.current && !roomCancelPending && !session) {
+      navigate(cancellationDestination.current, { replace: true });
+    }
+  }, [navigate, roomCancelPending, session]);
   const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
   const hostSetup = p2pSetup?.host ?? null;
 
@@ -106,6 +126,17 @@ export const RoomPage = () => {
       inviteNotice={inviteNotice}
       error={error}
       onCopy={copyInviteValue}
+      onCancelRoom={() => {
+        if (roomCancelPending) return;
+        cancellationDestination.current = "/lobby";
+        cancelRoom();
+      }}
+      onHome={() => {
+        if (roomCancelPending) return;
+        cancellationDestination.current = "/";
+        cancelRoom();
+      }}
+      cancelPending={roomCancelPending}
     />
   );
 };

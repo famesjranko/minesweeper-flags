@@ -382,3 +382,10 @@
     font-size: 11px;
   }
 }
+
+.arcade-lobby.lobby-form {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}

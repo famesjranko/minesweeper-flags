@@ -299,9 +299,6 @@ button.inline-bomb.is-armed::after {
 .arcade-match .inline-bomb .sidebar-bomb-icon {
   opacity: 1;
 }
-.arcade-chat-toggle {
-  width: 100%;
-}
 @media (max-width: 350px) {
   .arcade-brand-mark {
     display: none;

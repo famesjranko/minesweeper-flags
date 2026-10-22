@@ -383,5 +383,6 @@ it("keeps multiplayer header, presence, and chat UI by default", () => {
   expect(html).toContain('aria-label="Match options"');
   expect(html).toContain("Room ABCDE");
   expect(html).toContain('aria-label="Connected"');
-  expect(html).toContain("Chat · 0 messages");
+  expect(html).toContain("Full chat ↗");
+  expect(html).toContain("No messages yet.");
 });

@@ -181,43 +181,21 @@
   font-size: calc(var(--board-cell-size) * 0.68);
 }
 
-.arcade-chat-toggle,
-.arcade-chat-close,
-.arcade-options-close,
-.arcade-match .sidebar-resign-button {
+.arcade-match :is(.arcade-options-close, .arcade-chat-close) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   min-height: 44px;
-  padding: 9px 12px;
   border: 1px solid #526888;
   border-radius: 10px;
   background: #243c59;
   color: #dfedff;
   font: inherit;
-  font-size: 12px;
-}
-.arcade-match .sidebar-resign-button {
-  width: 100%;
-  grid-area: auto;
-  border-color: #98605e;
-  background: #412c33;
-  color: #ffd2c2;
-}
-.arcade-match :is(.arcade-options-close, .arcade-chat-close) {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
   padding: 0;
   font-size: 24px;
-}
-.arcade-match .sidebar-resign-button:disabled {
-  opacity: 0.5;
-}
-
-.arcade-chat-toggle {
-  display: none;
 }
 
 .arcade-chat-region {
@@ -426,11 +404,6 @@
 }
 
 @media (max-width: 1000px), (max-height: 500px) {
-  .arcade-chat-toggle {
-    display: flex;
-    justify-content: space-between;
-  }
-
   .arcade-chat-region {
     position: fixed;
     inset: auto 16px 16px;

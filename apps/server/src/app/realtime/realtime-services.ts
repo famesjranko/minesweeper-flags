@@ -38,7 +38,8 @@ export const createRealtimeServices = ({
   roomRepository,
   matchRepository,
   chatRepository,
-  playerSessionStore
+  playerSessionStore,
+  deleteRoomState
 }: StateStores): RealtimeServices => {
   const roomTaskRunner = new KeyedSerialTaskRunner();
   const roomService = new RoomService(roomRepository, roomTaskRunner);
@@ -55,6 +56,10 @@ export const createRealtimeServices = ({
     chatService,
     rematchService,
     playerSessionService,
+    roomRepository,
+    matchRepository,
+    roomTaskRunner,
+    deleteRoomState,
     maxConcurrentRooms: MAX_CONCURRENT_ROOMS
   });
   const connectionRegistry = new ConnectionRegistry();

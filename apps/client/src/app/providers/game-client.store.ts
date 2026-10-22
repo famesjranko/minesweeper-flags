@@ -17,6 +17,8 @@ export interface GameClientSnapshot {
   chatDraft: string;
   chatError: string | null;
   chatPendingText: string | null;
+  roomCancelPending: boolean;
+  roomCancelAttempted: boolean;
 }
 
 type Listener = () => void;
@@ -168,6 +170,16 @@ export class GameClientStore {
       ...current,
       chatPendingText
     }));
+  }
+
+  setRoomCancelPending(roomCancelPending: boolean): void {
+    if (this.snapshot.roomCancelPending === roomCancelPending) return;
+    this.update((current) => ({ ...current, roomCancelPending }));
+  }
+
+  setRoomCancelAttempted(roomCancelAttempted: boolean): void {
+    if (this.snapshot.roomCancelAttempted === roomCancelAttempted) return;
+    this.update((current) => ({ ...current, roomCancelAttempted }));
   }
 
   clearTransientRoomState({

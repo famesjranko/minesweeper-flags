@@ -101,7 +101,7 @@ describe("AppRouter", () => {
 
       // Then the visitor sees a not-found message and a link back to the lobby
       expect(app.container.querySelector("h1")?.textContent).toBe("We couldn’t find that page.");
-      expect(app.container.querySelector("a")?.getAttribute("href")).toBe("/lobby");
+      expect(app.container.querySelector("a.arcade-primary")?.getAttribute("href")).toBe("/lobby");
     } finally {
       app?.dispose();
       window.history.replaceState(null, "", originalUrl);
@@ -143,6 +143,14 @@ describe("AppRouter", () => {
         expect(getStoredP2PRecoveryRecord("ABCDE")).toEqual(p2pRecovery);
         app = renderApp();
         navigate(path);
+
+        // Then the cold home already contains its inaccessible friend form
+        if (path === "/") {
+          const panel = app.container.querySelector<HTMLElement>("#friend-panel");
+          expect(panel?.querySelector("input")).not.toBeNull();
+          expect(panel?.hidden).toBe(true);
+          expect(panel?.hasAttribute("inert")).toBe(true);
+        }
 
         // Then no multiplayer health, transport, rendezvous, or peer connection starts
         expect(fetchMock).not.toHaveBeenCalled();
@@ -251,16 +259,26 @@ describe("AppRouter", () => {
       }
       vi.stubGlobal("fetch", fetchMock);
       vi.stubGlobal("WebSocket", TrackingWebSocket);
-      window.history.replaceState(null, "", "/lobby");
+      window.history.replaceState(null, "", "/");
       let app: ReturnType<typeof renderApp> | null = null;
 
       try {
         // When the visitor changes friend routes and chooses solo while that refresh is pending
         app = renderApp();
+        expect(sockets).toHaveLength(0);
+        expect(fetchMock).not.toHaveBeenCalled();
+        const header = app.container.querySelector("header");
+        act(() => app?.container.querySelector<HTMLButtonElement>("#friend-tab")?.click());
+        expect(window.location.pathname).toBe("/");
+        expect(app.container.querySelector("header")).toBe(header);
+        expect(app.container.querySelector(".lobby-create-button")).not.toBeNull();
         const startedSocketCount = sockets.length;
         expect(startedSocketCount).toBeGreaterThan(0);
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(vi.getTimerCount()).toBeGreaterThan(0);
+        act(() => app?.container.querySelector<HTMLButtonElement>("#solo-tab")?.click());
+        act(() => app?.container.querySelector<HTMLButtonElement>("#friend-tab")?.click());
+        expect(sockets).toHaveLength(startedSocketCount);
         navigate("/room/ABCDE");
         navigate("/solo");
         await act(async () => {

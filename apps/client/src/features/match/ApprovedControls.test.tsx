@@ -56,16 +56,26 @@ const onRequest = vi.fn();
 const onCancel = vi.fn();
 const onSelect = vi.fn();
 const onToggle = vi.fn();
+const onResign = vi.fn();
 const container = document.createElement("div");
 let root: ReturnType<typeof createRoot>;
 
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
-const Scene = ({ match, connected = true }: { match: MatchStateDto; connected?: boolean }) => {
+const Scene = ({
+  match,
+  connected = true,
+  solo = false
+}: {
+  match: MatchStateDto;
+  connected?: boolean;
+  solo?: boolean;
+}) => {
   const [bombArmed, setBombArmed] = useState(false);
   return (
     <MatchPlayArea
@@ -86,8 +96,9 @@ const Scene = ({ match, connected = true }: { match: MatchStateDto; connected?: 
       onCellSelect={(row, column) => onSelect(row, column, bombArmed)}
       onRequestRematch={onRequest}
       onCancelRematch={onCancel}
-      chatMessageCount={0}
-      onOpenChat={() => {}}
+      onResign={onResign}
+      resignDisabled={!connected}
+      solo={solo ? { botThinking: false } : undefined}
     />
   );
 };
@@ -255,4 +266,26 @@ it("shows opponent availability without an action and preserves both spent bombs
   act(() => local.click());
   expect(local.disabled).toBe(true);
   expect(onToggle).not.toHaveBeenCalled();
+});
+
+it.each([false, true])("requires confirmation for the visible resign action in solo=%s", (solo) => {
+  // Given a live match using either presentation
+  const match = createMatch();
+  render(match);
+  act(() => root.render(<Scene match={match} solo={solo} />));
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  const resign = container.querySelector<HTMLButtonElement>(
+    ".arcade-play-area button[name='resign']"
+  )!;
+
+  // When the player cancels resignation and then confirms it
+  act(() => resign.click());
+  expect(onResign).not.toHaveBeenCalled();
+  confirm.mockReturnValue(true);
+  act(() => resign.click());
+
+  // Then one shared full-width action submits resignation only after confirmation
+  expect(resign.className).toBe("match-resign-action");
+  expect(onResign).toHaveBeenCalledOnce();
+  expect(container.querySelectorAll("button[name='resign']")).toHaveLength(1);
 });

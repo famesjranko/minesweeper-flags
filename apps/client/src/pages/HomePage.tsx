@@ -1,62 +1,103 @@
-import "../solo/solo.css";
+import "../shared-ui/game-mode.css";
 
-import { useId, useRef, useState } from "react";
-import { ArcadeHeader } from "../shared-ui/ArcadeHeader.js";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { createContext, type ReactNode, useContext, useRef, useState } from "react";
+import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
 
-type Mode = "solo" | "friend";
+export type Mode = "solo" | "friend";
 
 const modes: { id: Mode; label: string }[] = [
   { id: "solo", label: "Solo" },
   { id: "friend", label: "With a friend" }
 ];
 
-export const HomePage = () => {
-  const [mode, setMode] = useState<Mode>("solo");
-  const labelId = useId();
+const FriendPanelActiveContext = createContext(false);
+
+/**
+ * True once the player has chosen "With a friend" in this page. The friend form mounts eagerly
+ * so the hidden panel reserves its height, but networking must wait for this intent.
+ */
+export const useFriendPanelActive = () => useContext(FriendPanelActiveContext);
+
+interface HomePageProps {
+  initialMode?: Mode;
+  friendContent: ReactNode;
+  connectionStatus: string;
+  onFriendSelected: () => void;
+}
+
+export const HomePage = ({
+  initialMode = "solo",
+  friendContent,
+  connectionStatus,
+  onFriendSelected
+}: HomePageProps) => {
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [friendVisited, setFriendVisited] = useState(initialMode === "friend");
   const tabs = useRef<Record<Mode, HTMLButtonElement | null>>({ solo: null, friend: null });
   const selectMode = (nextMode: Mode, focus = false) => {
     setMode(nextMode);
+    if (nextMode === "friend") {
+      setFriendVisited(true);
+      onFriendSelected();
+    }
     if (focus) tabs.current[nextMode]?.focus();
   };
 
   return (
-    <main className="page-shell arcade-page-shell solo-home-shell">
-      <section className="solo-home">
-        <ArcadeHeader />
-        <div className="solo-home-intro">
-          <p className="arcade-eyebrow">A Messenger classic</p>
-          <h1>Find the mines. Win the flags.</h1>
-          <p>Choose a local match against the bot, or create a room for a friend.</p>
+    <LobbyLayout
+      connectionStatus={mode === "friend" ? connectionStatus : undefined}
+      stage={
+        <div className="solo-mode-tabs solo-stage-tabs" role="tablist" aria-label="Game mode">
+          {modes.map((item) => (
+            <button
+              key={item.id}
+              id={`${item.id}-tab`}
+              type="button"
+              role="tab"
+              aria-selected={mode === item.id}
+              aria-controls={`${item.id}-panel`}
+              tabIndex={mode === item.id ? 0 : -1}
+              ref={(element) => {
+                tabs.current[item.id] = element;
+              }}
+              onClick={() => selectMode(item.id)}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  selectMode(mode === "solo" ? "friend" : "solo", true);
+                }
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
-        <section className="solo-entry-card" aria-labelledby={labelId}>
-          <h2 id={labelId}>How do you want to play?</h2>
-          <div className="solo-mode-tabs" role="tablist" aria-label="Game mode">
-            {modes.map((item) => (
-              <button
-                key={item.id}
-                id={`${item.id}-tab`}
-                type="button"
-                role="tab"
-                aria-selected={mode === item.id}
-                aria-controls={`${item.id}-panel`}
-                tabIndex={mode === item.id ? 0 : -1}
-                ref={(element) => {
-                  tabs.current[item.id] = element;
-                }}
-                onClick={() => selectMode(item.id)}
-                onKeyDown={(event) => {
-                  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                    event.preventDefault();
-                    selectMode(mode === "solo" ? "friend" : "solo", true);
-                  }
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div id="solo-panel" role="tabpanel" aria-labelledby="solo-tab" hidden={mode !== "solo"}>
-            <p>Play a 16×16 local match. The bot moves from the same revealed clues you see.</p>
+      }
+      footer={
+        <footer className="arcade-footer">
+          <p>No account needed.</p>
+          <details>
+            <summary>How to play</summary>
+            <p>
+              Take turns choosing squares. A mine scores a point and keeps your turn. A safe square
+              ends your turn. Your comeback bomb unlocks when you trail by {MIN_BOMB_DEFICIT} or
+              more.
+            </p>
+          </details>
+        </footer>
+      }
+    >
+      <section className="solo-entry-card" aria-label="Choose a game mode">
+        {/* Both panels share one grid cell so the card keeps the taller panel's height in every mode. */}
+        <div className="solo-entry-panels">
+          <div
+            id="solo-panel"
+            role="tabpanel"
+            aria-labelledby="solo-tab"
+            hidden={mode !== "solo"}
+            inert={mode !== "solo"}
+          >
             <a className="solo-entry-primary" href="/solo">
               Start solo match
             </a>
@@ -66,14 +107,14 @@ export const HomePage = () => {
             role="tabpanel"
             aria-labelledby="friend-tab"
             hidden={mode !== "friend"}
+            inert={mode !== "friend"}
           >
-            <p>Create or join a room to play on the shared board with a friend.</p>
-            <a className="solo-entry-primary" href="/lobby">
-              Create or join a room
-            </a>
+            <FriendPanelActiveContext.Provider value={friendVisited}>
+              {friendContent}
+            </FriendPanelActiveContext.Provider>
           </div>
-        </section>
+        </div>
       </section>
-    </main>
+    </LobbyLayout>
   );
 };

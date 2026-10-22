@@ -115,7 +115,7 @@ export const ServerMatchActionCards = ({
         Create Room
       </button>
       <p className="lobby-create-description">
-        {slotsFull ? "All room slots are in use." : "Host a room and share a private invite link."}
+        {slotsFull ? "All room slots are in use." : "Share an invite link with a friend."}
       </p>
     </form>
 
@@ -127,7 +127,7 @@ export const ServerMatchActionCards = ({
       }}
     >
       <div className="lobby-card-heading">
-        <h3>Join by Token</h3>
+        <h3>Have an invite?</h3>
       </div>
 
       <div className="lobby-join-entry">
@@ -138,7 +138,7 @@ export const ServerMatchActionCards = ({
             value={inviteValue}
             onChange={(event) => onInviteValueChange(event.target.value)}
             maxLength={INVITE_TOKEN_LENGTH}
-            placeholder="Paste invite token"
+            placeholder="Invite token"
             spellCheck={false}
             autoCapitalize="none"
             autoCorrect="off"
@@ -152,7 +152,7 @@ export const ServerMatchActionCards = ({
             .join(" ")}
           disabled={!canJoinRoom}
         >
-          Join Match
+          Join
         </button>
       </div>
     </form>

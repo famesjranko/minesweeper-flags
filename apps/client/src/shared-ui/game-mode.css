@@ -1,0 +1,26 @@
+.solo-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border-radius: 12px;
+  background: #101e34;
+}
+.solo-mode-tabs :is(button, a) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b8c9df;
+  font: inherit;
+  font-weight: 650;
+}
+.solo-mode-tabs :is([aria-selected="true"], [aria-current="page"]) {
+  background: #304d6e;
+  color: #f3f7ff;
+  box-shadow: 0 1px 0 #6ecfff66;
+}

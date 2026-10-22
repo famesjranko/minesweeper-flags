@@ -7,12 +7,11 @@ import {
   getLastMoveMarks,
   type LastMoveTrail
 } from "../../entities/board/last-move.js";
-import { ChatPanel } from "../chat/ChatPanel.js";
+import { MatchChat } from "./MatchChat.js";
 import { MatchHeader } from "./MatchHeader.js";
 import { MatchPlayArea } from "./MatchPlayArea.js";
 import { getMatchPresentation } from "./match-presentation.js";
 import type { MatchViewProps } from "./match-view.types.js";
-import { useMatchChat } from "./useMatchChat.js";
 
 export const MatchView = (props: MatchViewProps) => {
   const { match, currentPlayerId } = props;
@@ -22,7 +21,6 @@ export const MatchView = (props: MatchViewProps) => {
   const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
   const view = getMatchPresentation(props);
-  const chatRef = useMatchChat();
   const isSolo = props.presentation === "solo";
   const helperText = view.opponent
     ? `${view.opponent.displayName} is ${view.opponent.connected ? "online" : "offline"}.`
@@ -35,7 +33,6 @@ export const MatchView = (props: MatchViewProps) => {
           roomCode={props.roomCode}
           match={match}
           connectionStatus={props.connectionStatus}
-          onResign={props.onResign}
         />
       ) : null}
       <div className="arcade-match-main">
@@ -54,34 +51,15 @@ export const MatchView = (props: MatchViewProps) => {
             match.board.columns,
             view.playerTones
           )}
-          chatMessageCount={isSolo ? 0 : props.chatMessages.length}
-          onOpenChat={() => chatRef.current?.showModal()}
-          showChat={!isSolo}
+          onResign={props.onResign}
+          resignDisabled={!isSolo && props.connectionStatus !== "connected"}
           solo={
-            props.presentation === "solo"
-              ? { botThinking: props.botThinking ?? false, onResign: props.onResign }
-              : undefined
+            props.presentation === "solo" ? { botThinking: props.botThinking ?? false } : undefined
           }
           hidePresence={isSolo}
         />
         {!isSolo ? (
-          <dialog ref={chatRef} className="arcade-chat-region" aria-label="Match chat">
-            <ChatPanel
-              roomCode={props.roomCode}
-              currentPlayerId={currentPlayerId}
-              playerTones={view.playerTones}
-              connectionStatus={props.connectionStatus}
-              messages={props.chatMessages}
-              draft={props.chatDraft}
-              pending={props.chatPending}
-              error={props.chatError}
-              helperText={helperText}
-              className="arcade-match-chat"
-              onClose={() => chatRef.current?.close()}
-              onDraftChange={props.onChatDraftChange}
-              onSend={props.onSendChatMessage}
-            />
-          </dialog>
+          <MatchChat props={props} playerTones={view.playerTones} helperText={helperText} />
         ) : null}
       </div>
     </div>

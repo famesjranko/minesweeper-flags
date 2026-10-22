@@ -1,0 +1,156 @@
+/* Each hero size renders its own cached board; only one is displayed per viewport range. */
+.lobby-board-hero {
+  display: none;
+  padding: 9px;
+  border: 2px solid #101723;
+  border-radius: 10px;
+  background: linear-gradient(#435576, #263751);
+  box-shadow:
+    inset 0 1px 0 #8190ac66,
+    0 10px 24px #0004;
+}
+.lobby-board-hero-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  grid-template-rows: repeat(16, minmax(0, 1fr));
+  gap: 2px;
+  padding: 5px;
+  background: #090d16;
+  box-shadow: inset 0 0 0 2px #313d50;
+}
+.lobby-board-hero--thumb .lobby-board-hero-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+}
+.lobby-board-hero-cell {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  border-radius: 2px;
+  color: #2a3653;
+  font:
+    700 13px / 1 Tahoma,
+    Verdana,
+    sans-serif;
+  text-shadow: 0 1px 0 #ffffff52;
+}
+.lobby-board-hero-cell.is-hidden {
+  background:
+    linear-gradient(135deg, #ffffff2e 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(315deg, #ffffff1f 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(180deg, #79d3fb 0%, #2894e6 55%, #1f6db8 100%);
+  box-shadow:
+    inset 1px 1px 0 #ffffff6b,
+    inset -1px -1px 0 #00000038;
+}
+.lobby-board-hero-cell.is-revealed,
+.lobby-board-hero-cell.is-flag-blue,
+.lobby-board-hero-cell.is-flag-red {
+  background:
+    linear-gradient(180deg, #ffffff85, transparent 22%),
+    linear-gradient(180deg, #ffe267 0%, #ffc214 100%);
+  box-shadow:
+    inset 1px 1px 0 #ffffff99,
+    inset -1px -1px 0 #d17c008c;
+}
+.lobby-board-hero-cell.is-number-1,
+.lobby-board-hero-cell.is-flag-blue {
+  color: #1940be;
+}
+.lobby-board-hero-cell.is-number-2 {
+  color: #237019;
+}
+.lobby-board-hero-cell.is-number-3,
+.lobby-board-hero-cell.is-flag-red {
+  color: #bb2d23;
+}
+.lobby-board-hero-cell.is-number-4 {
+  color: #59378b;
+}
+.lobby-board-hero-cell.is-number-5 {
+  color: #84251f;
+}
+.lobby-board-hero-cell.is-number-6 {
+  color: #14707a;
+}
+.lobby-board-hero-cell.is-number-7 {
+  color: #18243d;
+}
+.lobby-board-hero-cell.is-number-8 {
+  color: #555b68;
+}
+.lobby-board-hero-cell svg {
+  display: block;
+  width: 80%;
+  height: 80%;
+}
+
+/* Phones: a separate 8×8 board sits beside the heading. */
+@media (max-width: 679px) {
+  .lobby-board-hero--thumb {
+    display: block;
+    width: 104px;
+    height: 104px;
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow:
+      inset 0 1px 0 #8190ac66,
+      0 6px 14px #0004;
+  }
+  .lobby-board-hero--thumb .lobby-board-hero-grid {
+    gap: 1px;
+    padding: 2px;
+  }
+  .lobby-board-hero--thumb .lobby-board-hero-cell {
+    border-radius: 1px;
+    font-size: 8px;
+  }
+}
+@media (max-width: 379px) {
+  .lobby-board-hero--thumb {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+/* Larger viewports: the complete board pins the frame height beside the mode panel. */
+@media (min-width: 680px) {
+  .lobby-board-hero--full {
+    display: block;
+    width: 400px;
+    height: 400px;
+  }
+}
+@media (min-width: 900px) and (max-width: 999px) {
+  .lobby-board-hero--full {
+    width: 380px;
+    height: 380px;
+  }
+}
+@media (min-width: 680px) and (max-width: 899px) {
+  .lobby-board-hero--full {
+    width: 240px;
+    height: 240px;
+    padding: 6px;
+  }
+  .lobby-board-hero--full .lobby-board-hero-grid {
+    gap: 1px;
+    padding: 3px;
+  }
+  .lobby-board-hero--full .lobby-board-hero-cell {
+    font-size: 9px;
+  }
+}
+@media (min-width: 760px) and (max-width: 899px) {
+  .lobby-board-hero--full {
+    width: 280px;
+    height: 280px;
+    padding: 7px;
+  }
+  .lobby-board-hero--full .lobby-board-hero-cell {
+    font-size: 10px;
+  }
+}

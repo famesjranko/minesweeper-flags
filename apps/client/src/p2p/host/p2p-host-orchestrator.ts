@@ -241,7 +241,8 @@ export class P2PHostOrchestrator {
 
     if (
       event.type === CLIENT_EVENT_NAMES.roomCreate ||
-      event.type === CLIENT_EVENT_NAMES.roomJoin
+      event.type === CLIENT_EVENT_NAMES.roomJoin ||
+      event.type === CLIENT_EVENT_NAMES.roomCancel
     ) {
       return { steps: [] };
     }
