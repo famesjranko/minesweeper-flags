@@ -288,9 +288,8 @@ export class GameClientController {
     status,
     closeCode
   }: GameClientTransportStatusChange): void => {
-    this.store.setConnectionStatus(status);
-
     if (status === "connected") {
+      this.store.setConnectionStatus(status);
       this.reconnectAttemptCount = 0;
 
       const reconnectSession = this.reconnectAttempt ?? this.store.getSnapshot().session;
@@ -309,28 +308,34 @@ export class GameClientController {
     }
 
     if (status === "disconnected" && typeof closeCode === "number") {
-      this.handleTransportClosed(closeCode);
+      const isRetrying = this.handleTransportClosed(closeCode);
+      this.store.setConnectionStatus(isRetrying ? "connecting" : status);
+      return;
     }
+
+    this.store.setConnectionStatus(status);
   };
 
-  private handleTransportClosed(closeCode: number): void {
+  private handleTransportClosed(closeCode: number): boolean {
     this.chatRecovery.recoverPendingOnClose();
 
     if (!this.shouldReconnect) {
-      return;
+      return false;
     }
 
     if (!shouldReconnectAfterClose(closeCode)) {
       this.store.setError(
         "This room is active in another tab or window. Use that tab, or reconnect here."
       );
-      return;
+      return false;
     }
 
     this.clearReconnectTimer();
     this.reconnectTimeoutId = this.scheduler.setTimeout(() => {
       this.connectTransport();
     }, this.getNextReconnectDelayMs());
+
+    return true;
   }
 
   private handleServerEvent = (event: ServerEvent | null): void => {

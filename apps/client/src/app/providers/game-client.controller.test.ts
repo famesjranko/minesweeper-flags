@@ -341,6 +341,26 @@ describe("game client controller", () => {
       "This room is active in another tab or window. Use that tab, or reconnect here."
     );
     expect(scheduler.getTimeoutCount()).toBe(0);
+    expect(store.getSnapshot().connectionStatus).toBe("disconnected");
+  });
+
+  it("keeps the connecting status through retry delays until the transport reconnects", () => {
+    // Given a started client whose connection fails twice
+    const { controller, scheduler, store, transport } = createHarness();
+    controller.start();
+    transport.emitStatus({ status: "disconnected", closeCode: 1006 });
+
+    // When each retry delay elapses and the next connection also fails
+    expect(store.getSnapshot().connectionStatus).toBe("connecting");
+    scheduler.runNextTimeout();
+    transport.emitStatus({ status: "disconnected", closeCode: 1006 });
+
+    // Then the header state remains connecting until the transport is ready
+    expect(store.getSnapshot().connectionStatus).toBe("connecting");
+    scheduler.runNextTimeout();
+    transport.emitStatus({ status: "connected" });
+
+    expect(store.getSnapshot().connectionStatus).toBe("connected");
   });
 
   it("recovers pending chat drafts across disconnect and confirmed reconnect delivery", () => {
