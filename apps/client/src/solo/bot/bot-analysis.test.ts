@@ -1,7 +1,7 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import { analyse } from "./bot-analysis.js";
-import { claim, createMatch, reveal } from "./bot-test-support.js";
+import { claim, createMatch, createSizedMatch, reveal } from "./bot-test-support.js";
 
 const at = (row: number, column: number): number => row * 16 + column;
 
@@ -216,6 +216,52 @@ describe("analyse", () => {
 
     // Then the shared cell keeps the local average estimate
     expect(probabilityAt(analysis, 0, 1)).toBeCloseTo(4 / 15, 12);
+  });
+
+  it("keeps local estimates when an over-budget group leaves no consistent mine count", () => {
+    // Given two one-mine clues on a 2×3 board with two mines and a budget too small for them
+    const match = createSizedMatch(2, 3, 2);
+    reveal(match, 0, 0, 1);
+    reveal(match, 0, 2, 1);
+
+    // When the exact analysis runs
+    const analysis = analyse(match, "exact", { nodeBudget: 1 });
+
+    // Then the bot still has probabilities to choose from instead of a contradiction
+    expect(analysis).not.toBeNull();
+  });
+
+  it("does not prove a mine from an estimated budget", () => {
+    // Given a 4×3 board whose groups exceed a small budget and leave one free cell
+    const match = createSizedMatch(4, 3, 5);
+    reveal(match, 0, 0, 1);
+    reveal(match, 0, 2, 1);
+    reveal(match, 3, 2, 2);
+    claim(match, 2, 0);
+
+    // When the exact analysis runs with that budget
+    const analysis = analyse(match, "exact", { nodeBudget: 3 });
+
+    // Then the free cell, a mine in two of three layouts, is not reported as certain
+    const freeCell = analysis?.probabilities[3 * 3 + 0];
+    expect(freeCell).toBeGreaterThan(0);
+    expect(freeCell).toBeLessThan(1);
+  });
+
+  it("does not prove a safe cell from an estimated budget", () => {
+    // Given a 3×5 board whose groups exceed a small budget
+    const match = createSizedMatch(3, 5, 4);
+    reveal(match, 1, 0, 2);
+    reveal(match, 1, 4, 1);
+    reveal(match, 2, 3, 1);
+
+    // When the exact analysis runs with that budget
+    const analysis = analyse(match, "exact", { nodeBudget: 3 });
+
+    // Then the free cell, a mine in one of three layouts, is not reported as safe
+    const freeCell = analysis?.probabilities[0 * 5 + 2];
+    expect(freeCell).toBeGreaterThan(0);
+    expect(freeCell).toBeLessThan(1);
   });
 
   it("rejects clues that together need more mines than the board holds", () => {

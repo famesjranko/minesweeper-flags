@@ -198,20 +198,38 @@ const countDistribution = (
   return total === -Infinity ? null : logs.map((l) => Math.exp(l - total));
 };
 
-const cellProbability = (counts: ComponentCounts, distribution: number[], cell: number): number => {
+// Keeps an approximate probability off 0 and 1, which the policy reads as proof.
+const UNPROVEN_MARGIN = 1e-9;
+
+/**
+ * With an exact mine budget, a cell is certain when every weighted assignment agrees.
+ * With an approximate budget (a group ran past the node budget), the weights may wrongly
+ * exclude some counts, so certainty needs every assignment of the group at any count.
+ */
+const cellProbability = (
+  counts: ComponentCounts,
+  distribution: number[],
+  cell: number,
+  approximate: boolean
+): number => {
   let probability = 0;
   let alwaysMine = true;
   let neverMine = true;
   distribution.forEach((weight, k) => {
-    if (weight > 0) {
-      const share = counts.mineCounts[k]![cell]! / counts.solutions[k]!;
-      probability += weight * share;
-      alwaysMine &&= share === 1;
-      neverMine &&= share === 0;
-    }
+    // A weight would need a ratio near e^-709 to underflow to 0, beyond these board sizes.
+    const possible = approximate ? counts.solutions[k]! > 0 : weight > 0;
+    if (!possible) return;
+    const share = counts.mineCounts[k]![cell]! / counts.solutions[k]!;
+    probability += weight * share;
+    alwaysMine &&= share === 1;
+    neverMine &&= share === 0;
   });
   // Exact 0 and 1 matter: the policy treats p = 1 as a certain mine.
-  return alwaysMine ? 1 : neverMine ? 0 : probability;
+  if (alwaysMine) return 1;
+  if (neverMine) return 0;
+  return approximate
+    ? Math.min(1 - UNPROVEN_MARGIN, Math.max(UNPROVEN_MARGIN, probability))
+    : probability;
 };
 
 const freeDensity = (distribution: number[], free: { cells: number; mines: number }): number => {
@@ -260,15 +278,31 @@ export const refineExactly = (
   const frontier = new Set(components.flatMap((component) => component.cells));
   const freeCells = freeCellsOf(input, frontier);
   const free = { cells: freeCells.length, mines: Math.max(0, mines - Math.round(estimatedMines)) };
-  return combine(input, solved, freeCells, free);
+  const approximate = solved.length < components.length;
+  // A rounded budget can rule out every count without the clues being contradictory, so
+  // an approximate failure keeps the local estimates instead of reporting a contradiction.
+  return (
+    combine({ input, solved, freeCells, free, approximate }) ??
+    (approximate ? input.estimates : null)
+  );
 };
 
-const combine = (
-  input: ExactInput,
-  solved: { component: Component; counts: ComponentCounts }[],
-  freeCells: number[],
-  free: { cells: number; mines: number }
-): number[] | null => {
+interface CombineInput {
+  input: ExactInput;
+  solved: { component: Component; counts: ComponentCounts }[];
+  freeCells: number[];
+  free: { cells: number; mines: number };
+  /** True when a group ran past the node budget, so `free.mines` is only an estimate. */
+  approximate: boolean;
+}
+
+const combine = ({
+  input,
+  solved,
+  freeCells,
+  free,
+  approximate
+}: CombineInput): number[] | null => {
   const weights = solved.map(({ counts }) => counts.solutions);
   const prefix: number[][] = [[1]];
   const suffix: number[][] = new Array<number[]>(weights.length + 1).fill([1]);
@@ -286,14 +320,15 @@ const combine = (
       return null;
     }
     component.cells.forEach((cell, local) => {
-      probabilities[cell] = cellProbability(counts, distribution, local);
+      probabilities[cell] = cellProbability(counts, distribution, local, approximate);
     });
   }
   const totals = countDistribution(prefix[weights.length]!, [1], free);
   if (!totals) {
     return null;
   }
-  if (free.cells > 0) {
+  // Off-frontier cells keep their local estimate when the remaining-mine count is a guess.
+  if (free.cells > 0 && !approximate) {
     const density = freeDensity(totals, free);
     for (const cell of freeCells) {
       probabilities[cell] = density;
