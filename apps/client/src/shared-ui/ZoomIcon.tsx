@@ -9,8 +9,10 @@ export const ZoomIcon = ({ zoomed }: { zoomed: boolean }) => (
     strokeWidth="1.65"
     strokeLinecap="round"
   >
-    <circle cx="10" cy="10" r="6.5" />
-    <path d="m15 15 6 6M7 10h6" />
-    {!zoomed ? <path d="M10 7v6" /> : null}
+    <path
+      d={
+        zoomed ? "M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6" : "M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"
+      }
+    />
   </svg>
 );

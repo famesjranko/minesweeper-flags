@@ -12,64 +12,53 @@ interface PlayerBombButtonProps {
 }
 
 const STATES = {
-  locked: {
-    title: "Bomb",
-    detail: `Unlocks ${MIN_BOMB_DEFICIT} behind`,
-    hint: `Bomb unused. It becomes available while trailing by ${MIN_BOMB_DEFICIT} or more on your turn.`
-  },
-  waiting: {
-    title: "Bomb",
-    detail: "Ready on your turn",
-    hint: "Your bomb is ready. Wait for your turn to arm it."
-  },
-  ready: {
-    title: "Arm bomb",
-    detail: "Reveal a 5×5 area",
-    hint: "Bomb ready: click to arm a 5x5 blast."
-  },
-  armed: {
-    title: "Cancel bomb",
-    detail: "Tap a centre square",
-    hint: "Bomb armed. Pick the center of a 5x5 blast, or cancel targeting."
-  },
-  used: {
-    title: "Bomb used",
-    detail: "Once per match",
-    hint: "Your bomb has already been used."
-  },
-  finished: {
-    title: "Bomb",
-    detail: "Match finished",
-    hint: "Bomb unavailable. This match has finished."
-  }
+  locked: `Bomb unused. It becomes available while trailing by ${MIN_BOMB_DEFICIT} or more on your turn.`,
+  waiting: "Your bomb is ready. Wait for your turn and connection to arm it.",
+  ready: "Bomb ready: click to arm a 5x5 blast.",
+  armed: "Bomb armed. Pick the center of a 5x5 blast, or cancel targeting.",
+  used: "Your bomb has already been used.",
+  finished: "Bomb unused. This match has finished."
+};
+
+const OPPONENT_STATES = {
+  locked: `Opponent bomb unused. Unlocks while trailing by ${MIN_BOMB_DEFICIT} or more.`,
+  waiting: "Opponent bomb ready on their turn.",
+  ready: "Opponent bomb available.",
+  armed: "Opponent bomb available.",
+  used: "Opponent bomb has already been used.",
+  finished: "Opponent bomb unused. This match has finished."
 };
 
 const getStatus = ({ slot, bombArmed, canAct, canBomb, finished }: PlayerBombButtonProps) => {
   if (slot.player.bombsRemaining === 0) return "used";
   if (finished) return "finished";
   if (!canBomb) return "locked";
-  if (!canAct) return "waiting";
-  return bombArmed ? "armed" : "ready";
+  if (!slot.isTurn || (slot.isSelf && !canAct)) return "waiting";
+  return slot.isSelf && bombArmed ? "armed" : "ready";
 };
 
 export const PlayerBombButton = (props: PlayerBombButtonProps) => {
   const status = getStatus(props);
-  const { title, detail, hint } = STATES[status];
+  const hint = props.slot.isSelf ? STATES[status] : OPPONENT_STATES[status];
+  const icon = <BombIcon className="sidebar-bomb-icon" spent={status === "used"} size={22} />;
+  if (!props.slot.isSelf) {
+    return (
+      <span className={`inline-bomb is-${status}`} role="img" aria-label={hint} title={hint}>
+        {icon}
+      </span>
+    );
+  }
   return (
     <button
       type="button"
       aria-label={hint}
       aria-pressed={status === "armed"}
-      className={`sidebar-bomb-pill is-${status}`}
+      className={`inline-bomb is-${status}`}
       onClick={props.onToggleBomb}
       disabled={status !== "ready" && status !== "armed"}
       title={hint}
     >
-      <BombIcon className="sidebar-bomb-icon" spent={status === "used"} size={24} />
-      <span className="arcade-tool-copy">
-        <strong>{title}</strong>
-        <small>{detail}</small>
-      </span>
+      {icon}
     </button>
   );
 };

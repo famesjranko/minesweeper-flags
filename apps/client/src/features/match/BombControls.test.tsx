@@ -82,7 +82,7 @@ const render = (match: MatchStateDto) => {
   act(() => root.render(<Controls match={match} onToggle={onToggle} />));
   return {
     onToggle,
-    bomb: container.querySelector<HTMLButtonElement>(".sidebar-bomb-pill")!
+    bomb: container.querySelector<HTMLButtonElement>("button.inline-bomb")!
   };
 };
 
@@ -104,7 +104,7 @@ describe("bomb controls", () => {
       spent: false,
       finished: false,
       opponentTurn: false,
-      detail: "Unlocks 4 behind"
+      detail: "trailing by 4 or more"
     },
     {
       reason: "waiting for the player's turn",
@@ -112,7 +112,7 @@ describe("bomb controls", () => {
       spent: false,
       finished: false,
       opponentTurn: true,
-      detail: "Ready on your turn"
+      detail: "Wait for your turn"
     },
     {
       reason: "already used",
@@ -120,7 +120,7 @@ describe("bomb controls", () => {
       spent: true,
       finished: false,
       opponentTurn: false,
-      detail: "Once per match"
+      detail: "already been used"
     },
     {
       reason: "the match has finished",
@@ -128,7 +128,7 @@ describe("bomb controls", () => {
       spent: false,
       finished: true,
       opponentTurn: false,
-      detail: "Match finished"
+      detail: "match has finished"
     }
   ])(
     "explains why a bomb is unavailable when $reason",
@@ -144,8 +144,9 @@ describe("bomb controls", () => {
       // When the player tries to activate the unavailable bomb
       act(() => bomb.click());
 
-      // Then the visible reason matches the restriction and no action is sent
-      expect(bomb.textContent).toContain(detail);
+      // Then the accessible reason matches the restriction and no action is sent
+      expect(bomb.getAttribute("aria-label")).toContain(detail);
+      expect(bomb.textContent).toBe("");
       expect(bomb.disabled).toBe(true);
       expect(bomb.getAttribute("aria-pressed")).toBe("false");
       expect(onToggle).not.toHaveBeenCalled();
@@ -155,18 +156,20 @@ describe("bomb controls", () => {
   it("arms the bomb at the four-flag boundary and lets the player cancel targeting", () => {
     // Given an unused bomb on the trailing player's turn at exactly four behind
     const { bomb, onToggle } = render(createMatch());
-    expect(bomb.textContent).toContain("Arm bomb");
+    expect(bomb.getAttribute("aria-label")).toContain("click to arm");
     expect(bomb.disabled).toBe(false);
 
     // When the player arms the bomb and then cancels it
     act(() => bomb.click());
-    expect(bomb.textContent).toContain("Cancel bomb");
-    expect(bomb.textContent).toContain("Tap a centre square");
+    expect(bomb.getAttribute("aria-label")).toContain("cancel targeting");
+    expect(container.querySelector("[role=status]")?.textContent).toContain(
+      "select a square or cancel"
+    );
     expect(bomb.getAttribute("aria-pressed")).toBe("true");
     act(() => bomb.click());
 
     // Then targeting is canceled and the bomb remains available
-    expect(bomb.textContent).toContain("Arm bomb");
+    expect(bomb.getAttribute("aria-label")).toContain("click to arm");
     expect(bomb.getAttribute("aria-pressed")).toBe("false");
     expect(onToggle).toHaveBeenCalledTimes(2);
   });

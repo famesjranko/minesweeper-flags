@@ -4,10 +4,13 @@ This file is a lightweight pointer for AI assistants and humans working in this 
 
 ## What this project is
 
-Realtime two-player competitive Minesweeper, shipped in two product shapes from one codebase:
+Competitive Minesweeper with a browser-local solo mode and two friend-play deployment shapes:
 
+- **Solo** — a human plays a bounded, public-clue heuristic bot in the browser. It needs no API, model download, or backend game service.
 - **Hosted server flow** (`VITE_DEPLOYMENT_MODE=server`) — clients talk to a Node `ws` realtime server.
 - **P2P direct match flow** (`VITE_DEPLOYMENT_MODE=p2p`) — host browser owns gameplay; a small HTTP signaling service brokers WebRTC offer/answer rendezvous and short-lived reconnect control sessions.
+
+Solo and With a friend are player choices on the home page. `server` and `p2p` stay operator build choices for friend play.
 
 ## Repo layout
 

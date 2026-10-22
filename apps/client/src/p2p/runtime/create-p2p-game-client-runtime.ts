@@ -59,9 +59,8 @@ class P2PBootstrapController implements GameClientRuntimeController {
     });
   }
 
-  start = (): void => {
-    this.store.setConnectionStatus("disconnected");
-  };
+  // GameClientStore starts disconnected; do not overwrite a recovery transport that mounted first.
+  start = (): void => undefined;
 
   dispose = (): void => {
     this.context.teardownActiveRuntime();

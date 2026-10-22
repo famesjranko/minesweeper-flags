@@ -16,7 +16,6 @@ export const LobbyPage = () => {
     slotAvailability,
     refreshSlotCount
   } = useGameClient();
-  const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
 
   useEffect(() => {
     openLobby();
@@ -25,10 +24,6 @@ export const LobbyPage = () => {
 
   if (!isReady) {
     return null;
-  }
-
-  if (isP2PDeployment) {
-    return <Navigate to="/" replace />;
   }
 
   if (session?.roomCode) {

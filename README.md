@@ -13,24 +13,29 @@
 
 </div>
 
-This is an homage to the MSN Messenger game I used to play with friends back in the day. It is realtime two-player competitive Minesweeper with room chat, and it runs in the browser.
+This is an homage to the MSN Messenger game I used to play with friends back in the day. Play a local match against the bot, or play realtime competitive Minesweeper with room chat. It runs in the browser.
 
 [Play the live demo](https://minesweeper-flags-demo.onrender.com/). Invite a friend or use two browser sessions. It runs on Render's free tier, with space for four rooms. The server can take about a minute to wake up, and games and chat can be lost when the free state store restarts. See the [demo deployment and limits](docs/render-demo.md) for details.
 
 ## How to play
 
-- One player creates a room or hosts a direct match.
+- On the home page, choose **Solo** for a local match or **With a friend** to create or join a room.
+- A solo match is you against the bot on a 16×16 board. The bot uses revealed clues and claimed mines to make certain claims where it can, then ranks likely mines. Its bounded heuristic can make estimated moves instead of fully solving every position.
+- Solo matches run in the browser. They need no API, model download, or game backend. Progress is kept in `sessionStorage`, so it can survive a reload in the same tab. A saved record that cannot be restored starts a fresh match. If the browser cannot save progress, the current match continues without reload recovery. Closing the tab ends that session.
+- One player creates a friend room or hosts a direct match.
 - The other player joins with an invite link, an invite token, or a direct-match join URL.
 - Both players share a 16×16 board with 51 mines and take turns.
 - Find a mine and you claim it. The first player to 26 mines wins.
 - Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 4 or more.
 - Chat stays with the room through reconnects and rematches.
 
+A static frontend still needs its first download.
+
 <p align="center">
   <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with create and join options, beside a live match with a red and blue score sidebar, a half-cleared board, and room chat.">
 </p>
 
-## Two ways to run it
+## Server and direct-match deployments
 
 One codebase builds two product shapes. `VITE_DEPLOYMENT_MODE` selects the shape at build time.
 
@@ -40,6 +45,8 @@ One codebase builds two product shapes. `VITE_DEPLOYMENT_MODE` selects the shape
 | **Direct match** | `p2p` | The host's browser runs the match over a WebRTC data channel. A small HTTP signaling service in `apps/signaling` only brokers the connection and short reconnects. |
 
 "Direct match" is the product name. `p2p` is the technical mode name. They are the same thing.
+
+These are operator build choices. They do not change the **Solo** or **With a friend** player choice on the home page.
 
 ## How it works
 

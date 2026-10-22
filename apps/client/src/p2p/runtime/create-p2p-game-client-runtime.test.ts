@@ -1046,6 +1046,136 @@ describe("createP2PGameClientRuntime", () => {
     refreshedHostRuntime.controller.dispose();
   });
 
+  it("keeps the recovered host connected when recovery starts before bootstrap initialization", async () => {
+    // Given a live direct match with persisted host authority.
+    // Seed 6 makes (0,1) and (0,3) numbered safe cells, so each reveal changes turns.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(6);
+    const runtimes: ReturnType<typeof createP2PGameClientRuntime>[] = [];
+
+    try {
+      const initialHostPeer = new PairedFakePeer();
+      const reconnectHostPeer = new PairedFakePeer();
+      const initialGuestPeer = new PairedFakePeer();
+      const reconnectGuestPeer = new PairedFakePeer();
+      const hostPeers = [initialHostPeer, reconnectHostPeer];
+      const guestPeers = [initialGuestPeer, reconnectGuestPeer];
+      const { hostRecoveryPersistence, guestRecoveryPersistence } = createRecoveryPersistences();
+      const rendezvousClient = new FakeRendezvousClient();
+
+      initialHostPeer.setPartner(initialGuestPeer);
+      initialGuestPeer.setPartner(initialHostPeer);
+      reconnectHostPeer.setPartner(reconnectGuestPeer);
+      reconnectGuestPeer.setPartner(reconnectHostPeer);
+
+      const hostRuntime = createP2PGameClientRuntime({
+        createPeer: () => hostPeers.shift() ?? new PairedFakePeer(),
+        rendezvousClient,
+        recoveryPersistence: hostRecoveryPersistence
+      });
+      runtimes.push(hostRuntime);
+      const guestRuntime = createP2PGameClientRuntime({
+        createPeer: () => guestPeers.shift() ?? new PairedFakePeer(),
+        rendezvousClient,
+        recoveryPersistence: guestRecoveryPersistence
+      });
+      runtimes.push(guestRuntime);
+      hostRuntime.controller.start();
+      guestRuntime.controller.start();
+      hostRuntime.controller.createRoom("Host Player");
+      await flushPromises();
+      guestRuntime.p2p?.controller.openGuestSetupSession("session-1");
+      await flushPromises();
+      guestRuntime.p2p?.controller.createGuestAnswer("Guest Player");
+      await flushPromises();
+      await flushPromises();
+      await flushPromises();
+
+      const roomCode = hostRuntime.store.getSnapshot().session?.roomCode;
+
+      if (!roomCode) {
+        throw new Error("Expected a room code.");
+      }
+
+      hostRuntime.controller.dispose();
+      await flushPromises();
+
+      const refreshedHostRuntime = createP2PGameClientRuntime({
+        createPeer: () => hostPeers.shift() ?? new PairedFakePeer(),
+        rendezvousClient,
+        recoveryPersistence: hostRecoveryPersistence
+      });
+
+      runtimes.push(refreshedHostRuntime);
+
+      // When room recovery starts before the provider bootstrap effect
+      refreshedHostRuntime.controller.reconnect(roomCode);
+      await flushPromises();
+      refreshedHostRuntime.controller.start();
+      await flushPromises();
+      await waitFor(() => rendezvousClient.reconnectFinalizationOutcome === "reconnected");
+
+      // Then both peers remain connected and can exchange new traffic
+      expect(refreshedHostRuntime.store.getSnapshot().connectionStatus).toBe("connected");
+      expect(guestRuntime.store.getSnapshot().connectionStatus).toBe("connected");
+
+      const hostMatchBefore = refreshedHostRuntime.store.getSnapshot().match;
+      const hostPlayerId = refreshedHostRuntime.store.getSnapshot().session?.playerId;
+      const guestPlayerId = guestRuntime.store.getSnapshot().session?.playerId;
+      expect(hostPlayerId).toEqual(expect.any(String));
+      expect(guestPlayerId).toEqual(expect.any(String));
+      expect(hostMatchBefore).toMatchObject({ phase: "live", currentTurnPlayerId: hostPlayerId });
+      expect(hostMatchBefore?.board.cells[0]?.[1]?.status).toBe("hidden");
+      refreshedHostRuntime.controller.setChatDraft("host after refresh");
+      refreshedHostRuntime.controller.sendChatMessage();
+      refreshedHostRuntime.controller.submitCellAction(0, 1);
+      await flushPromises();
+
+      expect(guestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("host after refresh");
+      expect(refreshedHostRuntime.store.getSnapshot().match?.turnNumber).toBe(
+        (hostMatchBefore?.turnNumber ?? 0) + 1
+      );
+      expect(refreshedHostRuntime.store.getSnapshot().match?.lastAction).toMatchObject({
+        playerId: hostPlayerId,
+        row: 0,
+        column: 1,
+        outcome: "safe_reveal"
+      });
+      expect(guestRuntime.store.getSnapshot().match).toEqual(
+        refreshedHostRuntime.store.getSnapshot().match
+      );
+
+      const guestMatchBefore = guestRuntime.store.getSnapshot().match;
+      expect(guestMatchBefore).toMatchObject({ phase: "live", currentTurnPlayerId: guestPlayerId });
+      expect(guestMatchBefore?.board.cells[0]?.[3]?.status).toBe("hidden");
+      guestRuntime.controller.setChatDraft("guest after host refresh");
+      guestRuntime.controller.sendChatMessage();
+      guestRuntime.controller.submitCellAction(0, 3);
+      await flushPromises();
+
+      expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
+        "guest after host refresh"
+      );
+      expect(guestRuntime.store.getSnapshot().match?.turnNumber).toBe(
+        (guestMatchBefore?.turnNumber ?? 0) + 1
+      );
+      expect(guestRuntime.store.getSnapshot().match).toMatchObject({
+        currentTurnPlayerId: hostPlayerId,
+        lastAction: { playerId: guestPlayerId, row: 0, column: 3, outcome: "safe_reveal" }
+      });
+      expect(refreshedHostRuntime.store.getSnapshot().match).toEqual(
+        guestRuntime.store.getSnapshot().match
+      );
+    } finally {
+      try {
+        for (const runtime of runtimes.reverse()) {
+          runtime.controller.dispose();
+        }
+      } finally {
+        clock.mockRestore();
+      }
+    }
+  });
+
   it("clears the guest recovery record when the guest intentionally leaves the direct match", async () => {
     const hostPeer = new PairedFakePeer();
     const guestPeer = new PairedFakePeer();

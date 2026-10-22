@@ -1,0 +1,316 @@
+.arcade-match.is-solo {
+  max-width: 500px;
+}
+.arcade-match.is-solo .arcade-match-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+.arcade-match-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  flex-shrink: 0;
+  padding: 0 4px 0 12px;
+  border-radius: 10px;
+  background: #182d47;
+  color: #b7d8f2;
+}
+.arcade-turn-hint {
+  padding: 6px 0;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.arcade-match-status.is-red {
+  color: #ffb894;
+}
+.arcade-match-status.is-result {
+  color: #dcedff;
+  background: #1b3859;
+}
+.arcade-match-status:has(.match-result-summary.is-red) {
+  color: #ffd0b8;
+  background: #442e32;
+}
+.arcade-zoom-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #dbeeff;
+}
+.arcade-zoom-button:hover {
+  background: #ffffff0b;
+}
+.arcade-match .sidebar-player-panel {
+  --team: #67b8e8;
+  --team-border: #3a637f;
+  display: grid;
+  grid-area: auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 24px 44px;
+  gap: 0;
+  min-width: 0;
+  height: 80px;
+  min-height: 80px;
+  padding: 5px 6px;
+  border: 1px solid #344b64;
+  border-radius: 10px;
+  background: #192b43;
+  box-shadow:
+    inset 3px 0 var(--team-border),
+    0 2px 3px #040c1729;
+  overflow: visible;
+}
+.arcade-match .sidebar-player-panel-red {
+  --team: #e89a87;
+  --team-border: #79574f;
+  background: #302a36;
+  border-color: #55434b;
+}
+.arcade-match .sidebar-player-panel.is-turn {
+  border-color: #587e9e;
+  box-shadow:
+    inset 3px 0 var(--team),
+    inset 0 1px #ffffff09,
+    0 2px 3px #040c1729;
+}
+.arcade-match .sidebar-player-panel-red.is-turn {
+  border-color: #986b62;
+}
+.arcade-match .sidebar-player-panel.is-card-winner {
+  border-color: #c3a258;
+  box-shadow:
+    inset 3px 0 var(--team-border),
+    inset 0 0 0 1px #d3ab4f18;
+  background-color: #30313b;
+}
+.arcade-match .sidebar-player-name {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: #f3f7ff;
+  text-align: left;
+  overflow: hidden;
+}
+.player-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-crown-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 20px;
+}
+.arcade-match .winner-crown {
+  position: static;
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transform: none;
+  filter: none;
+}
+.arcade-match .sidebar-player-header {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  align-self: center;
+  align-items: center;
+  justify-content: start;
+  gap: 3px;
+  padding: 0 0 0 4px;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 14px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: #b2d6ed;
+}
+.arcade-match .sidebar-player-panel-red .sidebar-player-header {
+  color: #efb9ac;
+}
+.arcade-player-presence {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9a9da7;
+}
+.arcade-player-presence.is-online {
+  background: #60c99c;
+}
+.card-inline-actions {
+  display: flex;
+  align-items: center;
+  grid-column: 2;
+  grid-row: 2;
+  gap: 0;
+}
+.arcade-match .sidebar-score-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 27px;
+  min-height: 0;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  color: #f3f7ff;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.arcade-match .sidebar-score-pill strong {
+  font-weight: inherit;
+}
+.arcade-match .inline-bomb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: #9ba9bc;
+}
+.inline-bomb svg {
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+.arcade-match .inline-bomb:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.arcade-match .inline-bomb:is(.is-ready, .is-waiting, .is-used, .is-armed) {
+  color: #ffd45a;
+}
+button.inline-bomb:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  opacity: 0.65;
+  background: #ffd45a06;
+}
+button.inline-bomb:not(:disabled):hover::after {
+  background: #ffd45a18;
+  opacity: 1;
+}
+button.inline-bomb.is-armed::after {
+  opacity: 1;
+  border-width: 2px;
+  background: #ffd45a12;
+  box-shadow: inset 0 1px 2px #0005;
+}
+.arcade-match button.inline-bomb:focus-visible {
+  outline: 2px solid #fff1b4;
+  outline-offset: -4px;
+}
+.arcade-match :is(button, a, summary):focus-visible,
+.arcade-board-viewport:focus-visible {
+  outline: 3px solid #b5e6ff;
+  outline-offset: 2px;
+}
+.match-primary-action,
+.match-resign-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  width: 100%;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: #243c59;
+  color: #dfedff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+.match-primary-action {
+  border-color: #77d0ff;
+  background: linear-gradient(#3989c2, #246c9f);
+  color: #f4f9ff;
+  font-size: 16px;
+  font-weight: 750;
+  box-shadow: inset 0 1px 0 #ffffff33;
+}
+.match-rematch-action {
+  display: grid;
+  width: 100%;
+  gap: 12px;
+}
+.match-rematch-action p {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  color: #bdd5f0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1000px) {
+  .arcade-match.is-solo {
+    max-width: 624px;
+  }
+}
+@media (max-width: 600px) {
+  .arcade-match.is-solo {
+    max-width: 760px;
+  }
+}
+
+.arcade-match .sidebar-score-pill.is-winner {
+  outline: none;
+  box-shadow: none;
+}
+.arcade-match .inline-bomb .sidebar-bomb-icon {
+  opacity: 1;
+}
+.arcade-chat-toggle {
+  width: 100%;
+}
+@media (max-width: 350px) {
+  .arcade-brand-mark {
+    display: none;
+  }
+  .arcade-brand {
+    font-size: 12px;
+  }
+  .arcade-match .sidebar-player-header {
+    font-size: 8px;
+    gap: 2px;
+  }
+}

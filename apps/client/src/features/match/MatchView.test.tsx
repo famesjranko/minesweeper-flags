@@ -79,7 +79,8 @@ describe("MatchView bomb availability", () => {
     );
 
     expect(html).toContain("Bomb ready.");
-    expect(html).toContain("sidebar-bomb-pill is-ready");
+    expect(html).toContain('class="inline-bomb is-ready"');
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("Bomb ready: click to arm a 5x5 blast.");
     expect(html).toContain("sidebar-bomb-icon");
     expect(html).not.toContain(">X<");
@@ -110,7 +111,8 @@ describe("MatchView bomb availability", () => {
       />
     );
 
-    expect(html).not.toContain("sidebar-bomb-pill is-ready");
+    expect(html).toContain('class="inline-bomb is-locked"');
+    expect(html).toContain('disabled=""');
     expect(html).toContain(`Bomb unlocks at down ${MIN_BOMB_DEFICIT}.`);
     expect(html).toContain(`trailing by ${MIN_BOMB_DEFICIT} or more`);
   });
@@ -140,7 +142,8 @@ describe("MatchView bomb availability", () => {
       />
     );
 
-    expect(html).not.toContain("sidebar-bomb-pill is-ready");
+    expect(html).toContain('class="inline-bomb is-locked"');
+    expect(html).toContain('disabled=""');
     expect(html).not.toContain("Bomb ready.");
   });
 });
@@ -329,7 +332,7 @@ const renderMatchView = (match: MatchStateDto, currentPlayerId = "player-1") =>
   );
 
 describe("MatchView match end", () => {
-  it("crowns only the winner's score once the match ends", () => {
+  it("crowns only the winner beside their name once the match ends", () => {
     // Given a finished match that red (player-2) won
     const match: MatchStateDto = {
       ...createMatch({ currentTurnPlayerId: "player-1", scores: [24, 26] }),
@@ -342,12 +345,18 @@ describe("MatchView match end", () => {
     // When the match view renders
     const html = renderMatchView(match);
 
-    // Then exactly one score carries the crown, and it is red's
+    // Then exactly one name carries the crown, and it is red's
     expect(html.match(/winner-crown/g)?.length).toBe(1);
-    expect(html).toMatch(/sidebar-player-panel-red[\s\S]*sidebar-score-pill is-winner/);
+    expect(html).toMatch(
+      /sidebar-player-panel-red is-card-winner[\s\S]*player-crown-slot[\s\S]*winner-crown/
+    );
 
-    // And the result is shown over the board
-    expect(html).toMatch(/classic-board-frame[\s\S]*match-result-ribbon/);
+    // And the single result strip precedes the scores and board without an overlay
+    expect(html).toMatch(
+      /match-result-summary[\s\S]*arcade-match-scores[\s\S]*classic-board-frame/
+    );
+    expect(html.match(/match-result-summary/g)).toHaveLength(1);
+    expect(html).not.toContain("match-result-overlay");
   });
 
   it("shows no crown or result while the match is live", () => {
@@ -361,4 +370,18 @@ describe("MatchView match end", () => {
     expect(html).not.toContain("winner-crown");
     expect(html).not.toContain("match-result-ribbon");
   });
+});
+
+it("keeps multiplayer header, presence, and chat UI by default", () => {
+  // Given a normal multiplayer match without a presentation override
+  const match = createMatch({ currentTurnPlayerId: "player-1", scores: [3, 1] });
+
+  // When the default match view renders
+  const html = renderMatchView(match);
+
+  // Then multiplayer-only framing and controls remain present
+  expect(html).toContain('aria-label="Match options"');
+  expect(html).toContain("Room ABCDE");
+  expect(html).toContain('aria-label="Connected"');
+  expect(html).toContain("Chat · 0 messages");
 });
