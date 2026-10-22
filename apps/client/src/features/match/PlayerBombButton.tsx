@@ -53,7 +53,7 @@ export const PlayerBombButton = (props: PlayerBombButtonProps) => {
       type="button"
       aria-label={hint}
       aria-pressed={status === "armed"}
-      className={`sidebar-bomb-pill is-${status} inline-bomb`}
+      className={`inline-bomb is-${status}`}
       onClick={props.onToggleBomb}
       disabled={status !== "ready" && status !== "armed"}
       title={hint}

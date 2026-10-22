@@ -276,9 +276,9 @@ describe("AppRouter", () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(healthRequests.at(-1)?.aborted).toBe(true);
         expect(vi.getTimerCount()).toBe(0);
-        expect(app.container.querySelector(".solo-local-status")?.textContent).toContain(
-          "Local match"
-        );
+        expect(
+          app.container.querySelector("main.solo-page-shell .arcade-match.is-solo")
+        ).not.toBeNull();
       } finally {
         app?.dispose();
         vi.useRealTimers();
@@ -347,9 +347,9 @@ describe("AppRouter", () => {
           expect.objectContaining({ method: "POST" })
         );
         expect(peers[0]?.close).toHaveBeenCalledTimes(1);
-        expect(app.container.querySelector(".solo-local-status")?.textContent).toContain(
-          "Local match"
-        );
+        expect(
+          app.container.querySelector("main.solo-page-shell .arcade-match.is-solo")
+        ).not.toBeNull();
       } finally {
         app?.dispose();
         window.history.replaceState(null, "", originalUrl);
