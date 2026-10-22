@@ -56,45 +56,106 @@ describe("RoomLobby", () => {
     expect(html).not.toContain("Invite token");
   });
 
-  it("disables hosted room actions until the server is connected", () => {
-    // Given a server lobby with valid create and join input while it reconnects
-    const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <RoomLobby
-          connectionStatus="connecting"
-          deploymentMode="server"
-          error={null}
-          initialInviteValue="AbCdEfGhIjKlMnOpQrStUw"
-          onCreateRoom={vi.fn()}
-          onJoinRoom={vi.fn()}
-        />
-      </MemoryRouter>
+  it("gates server actions through connection loss without blocking initial P2P hosting", () => {
+    // Given valid server lobby input and action callbacks
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const onCreateRoom = vi.fn();
+    const onJoinRoom = vi.fn();
+    const renderLobby = (connectionStatus: "disconnected" | "connecting" | "connected") => {
+      root.render(
+        <MemoryRouter>
+          <RoomLobby
+            connectionStatus={connectionStatus}
+            deploymentMode="server"
+            error={null}
+            initialInviteValue="AbCdEfGhIjKlMnOpQrStUw"
+            onCreateRoom={onCreateRoom}
+            onJoinRoom={onJoinRoom}
+          />
+        </MemoryRouter>
+      );
+    };
+    const submitActions = () => {
+      container
+        .querySelector<HTMLFormElement>("form.is-create")
+        ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      container
+        .querySelector<HTMLFormElement>("form.is-join")
+        ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    };
+
+    // When the connection starts disconnected, retries, becomes ready, then is lost
+    act(() => {
+      renderLobby("disconnected");
+    });
+    expect(container.querySelector<HTMLButtonElement>(".lobby-create-button")?.disabled).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>(".lobby-join-button")?.disabled).toBe(true);
+    act(submitActions);
+
+    act(() => {
+      renderLobby("connecting");
+    });
+    expect(container.querySelector<HTMLButtonElement>(".lobby-create-button")?.disabled).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>(".lobby-join-button")?.disabled).toBe(true);
+    act(submitActions);
+
+    act(() => {
+      renderLobby("connected");
+    });
+    expect(container.querySelector<HTMLButtonElement>(".lobby-create-button")?.disabled).toBe(
+      false
     );
+    expect(container.querySelector<HTMLButtonElement>(".lobby-join-button")?.disabled).toBe(false);
+    act(submitActions);
 
-    // When the server transport is not ready
-    // Then both server actions use their existing disabled state
-    expect(html).toContain('class="lobby-action-button lobby-create-button" disabled=""');
-    expect(html).toContain('class="lobby-action-button lobby-join-button" disabled=""');
-  });
+    act(() => {
+      renderLobby("disconnected");
+    });
+    expect(container.querySelector<HTMLButtonElement>(".lobby-create-button")?.disabled).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>(".lobby-join-button")?.disabled).toBe(true);
+    act(submitActions);
 
-  it("keeps initial P2P hosting available before a peer connects", () => {
-    // Given a direct-match lobby before a peer exists
-    const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <RoomLobby
-          connectionStatus="disconnected"
-          deploymentMode="p2p"
-          error={null}
-          onCreateRoom={vi.fn()}
-          onJoinRoom={vi.fn()}
-        />
-      </MemoryRouter>
+    // Then only the connected submissions reach their callbacks
+    expect(onCreateRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper");
+    expect(onJoinRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper", "AbCdEfGhIjKlMnOpQrStUw");
+
+    act(() => {
+      root.unmount();
+    });
+    const p2pContainer = document.createElement("div");
+    document.body.appendChild(p2pContainer);
+    const p2pRoot = createRoot(p2pContainer);
+    const onP2PCreateRoom = vi.fn();
+
+    act(() => {
+      p2pRoot.render(
+        <MemoryRouter>
+          <RoomLobby
+            connectionStatus="disconnected"
+            deploymentMode="p2p"
+            error={null}
+            onCreateRoom={onP2PCreateRoom}
+            onJoinRoom={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+    });
+    act(() => {
+      p2pContainer
+        .querySelector<HTMLFormElement>("form.is-create")
+        ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    // And initial P2P hosting remains available before any peer connects
+    expect(p2pContainer.querySelector<HTMLButtonElement>(".lobby-create-button")?.disabled).toBe(
+      false
     );
-
-    // When the host has entered its default display name
-    // Then direct-match hosting remains enabled
-    expect(html).toContain('class="lobby-action-button lobby-create-button"');
-    expect(html).not.toContain('class="lobby-action-button lobby-create-button" disabled=""');
+    expect(onP2PCreateRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper");
+    act(() => {
+      p2pRoot.unmount();
+    });
   });
 
   it("cancels the refresh indicator timer when the lobby unmounts", () => {
