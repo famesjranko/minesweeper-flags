@@ -79,7 +79,8 @@ describe("MatchView bomb availability", () => {
     );
 
     expect(html).toContain("Bomb ready.");
-    expect(html).toContain("sidebar-bomb-pill is-ready");
+    expect(html).toContain('class="inline-bomb is-ready"');
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("Bomb ready: click to arm a 5x5 blast.");
     expect(html).toContain("sidebar-bomb-icon");
     expect(html).not.toContain(">X<");
@@ -110,7 +111,8 @@ describe("MatchView bomb availability", () => {
       />
     );
 
-    expect(html).not.toContain("sidebar-bomb-pill is-ready");
+    expect(html).toContain('class="inline-bomb is-locked"');
+    expect(html).toContain('disabled=""');
     expect(html).toContain(`Bomb unlocks at down ${MIN_BOMB_DEFICIT}.`);
     expect(html).toContain(`trailing by ${MIN_BOMB_DEFICIT} or more`);
   });
@@ -140,7 +142,8 @@ describe("MatchView bomb availability", () => {
       />
     );
 
-    expect(html).not.toContain("sidebar-bomb-pill is-ready");
+    expect(html).toContain('class="inline-bomb is-locked"');
+    expect(html).toContain('disabled=""');
     expect(html).not.toContain("Bomb ready.");
   });
 });

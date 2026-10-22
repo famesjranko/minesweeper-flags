@@ -82,7 +82,7 @@ const render = (match: MatchStateDto) => {
   act(() => root.render(<Controls match={match} onToggle={onToggle} />));
   return {
     onToggle,
-    bomb: container.querySelector<HTMLButtonElement>(".sidebar-bomb-pill")!
+    bomb: container.querySelector<HTMLButtonElement>("button.inline-bomb")!
   };
 };
 
