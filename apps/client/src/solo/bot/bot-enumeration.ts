@@ -250,7 +250,9 @@ const freeCellsOf = (input: ExactInput, frontier: Set<number>): number[] =>
 
 /**
  * Exact mine probabilities over the frontier, weighted by how many ways the
- * remaining mines fit off the frontier. Returns null when no assignment fits.
+ * remaining mines fit off the frontier. Returns null when the clues are contradictory
+ * as far as the solved groups can tell; if a group ran past the node budget and the
+ * estimated counts cannot be combined, it returns the local estimates instead.
  */
 export const refineExactly = (
   input: ExactInput,
