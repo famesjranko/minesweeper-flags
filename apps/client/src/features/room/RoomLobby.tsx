@@ -40,9 +40,10 @@ export const RoomLobby = ({
   const inviteToken = extractInviteToken(inviteValue);
   const slotsFull =
     slotAvailability !== null && slotAvailability.activeRooms >= slotAvailability.maxRooms;
-  const canCreateRoom = trimmedDisplayName.length > 0 && !slotsFull;
-  const canJoinRoom = trimmedDisplayName.length > 0 && inviteToken !== null;
   const isP2PDeployment = deploymentMode === "p2p";
+  const isServerConnected = isP2PDeployment || connectionStatus === "connected";
+  const canCreateRoom = trimmedDisplayName.length > 0 && !slotsFull && isServerConnected;
+  const canJoinRoom = trimmedDisplayName.length > 0 && inviteToken !== null && isServerConnected;
 
   const [refreshing, setRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

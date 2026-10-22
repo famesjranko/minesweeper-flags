@@ -56,6 +56,47 @@ describe("RoomLobby", () => {
     expect(html).not.toContain("Invite token");
   });
 
+  it("disables hosted room actions until the server is connected", () => {
+    // Given a server lobby with valid create and join input while it reconnects
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <RoomLobby
+          connectionStatus="connecting"
+          deploymentMode="server"
+          error={null}
+          initialInviteValue="AbCdEfGhIjKlMnOpQrStUw"
+          onCreateRoom={vi.fn()}
+          onJoinRoom={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    // When the server transport is not ready
+    // Then both server actions use their existing disabled state
+    expect(html).toContain('class="lobby-action-button lobby-create-button" disabled=""');
+    expect(html).toContain('class="lobby-action-button lobby-join-button" disabled=""');
+  });
+
+  it("keeps initial P2P hosting available before a peer connects", () => {
+    // Given a direct-match lobby before a peer exists
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <RoomLobby
+          connectionStatus="disconnected"
+          deploymentMode="p2p"
+          error={null}
+          onCreateRoom={vi.fn()}
+          onJoinRoom={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    // When the host has entered its default display name
+    // Then direct-match hosting remains enabled
+    expect(html).toContain('class="lobby-action-button lobby-create-button"');
+    expect(html).not.toContain('class="lobby-action-button lobby-create-button" disabled=""');
+  });
+
   it("cancels the refresh indicator timer when the lobby unmounts", () => {
     // Given a server lobby where the slot refresh button was pressed
     vi.useFakeTimers();
