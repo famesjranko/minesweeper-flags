@@ -1046,6 +1046,103 @@ describe("createP2PGameClientRuntime", () => {
     refreshedHostRuntime.controller.dispose();
   });
 
+  it("keeps the recovered host connected when recovery starts before bootstrap initialization", async () => {
+    // Given a live direct match with persisted host authority
+    const initialHostPeer = new PairedFakePeer();
+    const reconnectHostPeer = new PairedFakePeer();
+    const initialGuestPeer = new PairedFakePeer();
+    const reconnectGuestPeer = new PairedFakePeer();
+    const hostPeers = [initialHostPeer, reconnectHostPeer];
+    const guestPeers = [initialGuestPeer, reconnectGuestPeer];
+    const { hostRecoveryPersistence, guestRecoveryPersistence } = createRecoveryPersistences();
+    const rendezvousClient = new FakeRendezvousClient();
+
+    initialHostPeer.setPartner(initialGuestPeer);
+    initialGuestPeer.setPartner(initialHostPeer);
+    reconnectHostPeer.setPartner(reconnectGuestPeer);
+    reconnectGuestPeer.setPartner(reconnectHostPeer);
+
+    const hostRuntime = createP2PGameClientRuntime({
+      createPeer: () => hostPeers.shift() ?? new PairedFakePeer(),
+      rendezvousClient,
+      recoveryPersistence: hostRecoveryPersistence
+    });
+    const guestRuntime = createP2PGameClientRuntime({
+      createPeer: () => guestPeers.shift() ?? new PairedFakePeer(),
+      rendezvousClient,
+      recoveryPersistence: guestRecoveryPersistence
+    });
+    hostRuntime.controller.start();
+    guestRuntime.controller.start();
+    hostRuntime.controller.createRoom("Host Player");
+    await flushPromises();
+    guestRuntime.p2p?.controller.openGuestSetupSession("session-1");
+    await flushPromises();
+    guestRuntime.p2p?.controller.createGuestAnswer("Guest Player");
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+
+    const roomCode = hostRuntime.store.getSnapshot().session?.roomCode;
+
+    if (!roomCode) {
+      throw new Error("Expected a room code.");
+    }
+
+    hostRuntime.controller.dispose();
+    await flushPromises();
+
+    const refreshedHostRuntime = createP2PGameClientRuntime({
+      createPeer: () => hostPeers.shift() ?? new PairedFakePeer(),
+      rendezvousClient,
+      recoveryPersistence: hostRecoveryPersistence
+    });
+
+    // When room recovery starts before the provider bootstrap effect
+    refreshedHostRuntime.controller.reconnect(roomCode);
+    await flushPromises();
+    refreshedHostRuntime.controller.start();
+    await flushPromises();
+    await waitFor(() => rendezvousClient.reconnectFinalizationOutcome === "reconnected");
+
+    // Then both peers remain connected and can exchange new traffic
+    expect(refreshedHostRuntime.store.getSnapshot().connectionStatus).toBe("connected");
+    expect(guestRuntime.store.getSnapshot().connectionStatus).toBe("connected");
+
+    const hostTurnBefore = refreshedHostRuntime.store.getSnapshot().match?.turnNumber;
+    refreshedHostRuntime.controller.setChatDraft("host after refresh");
+    refreshedHostRuntime.controller.sendChatMessage();
+    refreshedHostRuntime.controller.submitCellAction(0, 0);
+    await flushPromises();
+
+    expect(guestRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe("host after refresh");
+    expect(refreshedHostRuntime.store.getSnapshot().match?.turnNumber).toBeGreaterThan(
+      hostTurnBefore ?? 0
+    );
+    expect(guestRuntime.store.getSnapshot().match).toEqual(
+      refreshedHostRuntime.store.getSnapshot().match
+    );
+
+    const guestTurnBefore = guestRuntime.store.getSnapshot().match?.turnNumber;
+    guestRuntime.controller.setChatDraft("guest after host refresh");
+    guestRuntime.controller.sendChatMessage();
+    guestRuntime.controller.submitCellAction(0, 1);
+    await flushPromises();
+
+    expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
+      "guest after host refresh"
+    );
+    expect(guestRuntime.store.getSnapshot().match?.turnNumber).toBeGreaterThan(
+      guestTurnBefore ?? 0
+    );
+    expect(refreshedHostRuntime.store.getSnapshot().match).toEqual(
+      guestRuntime.store.getSnapshot().match
+    );
+
+    guestRuntime.controller.dispose();
+    refreshedHostRuntime.controller.dispose();
+  });
+
   it("clears the guest recovery record when the guest intentionally leaves the direct match", async () => {
     const hostPeer = new PairedFakePeer();
     const guestPeer = new PairedFakePeer();
