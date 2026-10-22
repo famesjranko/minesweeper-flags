@@ -52,6 +52,27 @@ const startedMatch = () =>
       startingPlayerId: session.playerId
     })
   );
+// jsdom has no dialog methods; the match chat calls them when the board mounts.
+const dialogPrototype = HTMLDialogElement.prototype;
+const originalDialogMethods = {
+  close: dialogPrototype.close,
+  showModal: dialogPrototype.showModal
+};
+const stubDialogMethods = () => {
+  dialogPrototype.close = () => undefined;
+  dialogPrototype.showModal = () => undefined;
+};
+const startMatchWithGuest = (socket: Socket) => {
+  socket.receive("room:state", {
+    roomId: session.roomId,
+    roomCode: session.roomCode,
+    players: [
+      { playerId: session.playerId, displayName: "Host" },
+      { playerId: "guest-1", displayName: "Guest" }
+    ]
+  });
+  socket.receive("match:started", { roomCode: session.roomCode, match: startedMatch() });
+};
 let root: Root | undefined;
 let container: HTMLDivElement;
 const navigate = (path: string) =>
@@ -85,6 +106,8 @@ const setup = () => {
 };
 afterEach(() => {
   act(() => root?.unmount());
+  dialogPrototype.close = originalDialogMethods.close;
+  dialogPrototype.showModal = originalDialogMethods.showModal;
   root = undefined;
   container?.remove();
   window.localStorage.clear();
@@ -183,21 +206,11 @@ describe("waiting room exit", () => {
       addEventListener: () => undefined,
       removeEventListener: () => undefined
     }));
-    // jsdom has no dialog methods; the match chat calls them when the board mounts.
-    HTMLDialogElement.prototype.close ??= () => undefined;
-    HTMLDialogElement.prototype.showModal ??= () => undefined;
+    stubDialogMethods();
     const { socket } = setup();
     navigate("/lobby");
     socket.receive("server:error", { message: "Only the waiting room host can cancel this room." });
-    socket.receive("room:state", {
-      roomId: session.roomId,
-      roomCode: session.roomCode,
-      players: [
-        { playerId: session.playerId, displayName: "Host" },
-        { playerId: "guest-1", displayName: "Guest" }
-      ]
-    });
-    socket.receive("match:started", { roomCode: session.roomCode, match: startedMatch() });
+    startMatchWithGuest(socket);
 
     // When the host later uses browser navigation to reach the lobby
     navigate("/lobby");
@@ -207,6 +220,36 @@ describe("waiting room exit", () => {
 
     // And the stale cancellation error is gone
     expect(container.textContent).not.toContain("Only the waiting room host");
+  });
+  it("ignores a cancellation refusal that arrives after the match started", () => {
+    // Given a host whose cancellation is in flight when a guest's join starts the match
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    }));
+    stubDialogMethods();
+    const { socket } = setup();
+    navigate("/lobby");
+    startMatchWithGuest(socket);
+
+    // When the server's refusal arrives after the match started
+    socket.receive("server:error", { message: "Only the waiting room host can cancel this room." });
+
+    // Then the match screen shows no stale cancellation error
+    expect(container.textContent).not.toContain("Only the waiting room host");
+  });
+  it("finishes the exit when a timed-out cancellation proves the room is gone", () => {
+    // Given a host who asked to cancel from the waiting room
+    const { socket } = setup();
+    act(() => container.querySelector<HTMLElement>(".room-waiting-back")?.click());
+
+    // When the acknowledgement is lost and the confirming reconnect finds no session
+    act(() => vi.advanceTimersByTime(8_000));
+    socket.receive("server:error", { message: "Invalid session." });
+
+    // Then the host reaches the lobby they asked for
+    expect(window.location.pathname).toBe("/lobby");
   });
   it.each([false, true])("does not cancel on unmount after network loss is %s", (networkLost) => {
     // Given a waiting room whose transport drops

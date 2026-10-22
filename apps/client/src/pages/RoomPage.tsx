@@ -24,20 +24,22 @@ export const RoomPage = () => {
     reconnect,
     p2pSetup,
     cancelRoom,
-    roomCancelPending
+    roomCancelPending,
+    roomCancelAttempted
   } = gameClient;
   // Set when the host asks to leave; the exit completes once the seat is gone, whether the
-  // server confirmed a cancellation or the host left while offline.
+  // server confirmed a cancellation, a timed-out cancellation proved the room gone, or the
+  // host left while offline. It is dropped only when the room is known to have survived.
   const exitDestination = useRef<string | null>(null);
 
   useEffect(() => {
     if (!exitDestination.current || roomCancelPending) return;
     if (session) {
-      exitDestination.current = null;
+      if (!roomCancelAttempted) exitDestination.current = null;
       return;
     }
     navigate(exitDestination.current, { replace: true });
-  }, [navigate, roomCancelPending, session]);
+  }, [navigate, roomCancelAttempted, roomCancelPending, session]);
   const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
   const hostSetup = p2pSetup?.host ?? null;
 

@@ -466,7 +466,8 @@ export class GameClientController {
         }
         if (this.pendingRoomCancellation) {
           this.clearPendingRoomCancellation();
-          this.store.setError(event.payload.message);
+          // A match can start before the refusal arrives; the refusal is moot by then.
+          if (!this.store.getSnapshot().match) this.store.setError(event.payload.message);
           break;
         }
 
