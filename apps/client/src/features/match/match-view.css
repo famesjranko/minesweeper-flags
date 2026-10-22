@@ -200,6 +200,7 @@
 }
 .arcade-match .sidebar-resign-button {
   width: 100%;
+  grid-area: auto;
   border-color: #98605e;
   background: #412c33;
   color: #ffd2c2;
