@@ -163,3 +163,33 @@ it("mounts the friend form before selection while keeping it hidden and inert", 
     act(() => root.unmount());
   }
 });
+
+it("follows the route when browser history changes the selected mode", () => {
+  // Given the shared lobby opened on the friend route
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const render = (initialMode: "solo" | "friend") =>
+    act(() =>
+      root.render(
+        <HomePage
+          initialMode={initialMode}
+          connectionStatus="connected"
+          onFriendSelected={vi.fn()}
+          friendContent={<p>Friend form</p>}
+        />
+      )
+    );
+  render("friend");
+
+  try {
+    // When browser history returns to the game selection route
+    render("solo");
+
+    // Then the solo tab is selected and its panel is shown
+    const solo = container.querySelector("button[aria-controls='solo-panel']");
+    expect(solo?.getAttribute("aria-selected")).toBe("true");
+    expect(container.querySelector<HTMLElement>("#solo-panel")?.hidden).toBe(false);
+  } finally {
+    act(() => root.unmount());
+  }
+});

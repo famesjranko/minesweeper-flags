@@ -34,6 +34,13 @@ export const HomePage = ({
 }: HomePageProps) => {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [friendVisited, setFriendVisited] = useState(initialMode === "friend");
+  // "/" and "/lobby" share this page, so browser history changes the prop without a remount.
+  const [routeMode, setRouteMode] = useState(initialMode);
+  if (routeMode !== initialMode) {
+    setRouteMode(initialMode);
+    setMode(initialMode);
+    if (initialMode === "friend") setFriendVisited(true);
+  }
   const tabs = useRef<Record<Mode, HTMLButtonElement | null>>({ solo: null, friend: null });
   const selectMode = (nextMode: Mode, focus = false) => {
     setMode(nextMode);

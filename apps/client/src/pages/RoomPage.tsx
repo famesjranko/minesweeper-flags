@@ -26,14 +26,17 @@ export const RoomPage = () => {
     cancelRoom,
     roomCancelPending
   } = gameClient;
-  const wasCancelling = useRef(false);
-  const cancellationDestination = useRef("/lobby");
+  // Set when the host asks to leave; the exit completes once the seat is gone, whether the
+  // server confirmed a cancellation or the host left while offline.
+  const exitDestination = useRef<string | null>(null);
 
   useEffect(() => {
-    if (roomCancelPending) wasCancelling.current = true;
-    if (wasCancelling.current && !roomCancelPending && !session) {
-      navigate(cancellationDestination.current, { replace: true });
+    if (!exitDestination.current || roomCancelPending) return;
+    if (session) {
+      exitDestination.current = null;
+      return;
     }
+    navigate(exitDestination.current, { replace: true });
   }, [navigate, roomCancelPending, session]);
   const isP2PDeployment = DEPLOYMENT_MODE === "p2p";
   const hostSetup = p2pSetup?.host ?? null;
@@ -128,12 +131,12 @@ export const RoomPage = () => {
       onCopy={copyInviteValue}
       onCancelRoom={() => {
         if (roomCancelPending) return;
-        cancellationDestination.current = "/lobby";
+        exitDestination.current = "/lobby";
         cancelRoom();
       }}
       onHome={() => {
         if (roomCancelPending) return;
-        cancellationDestination.current = "/";
+        exitDestination.current = "/";
         cancelRoom();
       }}
       cancelPending={roomCancelPending}

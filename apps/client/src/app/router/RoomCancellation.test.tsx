@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+
+import { createMatchState } from "@minesweeper-flags/game-engine";
+import { toMatchStateDto } from "@minesweeper-flags/shared";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -36,6 +39,19 @@ class Socket extends EventTarget {
     );
   }
 }
+const startedMatch = () =>
+  toMatchStateDto(
+    createMatchState({
+      roomId: session.roomId,
+      players: [
+        { playerId: session.playerId, displayName: "Host" },
+        { playerId: "guest-1", displayName: "Guest" }
+      ],
+      seed: 1,
+      createdAt: 0,
+      startingPlayerId: session.playerId
+    })
+  );
 let root: Root | undefined;
 let container: HTMLDivElement;
 const navigate = (path: string) =>
@@ -130,7 +146,7 @@ describe("waiting room exit", () => {
       expect(window.location.pathname).toBe(selector === ".arcade-brand" ? "/" : "/lobby");
     }
   );
-  it("retains the waiting room when browser Back cannot send cancellation", () => {
+  it("leaves the waiting room on browser Back while offline and keeps credentials", () => {
     // Given the host loses its network connection before leaving
     const { socket } = setup();
     act(() => socket.dispatchEvent(new CloseEvent("close", { code: 1006 })));
@@ -138,10 +154,59 @@ describe("waiting room exit", () => {
     // When browser Back returns to game selection
     navigate("/");
 
-    // Then the host returns to the waiting room with credentials and a retry error
-    expect(window.location.pathname).toBe("/room/ABCDE");
-    expect(container.textContent).toContain("active connection");
+    // Then the host stays at game selection without sending a cancellation
+    expect(window.location.pathname).toBe("/");
+    expect(socket.sent.some((event) => event.type === "room:cancel")).toBe(false);
+
+    // And the stored session remains so the host can return to the room
     expect(createBrowserSessionPersistence().read(session.roomCode)).not.toBeNull();
+  });
+  it.each([
+    [".room-waiting-back", "/lobby"],
+    [".arcade-brand", "/"]
+  ])("leaves through %s while offline", (selector, destination) => {
+    // Given a waiting host whose connection has dropped
+    const { socket } = setup();
+    act(() => socket.dispatchEvent(new CloseEvent("close", { code: 1006 })));
+
+    // When the host uses the exit control
+    act(() => container.querySelector<HTMLElement>(selector)?.click());
+
+    // Then the host reaches its destination and keeps the stored session
+    expect(window.location.pathname).toBe(destination);
+    expect(createBrowserSessionPersistence().read(session.roomCode)).not.toBeNull();
+  });
+  it("lets the host leave after a failed cancellation once the match starts", () => {
+    // Given a cancellation that failed because a guest took the second seat
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    }));
+    // jsdom has no dialog methods; the match chat calls them when the board mounts.
+    HTMLDialogElement.prototype.close ??= () => undefined;
+    HTMLDialogElement.prototype.showModal ??= () => undefined;
+    const { socket } = setup();
+    navigate("/lobby");
+    socket.receive("server:error", { message: "Only the waiting room host can cancel this room." });
+    socket.receive("room:state", {
+      roomId: session.roomId,
+      roomCode: session.roomCode,
+      players: [
+        { playerId: session.playerId, displayName: "Host" },
+        { playerId: "guest-1", displayName: "Guest" }
+      ]
+    });
+    socket.receive("match:started", { roomCode: session.roomCode, match: startedMatch() });
+
+    // When the host later uses browser navigation to reach the lobby
+    navigate("/lobby");
+
+    // Then the host is not sent back to the room
+    expect(window.location.pathname).toBe("/lobby");
+
+    // And the stale cancellation error is gone
+    expect(container.textContent).not.toContain("Only the waiting room host");
   });
   it.each([false, true])("does not cancel on unmount after network loss is %s", (networkLost) => {
     // Given a waiting room whose transport drops

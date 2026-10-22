@@ -305,26 +305,24 @@ export class GameClientController {
   cancelRoom = (): void => {
     this.withSession((activeSession) => {
       if (this.store.getSnapshot().match || this.pendingRoomCancellation) return;
-      this.store.setRoomCancelAttempted(true);
-      if (this.transport.getStatus() !== "connected") {
-        this.store.setError("Room cancellation needs an active connection. Try again.");
-        return;
-      }
 
       const requestId = `cancel-${this.nextRoomCancelRequestId++}`;
-      try {
-        this.transport.send({
-          type: CLIENT_EVENT_NAMES.roomCancel,
-          payload: {
-            roomCode: activeSession.roomCode,
-            sessionToken: activeSession.sessionToken,
-            requestId
-          }
-        });
-      } catch {
-        this.store.setError("Room cancellation could not be sent. Try again.");
+      const sent = this.sendEvent({
+        type: CLIENT_EVENT_NAMES.roomCancel,
+        payload: {
+          roomCode: activeSession.roomCode,
+          sessionToken: activeSession.sessionToken,
+          requestId
+        }
+      });
+      if (!sent) {
+        // Leaving must never depend on the network. The server's reconnect grace releases the
+        // slot, and the stored session stays so the host can still return to the room.
+        this.clearActiveRoomState();
+        this.restartTransport();
         return;
       }
+      this.store.setRoomCancelAttempted(true);
 
       const timeoutId = this.scheduler.setTimeout(() => {
         if (this.pendingRoomCancellation?.requestId !== requestId) return;
@@ -449,6 +447,7 @@ export class GameClientController {
       case SERVER_EVENT_NAMES.matchEnded:
         this.store.setMatch(event.payload.match);
         this.store.setBombArmed(false);
+        this.settleFailedRoomCancellation();
         break;
       case SERVER_EVENT_NAMES.matchRematchUpdated:
         this.store.applyRematchUpdate(event.payload.players);
@@ -553,6 +552,13 @@ export class GameClientController {
     this.clearActiveRoomState();
   }
 
+  /** A started match ends any cancellation attempt, so its error must not hold the host back. */
+  private settleFailedRoomCancellation(): void {
+    if (!this.store.getSnapshot().roomCancelAttempted) return;
+    this.store.setRoomCancelAttempted(false);
+    this.store.setError(null);
+  }
+
   private clearPendingRoomCancellation(): void {
     const pending = this.pendingRoomCancellation;
     if (pending && pending.timeoutId !== null) this.scheduler.clearTimeout(pending.timeoutId);
@@ -600,6 +606,7 @@ export class GameClientController {
   private clearActiveRoomState(): void {
     this.joiningInviteToken = null;
     this.clearReconnectAttempt();
+    this.store.setRoomCancelAttempted(false);
     this.store.setSession(null);
     this.store.clearTransientRoomState();
     this.store.setError(null);
