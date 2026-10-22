@@ -75,28 +75,26 @@ export const cloneBoard = (board: BoardState): BoardState => ({
   cells: board.cells.map((row) => row.map((cell) => ({ ...cell })))
 });
 
-export const createBoard = (seed: number | string, config: BoardConfig = {}): BoardState => {
-  const rows = config.rows ?? BOARD_ROWS;
-  const columns = config.columns ?? BOARD_COLUMNS;
-  const mineCount = config.mineCount ?? TOTAL_MINES;
-
-  if (mineCount >= rows * columns) {
+/** Builds a board with mines at exactly the given coordinates and derives every clue. */
+export const createBoardFromMines = (
+  mines: readonly Coordinate[],
+  { rows = BOARD_ROWS, columns = BOARD_COLUMNS }: Omit<BoardConfig, "mineCount"> = {}
+): BoardState => {
+  if (mines.length >= rows * columns) {
     throw new Error("Mine count must be lower than the number of cells.");
   }
 
-  const rng = createRng(seed);
   const board = createEmptyBoard(rows, columns);
-  const positions = Array.from({ length: rows * columns }, (_, index) => index);
 
-  for (let index = positions.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(rng() * (index + 1));
-    [positions[index], positions[swapIndex]] = [positions[swapIndex]!, positions[index]!];
-  }
-
-  for (const position of positions.slice(0, mineCount)) {
-    const row = Math.floor(position / columns);
-    const column = position % columns;
-    board[row]![column]!.hasMine = true;
+  for (const { row, column } of mines) {
+    const cell = board[row]?.[column];
+    if (!cell) {
+      throw new Error(`Mine ${row},${column} is outside the board.`);
+    }
+    if (cell.hasMine) {
+      throw new Error(`Mine ${row},${column} is listed more than once.`);
+    }
+    cell.hasMine = true;
   }
 
   for (let row = 0; row < rows; row += 1) {
@@ -114,7 +112,31 @@ export const createBoard = (seed: number | string, config: BoardConfig = {}): Bo
     }
   }
 
-  return { rows, columns, mineCount, cells: board };
+  return { rows, columns, mineCount: mines.length, cells: board };
+};
+
+export const createBoard = (seed: number | string, config: BoardConfig = {}): BoardState => {
+  const rows = config.rows ?? BOARD_ROWS;
+  const columns = config.columns ?? BOARD_COLUMNS;
+  const mineCount = config.mineCount ?? TOTAL_MINES;
+
+  if (mineCount >= rows * columns) {
+    throw new Error("Mine count must be lower than the number of cells.");
+  }
+
+  const rng = createRng(seed);
+  const positions = Array.from({ length: rows * columns }, (_, index) => index);
+
+  for (let index = positions.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(rng() * (index + 1));
+    [positions[index], positions[swapIndex]] = [positions[swapIndex]!, positions[index]!];
+  }
+
+  const mines = positions
+    .slice(0, mineCount)
+    .map((position) => ({ row: Math.floor(position / columns), column: position % columns }));
+
+  return createBoardFromMines(mines, { rows, columns });
 };
 
 export const isWithinBoard = (board: BoardState, row: number, column: number): boolean =>
