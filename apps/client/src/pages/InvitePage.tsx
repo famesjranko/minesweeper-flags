@@ -50,7 +50,7 @@ const InviteErrorPanel = ({
       </div>
       <div className="arcade-flow-card">
         <Link className="arcade-primary" to="/lobby">
-          Back To Lobby
+          Back to lobby
         </Link>
         {error && hasInviteToken ? (
           <p className="arcade-flow-error" role="alert">
@@ -124,9 +124,9 @@ export const InvitePage = () => {
             />
           </label>
           <button type="submit" className="arcade-primary" disabled={!canJoin}>
-            Join Game
+            Join game
           </button>
-          <p className="arcade-flow-note">Shared 16×16 board · First to 26 mines</p>
+          <p className="arcade-flow-note">Shared 16×16 board · First to 26 wins</p>
           {error ? (
             <p className="arcade-flow-error" role="alert">
               {error}
@@ -134,7 +134,7 @@ export const InvitePage = () => {
           ) : null}
         </form>
         <Link className="arcade-back" to="/lobby">
-          ← Back To Lobby
+          ← Back to lobby
         </Link>
       </section>
     </ArcadePage>

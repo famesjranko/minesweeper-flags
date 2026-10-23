@@ -300,12 +300,6 @@ button.inline-bomb.is-armed::after {
   opacity: 1;
 }
 @media (max-width: 350px) {
-  .arcade-brand-mark {
-    display: none;
-  }
-  .arcade-brand {
-    font-size: 12px;
-  }
   .arcade-match .sidebar-player-header {
     font-size: 8px;
     gap: 2px;

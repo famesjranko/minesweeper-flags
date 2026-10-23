@@ -36,7 +36,7 @@ const getRematchState = (currentPlayer: Player, opponent: Player | null) => {
   if (currentPlayer.rematchRequested) {
     return {
       status: `Waiting for ${opponent?.displayName ?? "the other player"}…`,
-      label: "Cancel Rematch",
+      label: "Cancel rematch",
       cancels: true
     };
   }
@@ -44,12 +44,12 @@ const getRematchState = (currentPlayer: Player, opponent: Player | null) => {
   if (opponent?.rematchRequested) {
     return {
       status: `${opponent.displayName} wants a rematch.`,
-      label: "Accept Rematch",
+      label: "Accept rematch",
       cancels: false
     };
   }
 
-  return { status: null, label: "Request Rematch", cancels: false };
+  return { status: null, label: "Request rematch", cancels: false };
 };
 
 export const MatchResultRibbon = ({

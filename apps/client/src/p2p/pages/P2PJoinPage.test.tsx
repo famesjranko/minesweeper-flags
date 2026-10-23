@@ -112,7 +112,7 @@ describe("P2PJoinPage", () => {
     expect(gameClientMock.openGuestSetupSession).toHaveBeenCalledWith("session-1");
 
     const joinButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Join Direct Match"
+      (button) => button.textContent === "Join direct match"
     );
 
     act(() => {
@@ -155,7 +155,7 @@ describe("P2PJoinPage", () => {
     expect(container.textContent).not.toContain("no longer joinable");
 
     const joinButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Join Direct Match"
+      (button) => button.textContent === "Join direct match"
     );
 
     expect(joinButton).toBeDefined();

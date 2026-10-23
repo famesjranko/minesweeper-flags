@@ -143,7 +143,7 @@ it("offers only a local rematch after the match finishes", () => {
     expect(container.querySelectorAll(".arcade-play-area [role=status]")).toHaveLength(1);
     expect(container.querySelectorAll(".match-primary-action")).toHaveLength(1);
     expect(container.querySelector(".solo-result")).toBeNull();
-    expect(container.textContent).not.toContain("Request Rematch");
+    expect(container.textContent).not.toContain("Request rematch");
   } finally {
     act(() => root.unmount());
     container.remove();

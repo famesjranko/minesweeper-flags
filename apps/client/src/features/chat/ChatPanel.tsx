@@ -61,7 +61,7 @@ export const ChatPanel = ({
     <section className={["classic-chat-frame", className].filter(Boolean).join(" ")}>
       <header className="chat-panel-header">
         <div>
-          <h2>{onExpand ? "Chat" : "Messenger"}</h2>
+          <h2>Chat</h2>
           {!onExpand ? (
             <p className="chat-room-meta">
               Room {roomCode}{" "}

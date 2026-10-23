@@ -125,7 +125,7 @@ describe("MatchResultRibbon", () => {
     const html = renderRematch(match, "player-2");
 
     // Then it offers to request one
-    expect(html).toContain("Request Rematch");
+    expect(html).toContain("Request rematch");
   });
 
   it("waits, with a cancel, after this player asks for a rematch", () => {
@@ -137,7 +137,7 @@ describe("MatchResultRibbon", () => {
 
     // Then it says it is waiting for the opponent and offers to cancel
     expect(html).toContain("Waiting for Guest");
-    expect(html).toContain("Cancel Rematch");
+    expect(html).toContain("Cancel rematch");
   });
 
   it("offers to accept when the opponent asked first", () => {
@@ -149,6 +149,6 @@ describe("MatchResultRibbon", () => {
 
     // Then it says the opponent wants a rematch and offers to accept
     expect(html).toContain("Host wants a rematch");
-    expect(html).toContain("Accept Rematch");
+    expect(html).toContain("Accept rematch");
   });
 });

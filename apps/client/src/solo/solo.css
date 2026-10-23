@@ -4,9 +4,8 @@
 }
 .solo-match > .arcade-header {
   min-height: 44px;
-  padding: 0;
-  border: 0;
-  margin-bottom: 16px;
+  padding: 0 0 8px;
+  margin-bottom: 12px;
 }
 .solo-leave-link {
   color: #c2d3e9;

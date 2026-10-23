@@ -5,27 +5,6 @@
   width: min(100%, 1000px);
   margin: 0 auto;
 }
-.solo-home .arcade-header {
-  min-height: 44px;
-  padding-bottom: 12px;
-  gap: 8px;
-}
-.solo-home .arcade-brand {
-  font-size: 14px;
-}
-.solo-home .arcade-brand-mark {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-}
-.solo-home .arcade-brand-mark svg {
-  width: 20px;
-  height: 20px;
-}
-.solo-home .arcade-connection {
-  font-size: 11px;
-}
 .solo-entry-layout {
   display: grid;
   gap: 16px;
@@ -166,26 +145,6 @@
   .solo-home {
     width: min(100%, 1040px);
   }
-  .solo-home .arcade-header {
-    min-height: 53px;
-    padding-bottom: 20px;
-    gap: 16px;
-  }
-  .solo-home .arcade-brand {
-    font-size: 16px;
-  }
-  .solo-home .arcade-brand-mark {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-  }
-  .solo-home .arcade-brand-mark svg {
-    width: 26px;
-    height: 26px;
-  }
-  .solo-home .arcade-connection {
-    font-size: 12px;
-  }
   /* The stage row adds 52px; trimmed air keeps 1280×800 on one screen. */
   .solo-entry-layout {
     gap: 12px;
@@ -305,17 +264,6 @@
 @media (max-width: 350px) {
   .page-shell.arcade-page-shell.solo-home-shell {
     padding: 12px 16px 8px;
-  }
-  .solo-home .arcade-brand {
-    gap: 6px;
-    font-size: 12px;
-  }
-  .solo-home .arcade-brand-mark {
-    width: 24px;
-    height: 24px;
-  }
-  .solo-home .arcade-connection {
-    font-size: 10px;
   }
   .solo-entry-layout {
     padding-top: 12px;

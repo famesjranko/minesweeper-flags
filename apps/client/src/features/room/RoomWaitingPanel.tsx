@@ -6,11 +6,27 @@ import { buildInvitePath } from "./invite-link.js";
 
 type RoomSession = NonNullable<GameClientSnapshot["session"]>;
 
+export interface InviteNotice {
+  message: string;
+  failed: boolean;
+}
+
+const InviteNoticeLine = ({ notice }: { notice: InviteNotice }) =>
+  notice.failed ? (
+    <p className="arcade-flow-error" role="alert">
+      {notice.message}
+    </p>
+  ) : (
+    <p className="room-waiting-notice" role="status">
+      {notice.message}
+    </p>
+  );
+
 interface RoomWaitingPanelProps {
   roomCode: string;
   connectionStatus: string;
   session: RoomSession;
-  inviteNotice: string | null;
+  inviteNotice: InviteNotice | null;
   error: string | null;
   onCopy: (value: string, successMessage: string) => void;
   onCancelRoom: () => void;
@@ -85,13 +101,9 @@ export const RoomWaitingPanel = ({
           disabled={!inviteLink}
           onClick={() => (inviteLink ? onCopy(inviteLink, "Invite link copied.") : undefined)}
         >
-          Copy Invite Link
+          Copy invite link
         </button>
-        {inviteNotice ? (
-          <p className="room-waiting-notice" role="status">
-            {inviteNotice}
-          </p>
-        ) : null}
+        {inviteNotice ? <InviteNoticeLine notice={inviteNotice} /> : null}
         <div className="room-waiting-meta">
           <span>Room {roomCode}</span>
           <details className="arcade-token-details">
@@ -111,7 +123,7 @@ export const RoomWaitingPanel = ({
                   inviteToken ? onCopy(inviteToken, "Invite token copied.") : undefined
                 }
               >
-                Copy Invite Token
+                Copy invite token
               </button>
             </div>
           </details>

@@ -113,7 +113,7 @@ describe("MatchView bomb availability", () => {
 
     expect(html).toContain('class="inline-bomb is-locked"');
     expect(html).toContain('disabled=""');
-    expect(html).toContain(`Bomb unlocks at down ${MIN_BOMB_DEFICIT}.`);
+    expect(html).toContain(`Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`);
     expect(html).toContain(`trailing by ${MIN_BOMB_DEFICIT} or more`);
   });
 

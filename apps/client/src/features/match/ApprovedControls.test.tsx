@@ -216,13 +216,13 @@ it("keeps finished zoom and the single Request, Cancel or Accept rematch action 
   // When their request is acknowledged and then replaced by an opponent request
   match.players[1].rematchRequested = true;
   act(() => root.render(<Scene match={match} />));
-  expect(primary().textContent).toBe("Cancel Rematch");
+  expect(primary().textContent).toBe("Cancel rematch");
   act(() => primary().click());
   expect(onCancel).toHaveBeenCalledOnce();
   match.players[1].rematchRequested = false;
   match.players[0].rematchRequested = true;
   act(() => root.render(<Scene match={match} />));
-  expect(primary().textContent).toBe("Accept Rematch");
+  expect(primary().textContent).toBe("Accept rematch");
   act(() => {
     primary().click();
     zoom.click();

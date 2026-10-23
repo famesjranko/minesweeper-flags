@@ -55,15 +55,15 @@ const getStatusSummary = (guestSetup: GuestSetup): string => {
 const getStatusDetail = (guestSetup: GuestSetup): string => {
   return guestSetup?.stage === "waiting-for-host-finalize" || guestSetup?.stage === "connecting"
     ? "Waiting for the host to finish setup and open the direct channel."
-    : "Pick a display name to unlock Join Direct Match.";
+    : "Pick a display name to unlock Join direct match.";
 };
 
 const getJoinButtonLabel = (stage: P2PGuestSetupState["stage"] | undefined): string => {
   if (stage === "creating-answer" || stage === "submitting-answer") {
-    return "Joining Direct Match...";
+    return "Joining direct match...";
   }
 
-  return stage === "waiting-for-host-finalize" ? "Connecting To Host..." : "Join Direct Match";
+  return stage === "waiting-for-host-finalize" ? "Connecting to host..." : "Join direct match";
 };
 
 interface JoinDirectMatchCardProps {
@@ -112,7 +112,7 @@ const JoinDirectMatchCard = ({
 
     <div className="invite-secondary-actions">
       <Link className="secondary-button link-button" to="/">
-        Back To Home
+        Back to home
       </Link>
     </div>
   </section>

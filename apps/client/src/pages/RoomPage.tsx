@@ -5,14 +5,14 @@ import { MatchView } from "../features/match/MatchView.js";
 import { HostDirectMatchPanel } from "../features/room/HostDirectMatchPanel.js";
 import { RoomRestoringPanel } from "../features/room/RoomRestoringPanel.js";
 import { RoomUnavailablePanel } from "../features/room/RoomUnavailablePanel.js";
-import { RoomWaitingPanel } from "../features/room/RoomWaitingPanel.js";
+import { type InviteNotice, RoomWaitingPanel } from "../features/room/RoomWaitingPanel.js";
 import { useRoomRecovery } from "../features/room/useRoomRecovery.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: Route recovery and waiting state share one page.
 export const RoomPage = () => {
   const { roomCode = "" } = useParams();
-  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+  const [inviteNotice, setInviteNotice] = useState<InviteNotice | null>(null);
   const navigate = useNavigate();
   const gameClient = useGameClient();
   const {
@@ -59,9 +59,9 @@ export const RoomPage = () => {
   const copyInviteValue = async (value: string, successMessage: string) => {
     try {
       await window.navigator.clipboard.writeText(value);
-      setInviteNotice(successMessage);
+      setInviteNotice({ message: successMessage, failed: false });
     } catch {
-      setInviteNotice("Copy failed. Copy it manually from the screen.");
+      setInviteNotice({ message: "Copy failed. Copy it manually from the screen.", failed: true });
     }
   };
 
@@ -116,7 +116,7 @@ export const RoomPage = () => {
         roomCode={roomCode}
         connectionStatus={connectionStatus}
         hostSetup={hostSetup}
-        inviteNotice={inviteNotice}
+        inviteNotice={inviteNotice?.message ?? null}
         error={error}
         onCopy={copyInviteValue}
       />

@@ -135,7 +135,7 @@ const ShareDirectLinkCard = ({
         disabled={!directJoinLink}
         onClick={() => (directJoinLink ? onCopy(directJoinLink, "Direct link copied.") : undefined)}
       >
-        Copy Direct Link
+        Copy direct link
       </button>
     </div>
 
@@ -241,7 +241,7 @@ export const HostDirectMatchPanel = ({
           <span className="lobby-status-note">{inviteNotice ?? hostSetupSummary}</span>
           <span className="lobby-status-note">{hostSetupDetails}</span>
           <Link className="lobby-status-link" to="/lobby">
-            Back To Lobby
+            Back to lobby
           </Link>
           {hostSetup?.error ? <span className="error-text">{hostSetup.error}</span> : null}
           {error ? <span className="error-text">{error}</span> : null}
