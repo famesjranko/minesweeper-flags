@@ -1,21 +1,15 @@
-import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { type KeyboardEvent, useRef, useState } from "react";
 
 interface ResignControlProps {
-  match: MatchStateDto;
   disabled: boolean | undefined;
   onResign: () => void;
 }
 
-// Every move either passes the turn or scores a mine, so this key changes with each move.
-const moveKey = (match: MatchStateDto) =>
-  `${match.phase}:${match.turnNumber}:${match.players.map((player) => player.score).join(",")}`;
-
-export const ResignControl = ({ match, disabled, onResign }: ResignControlProps) => {
-  const key = moveKey(match);
-  // A confirmation belongs to the position it was asked in; any later move cancels it.
-  const [confirmingAt, setConfirmingAt] = useState<string | null>(null);
-  const confirming = confirmingAt === key;
+export const ResignControl = ({ disabled, onResign }: ResignControlProps) => {
+  // The opponent's moves do not change whether the player wants to resign, so a pending
+  // confirmation survives them (the bot can claim several mines in a row). The play area
+  // replaces this control when the match ends, which discards the confirmation.
+  const [confirming, setConfirming] = useState(false);
   // Swapping the buttons would drop keyboard focus, so the button that appears takes it.
   const pendingFocus = useRef<"keep" | "resign" | null>(null);
   const focusOnMount = (target: "keep" | "resign") => (element: HTMLButtonElement | null) => {
@@ -27,11 +21,11 @@ export const ResignControl = ({ match, disabled, onResign }: ResignControlProps)
 
   const ask = () => {
     pendingFocus.current = "keep";
-    setConfirmingAt(key);
+    setConfirming(true);
   };
   const keepPlaying = () => {
     pendingFocus.current = "resign";
-    setConfirmingAt(null);
+    setConfirming(false);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "Escape") return;

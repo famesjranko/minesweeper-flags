@@ -122,11 +122,7 @@ export const MatchPlayArea = (props: PlayProps) => {
       </div>
       <MatchBoard props={props} zoomed={zoomed} />
       {props.match.phase === "live" ? (
-        <ResignControl
-          match={props.match}
-          disabled={props.resignDisabled}
-          onResign={props.onResign}
-        />
+        <ResignControl disabled={props.resignDisabled} onResign={props.onResign} />
       ) : props.solo ? (
         <button
           type="button"

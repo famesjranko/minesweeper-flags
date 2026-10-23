@@ -319,33 +319,34 @@ it.each([
   expect(onResign).not.toHaveBeenCalled();
 });
 
-it("drops a pending resign confirmation when a move changes the match", () => {
-  // Given a live match waiting for the player to confirm resignation
-  const match = createMatch();
-  render(match);
-  act(() => button("resign")?.click());
-
-  // When the opponent scores a mine
-  const moved = createMatch();
-  moved.players[0].score += 1;
-  act(() => root.render(<Scene match={moved} />));
-
-  // Then the confirmation is gone and the player must ask again
-  expect(button("confirm-resign")).toBeNull();
-  expect(button("resign")).not.toBeNull();
-  expect(onResign).not.toHaveBeenCalled();
-});
-
-it("keeps a pending resign confirmation when the match is unchanged", () => {
+it("keeps a pending resign confirmation through the opponent's moves", () => {
   // Given a live match waiting for the player to confirm resignation
   render(createMatch());
   act(() => button("resign")?.click());
 
-  // When the same position arrives again as a new snapshot
-  act(() => root.render(<Scene match={createMatch()} />));
+  // When the opponent scores a mine and keeps the turn
+  const moved = createMatch();
+  moved.players[1].score += 1;
+  act(() => root.render(<Scene match={moved} />));
 
   // Then the player can still confirm
   expect(button("confirm-resign")).not.toBeNull();
+  expect(onResign).not.toHaveBeenCalled();
+});
+
+it("drops a pending resign confirmation when the match ends", () => {
+  // Given a live match waiting for the player to confirm resignation
+  render(createMatch());
+  act(() => button("resign")?.click());
+
+  // When the match finishes before the player confirms
+  const finished = createMatch();
+  finished.phase = "finished";
+  act(() => root.render(<Scene match={finished} />));
+
+  // Then no resign confirmation remains and nothing was sent
+  expect(button("confirm-resign")).toBeNull();
+  expect(onResign).not.toHaveBeenCalled();
 });
 
 it("blocks confirming a resignation while offline", () => {
