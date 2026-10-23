@@ -172,13 +172,12 @@ it("offers only resign while a local match is live", () => {
   act(() => root.render(<SoloPage createSession={() => session} />));
 
   try {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    // When the player resigns the live local match
+    // When the player resigns the live local match and confirms
     act(() => container.querySelector<HTMLButtonElement>("button[name='resign']")?.click());
+    act(() => container.querySelector<HTMLButtonElement>("button[name='confirm-resign']")?.click());
 
     // Then resign uses the local authority and rematch or restart are unavailable
     expect(session.resign).toHaveBeenCalledOnce();
-    confirm.mockRestore();
     expect(container.querySelector("button[name='rematch']")).toBeNull();
     expect(container.querySelector("button[name='restart']")).toBeNull();
   } finally {

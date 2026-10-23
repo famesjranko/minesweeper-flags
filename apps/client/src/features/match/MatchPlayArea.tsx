@@ -5,6 +5,7 @@ import { ZoomIcon } from "../../shared-ui/ZoomIcon.js";
 import { MatchRematchAction, MatchResultRibbon } from "./MatchResultRibbon.js";
 import type { MatchPresentation } from "./match-presentation.js";
 import { PlayerPanel } from "./PlayerPanel.js";
+import { ResignControl } from "./ResignControl.js";
 
 type PlayProps = {
   match: import("@minesweeper-flags/shared").MatchStateDto;
@@ -111,17 +112,11 @@ export const MatchPlayArea = (props: PlayProps) => {
       </div>
       <MatchBoard props={props} zoomed={zoomed} />
       {props.match.phase === "live" ? (
-        <button
-          type="button"
-          name="resign"
-          className="match-resign-action"
+        <ResignControl
+          match={props.match}
           disabled={props.resignDisabled}
-          onClick={() => {
-            if (window.confirm("Resign this match?")) props.onResign();
-          }}
-        >
-          Resign match
-        </button>
+          onResign={props.onResign}
+        />
       ) : props.solo ? (
         <button
           type="button"

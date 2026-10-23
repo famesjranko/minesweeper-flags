@@ -268,24 +268,98 @@ it("shows opponent availability without an action and preserves both spent bombs
   expect(onToggle).not.toHaveBeenCalled();
 });
 
-it.each([false, true])("requires confirmation for the visible resign action in solo=%s", (solo) => {
+const button = (name: string) =>
+  container.querySelector<HTMLButtonElement>(`.arcade-play-area button[name='${name}']`);
+
+it.each([false, true])("resigns only after the inline confirmation in solo=%s", (solo) => {
   // Given a live match using either presentation
   const match = createMatch();
   render(match);
   act(() => root.render(<Scene match={match} solo={solo} />));
-  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-  const resign = container.querySelector<HTMLButtonElement>(
-    ".arcade-play-area button[name='resign']"
-  )!;
 
-  // When the player cancels resignation and then confirms it
-  act(() => resign.click());
+  // When the player presses Resign match
+  act(() => button("resign")?.click());
+
+  // Then the control asks inline, focuses the safe choice, and has not resigned
+  expect(button("resign")).toBeNull();
+  expect(button("keep-playing")?.textContent).toBe("Keep playing");
+  expect(button("confirm-resign")?.textContent).toBe("Confirm resign");
+  expect(document.activeElement).toBe(button("keep-playing"));
   expect(onResign).not.toHaveBeenCalled();
-  confirm.mockReturnValue(true);
-  act(() => resign.click());
 
-  // Then one shared full-width action submits resignation only after confirmation
-  expect(resign.className).toBe("match-resign-action");
+  // When the player confirms
+  act(() => button("confirm-resign")?.click());
+
+  // Then the match is resigned once
   expect(onResign).toHaveBeenCalledOnce();
-  expect(container.querySelectorAll("button[name='resign']")).toHaveLength(1);
+});
+
+it.each([
+  ["Keep playing", () => act(() => button("keep-playing")?.click())],
+  [
+    "Escape",
+    () =>
+      act(() =>
+        button("confirm-resign")?.dispatchEvent(
+          new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })
+        )
+      )
+  ]
+])("returns to Resign match on %s without resigning", (_name, cancel) => {
+  // Given a live match waiting for the player to confirm resignation
+  render(createMatch());
+  act(() => button("resign")?.click());
+
+  // When the player backs out
+  cancel();
+
+  // Then the single resign control returns with focus and nothing is sent
+  expect(button("confirm-resign")).toBeNull();
+  expect(document.activeElement).toBe(button("resign"));
+  expect(onResign).not.toHaveBeenCalled();
+});
+
+it("drops a pending resign confirmation when a move changes the match", () => {
+  // Given a live match waiting for the player to confirm resignation
+  const match = createMatch();
+  render(match);
+  act(() => button("resign")?.click());
+
+  // When the opponent scores a mine
+  const moved = createMatch();
+  moved.players[0].score += 1;
+  act(() => root.render(<Scene match={moved} />));
+
+  // Then the confirmation is gone and the player must ask again
+  expect(button("confirm-resign")).toBeNull();
+  expect(button("resign")).not.toBeNull();
+  expect(onResign).not.toHaveBeenCalled();
+});
+
+it("keeps a pending resign confirmation when the match is unchanged", () => {
+  // Given a live match waiting for the player to confirm resignation
+  render(createMatch());
+  act(() => button("resign")?.click());
+
+  // When the same position arrives again as a new snapshot
+  act(() => root.render(<Scene match={createMatch()} />));
+
+  // Then the player can still confirm
+  expect(button("confirm-resign")).not.toBeNull();
+});
+
+it("blocks confirming a resignation while offline", () => {
+  // Given a live match waiting for the player to confirm resignation
+  const match = createMatch();
+  render(match);
+  act(() => button("resign")?.click());
+
+  // When the connection drops
+  act(() => root.render(<Scene match={match} connected={false} />));
+  act(() => button("confirm-resign")?.click());
+
+  // Then confirming is disabled and nothing is sent
+  expect(button("confirm-resign")?.disabled).toBe(true);
+  expect(button("keep-playing")?.disabled).toBe(false);
+  expect(onResign).not.toHaveBeenCalled();
 });
