@@ -316,11 +316,20 @@
     font-size: 14px;
   }
   .solo-entry-content {
-    grid-template-columns: 200px minmax(0, 1fr);
+    width: min(100%, 850px);
+    margin-inline: auto;
+    grid-template-columns: 280px minmax(0, 440px);
+    gap: 24px;
+    justify-content: center;
     padding: 16px;
   }
   .solo-home .lobby-form {
     gap: 12px;
+  }
+}
+@media (min-width: 900px) and (max-height: 500px) {
+  .solo-entry-content {
+    grid-template-columns: 320px minmax(0, 440px);
   }
 }
 /* Short phones: tighter air keeps the waiting room's cancel action on screen. */
