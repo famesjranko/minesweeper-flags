@@ -226,13 +226,10 @@ describe("solo bot level", () => {
     first.dispose();
     const second = renderHome();
 
-    // Then the hard level is still selected and described.
+    // Then the hard level is still selected.
     try {
       expect(second.radio("Hard")?.checked).toBe(true);
       expect(second.radio("Normal")?.checked).toBe(false);
-      expect(second.container.querySelector("#solo-difficulty-note")?.textContent).toBe(
-        "Hard · Expert that works out the odds across the whole board."
-      );
     } finally {
       second.dispose();
     }

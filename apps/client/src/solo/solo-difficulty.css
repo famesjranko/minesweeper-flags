@@ -51,8 +51,7 @@
   opacity: 0;
   cursor: pointer;
 }
-.solo-difficulty-intro,
-.solo-difficulty-note {
+.solo-difficulty-intro {
   margin: 0;
   color: #b0bed3;
   font-size: 13px;
@@ -76,8 +75,7 @@
     min-height: 44px;
     font-size: 15px;
   }
-  .solo-difficulty-intro,
-  .solo-difficulty-note {
+  .solo-difficulty-intro {
     font-size: 14px;
   }
 }

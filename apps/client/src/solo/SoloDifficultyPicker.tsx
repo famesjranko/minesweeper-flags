@@ -16,7 +16,6 @@ export const SoloDifficultyPicker = ({ value, onChange }: SoloDifficultyPickerPr
     <fieldset
       className="solo-mode-tabs solo-difficulty-options"
       aria-labelledby="solo-difficulty-heading"
-      aria-describedby="solo-difficulty-note"
     >
       {SOLO_DIFFICULTIES.map((difficulty) => (
         <label key={difficulty}>
@@ -31,8 +30,5 @@ export const SoloDifficultyPicker = ({ value, onChange }: SoloDifficultyPickerPr
         </label>
       ))}
     </fieldset>
-    <p id="solo-difficulty-note" className="solo-difficulty-note">
-      {SOLO_DIFFICULTY_COPY[value].label} · {SOLO_DIFFICULTY_COPY[value].description}
-    </p>
   </div>
 );
