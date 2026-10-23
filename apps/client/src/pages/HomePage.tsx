@@ -5,10 +5,12 @@ import { createContext, type ReactNode, useContext, useRef, useState } from "rea
 import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
 import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";
 import { SoloDifficultyPicker } from "../solo/SoloDifficultyPicker.js";
+import { replaySoloRecord } from "../solo/session/solo-replay.js";
 import {
   readSoloDifficulty,
   writeSoloDifficulty
 } from "../solo/storage/solo-difficulty-preference.js";
+import { createBrowserSoloStorage } from "../solo/storage/solo-storage.js";
 
 export type Mode = "solo" | "friend";
 
@@ -26,6 +28,10 @@ const FriendPanelActiveContext = createContext(false);
 export const useFriendPanelActive = () => useContext(FriendPanelActiveContext);
 
 const SoloEntry = () => {
+  const [hasLiveGame] = useState(() => {
+    const { record } = createBrowserSoloStorage().read();
+    return record !== null && replaySoloRecord(record)?.phase === "live";
+  });
   // The solo page reads the saved level when it starts a fresh match.
   const [difficulty, setDifficulty] = useState(readSoloDifficulty);
   const selectDifficulty = (nextDifficulty: SoloDifficulty) => {
@@ -35,9 +41,20 @@ const SoloEntry = () => {
   return (
     <>
       <SoloDifficultyPicker value={difficulty} onChange={selectDifficulty} />
-      <a className="solo-entry-primary" href="/solo">
-        Start solo match
-      </a>
+      {hasLiveGame ? (
+        <div className="solo-entry-actions">
+          <a className="solo-entry-primary" href="/solo">
+            Return to game
+          </a>
+          <a className="solo-entry-primary" href="/solo?new=1">
+            Start new
+          </a>
+        </div>
+      ) : (
+        <a className="solo-entry-primary" href="/solo">
+          Start solo match
+        </a>
+      )}
     </>
   );
 };

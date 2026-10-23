@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 
+import { createMatchState } from "@minesweeper-flags/game-engine";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomLobby } from "../features/room/RoomLobby.js";
+import { createSoloSession } from "../solo/session/solo-session.js";
+import { SOLO_STORAGE_KEY } from "../solo/storage/solo-storage.js";
 import { HomePage } from "./HomePage.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -234,4 +237,85 @@ describe("solo bot level", () => {
       second.dispose();
     }
   });
+});
+
+describe("saved solo entry actions", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  const saveProgress = (kind: string) => {
+    const session = createSoloSession({ nextSeed: () => 11, now: () => 20 });
+    session.start();
+    const board = createMatchState({
+      roomId: "solo-local",
+      players: [
+        { playerId: "solo-human", displayName: "You" },
+        { playerId: "solo-bot", displayName: "Bot" }
+      ],
+      seed: 11,
+      createdAt: 20,
+      startingPlayerId: "solo-human"
+    }).board.cells.flat();
+    for (const cell of board
+      .filter((cell) => cell.hasMine)
+      .slice(0, kind === "natural win" ? 26 : 1)) {
+      session.submitCellAction(cell.row, cell.column);
+    }
+    if (kind === "resigned") session.resign();
+    expect(session.getSnapshot().match.phase).toBe(
+      ["natural win", "resigned"].includes(kind) ? "finished" : "live"
+    );
+    session.dispose();
+    if (kind === "illegal replay") {
+      const saved = JSON.parse(window.sessionStorage.getItem(SOLO_STORAGE_KEY)!);
+      saved.actions.push(saved.actions[0]);
+      window.sessionStorage.setItem(SOLO_STORAGE_KEY, JSON.stringify(saved));
+    }
+    if (kind === "malformed") window.sessionStorage.setItem(SOLO_STORAGE_KEY, "{");
+    if (kind === "denied")
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("denied");
+      });
+  };
+
+  it.each(["live", "natural win", "resigned", "illegal replay", "malformed", "denied"])(
+    "offers explicit actions only for valid live progress: %s",
+    (kind) => {
+      // Given real saved progress or an unavailable or invalid save.
+      saveProgress(kind);
+      const savedBefore = window.sessionStorage.getItem.bind(window.sessionStorage);
+      const before = kind === "denied" ? null : savedBefore(SOLO_STORAGE_KEY);
+      const network = vi.fn();
+      for (const name of ["fetch", "WebSocket", "RTCPeerConnection"]) vi.stubGlobal(name, network);
+      const container = document.createElement("div");
+      const root = createRoot(container);
+
+      // When the lobby opens and the player picks a different difficulty.
+      act(() =>
+        root.render(
+          <HomePage connectionStatus="connected" onFriendSelected={network} friendContent={null} />
+        )
+      );
+      act(() => container.querySelector<HTMLInputElement>("input[value='hard']")!.click());
+
+      try {
+        // Then only a valid live replay has Return and Start new and choosing a level preserves it.
+        const actions = [...container.querySelectorAll<HTMLAnchorElement>(".solo-entry-primary")];
+        expect(actions.map((action) => action.textContent)).toEqual(
+          kind === "live" ? ["Return to game", "Start new"] : ["Start solo match"]
+        );
+        expect(actions.map((action) => action.getAttribute("href"))).toEqual(
+          kind === "live" ? ["/solo", "/solo?new=1"] : ["/solo"]
+        );
+        if (kind === "live") expect(savedBefore(SOLO_STORAGE_KEY)).toBe(before);
+        expect(network).not.toHaveBeenCalled();
+      } finally {
+        act(() => root.unmount());
+        vi.restoreAllMocks();
+      }
+    }
+  );
 });

@@ -54,7 +54,16 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
 };
 
 // A fresh match uses the level last chosen on the home page.
-const createPreferredSession = () => createSoloSession({ preferredDifficulty: readSoloDifficulty });
+const createPreferredSession = () => {
+  const url = new URL(window.location.href);
+  const startFresh = url.searchParams.get("new") === "1";
+  if (startFresh) {
+    // Consume the intent before Strict Mode reactivation or a later refresh can repeat it.
+    url.searchParams.delete("new");
+    window.history.replaceState(window.history.state, "", url);
+  }
+  return createSoloSession({ preferredDifficulty: readSoloDifficulty, startFresh });
+};
 
 export const SoloPage = ({ createSession = createPreferredSession }: SoloPageProps) => {
   const [session, setSession] = useState<SoloSession | null>(null);

@@ -83,3 +83,13 @@
     font-size: 14px;
   }
 }
+
+.solo-entry-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.solo-entry-actions .solo-entry-primary {
+  min-width: 0;
+  text-align: center;
+}

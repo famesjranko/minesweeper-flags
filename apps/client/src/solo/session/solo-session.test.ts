@@ -284,7 +284,7 @@ describe("solo session", () => {
 
   it("restores live progress identically with different wall clocks", () => {
     // Given a live replay one mine short of a natural win.
-    const replay = replayFor("human");
+    const replay = { ...replayFor("human"), difficulty: "easy" as const };
     replay.actions = boardFor()
       .filter((cell) => cell.hasMine)
       .slice(0, 25)
@@ -296,11 +296,13 @@ describe("solo session", () => {
       }));
     const first = createSoloSession({
       storage: createStorage(replay),
+      preferredDifficulty: () => "hard",
       scheduler: createScheduler(),
       now: () => 999
     });
     const second = createSoloSession({
       storage: createStorage(replay),
+      preferredDifficulty: () => "hard",
       scheduler: createScheduler(),
       now: () => 4
     });
@@ -311,6 +313,7 @@ describe("solo session", () => {
 
     // Then both retain the live progress and expose identical public state.
     expect(first.getSnapshot().match.phase).toBe("live");
+    expect(first.getSnapshot().difficulty).toBe("easy");
     expect(first.getSnapshot().match.players[0].score).toBe(25);
     expect(second.getSnapshot()).toEqual(first.getSnapshot());
   });
