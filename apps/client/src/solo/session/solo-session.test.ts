@@ -1,5 +1,6 @@
 import { createMatchState } from "@minesweeper-flags/game-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { chooseSoloAction } from "../bot/solo-bot.js";
 import {
   createBrowserSoloStorage,
   SOLO_STORAGE_KEY,
@@ -440,6 +441,26 @@ it("paces each retained mine claim with a 500 ms browser delay", () => {
   expect(storage.saved!.actions).toHaveLength(2);
   session.dispose();
   vi.useRealTimers();
+});
+
+it("lets the default bot draw its choices from the injected random source", () => {
+  // Given a bot-started game, an injected random source, and a different global random
+  const random = () => 0.05;
+  vi.spyOn(Math, "random").mockReturnValue(0.5);
+  const scheduler = createScheduler();
+  const session = createSoloSession({ storage: createStorage(replayFor()), scheduler, random });
+  session.start();
+  const expected = chooseSoloAction(session.getSnapshot().match, SOLO_BOT_ID, { random });
+
+  // When the bot takes its opening turn
+  scheduler.runOne();
+  vi.restoreAllMocks();
+
+  // Then it plays the move that the injected random source selects
+  const { lastAction } = session.getSnapshot().match;
+  expect({ type: lastAction?.type, row: lastAction?.row, column: lastAction?.column }).toEqual(
+    expected
+  );
 });
 
 it("passes the bot turn after a safe reveal", () => {

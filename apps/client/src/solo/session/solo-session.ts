@@ -34,6 +34,8 @@ export interface SoloSessionOptions {
   now?: () => number;
   nextSeed?: () => number;
   chooseAction?: (match: SoloSnapshot["match"], botPlayerId: string) => SoloAction | null;
+  /** Uniform numbers in [0, 1) for the default bot's choices. */
+  random?: () => number;
 }
 
 export interface SoloSession {
@@ -91,7 +93,11 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   const storage = options.storage ?? createBrowserSoloStorage();
   const now = options.now ?? Date.now;
   const nextSeed = options.nextSeed ?? (() => Math.floor(Math.random() * 0x100000000));
-  const chooseAction = options.chooseAction ?? chooseSoloAction;
+  const random = options.random ?? Math.random;
+  const chooseAction =
+    options.chooseAction ??
+    ((match: SoloSnapshot["match"], botPlayerId: string) =>
+      chooseSoloAction(match, botPlayerId, { random }));
   const listeners = new Set<() => void>();
   let state: MatchState | null = null;
   let record: SoloReplayRecord | null = null;
