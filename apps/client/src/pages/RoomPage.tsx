@@ -116,7 +116,7 @@ export const RoomPage = () => {
         roomCode={roomCode}
         connectionStatus={connectionStatus}
         hostSetup={hostSetup}
-        inviteNotice={inviteNotice?.message ?? null}
+        inviteNotice={inviteNotice}
         error={error}
         onCopy={copyInviteValue}
       />

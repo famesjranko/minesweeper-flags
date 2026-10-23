@@ -204,6 +204,21 @@
   color: #062b4e;
 }
 
+.lobby-match-in-progress {
+  display: grid;
+  gap: 12px;
+}
+.lobby-match-in-progress p {
+  margin: 0;
+  color: #cfdbec;
+}
+.lobby-match-in-progress .lobby-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .arcade-lobby .lobby-action-button:disabled {
   background: #30445e;
   box-shadow: none;

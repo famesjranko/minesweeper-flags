@@ -270,6 +270,27 @@ describe("waiting room exit", () => {
     // And the stale cancellation error is gone
     expect(container.textContent).not.toContain("Only the waiting room host");
   });
+  it("keeps a live match connected when browser Back returns to the lobby", () => {
+    // Given a host whose match with a guest has started
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    }));
+    stubDialogMethods();
+    const { socket } = setup();
+    startMatchWithGuest(socket);
+
+    // When browser history goes back to the friend lobby
+    navigate("/lobby");
+
+    // Then the match connection stays open and nothing is cancelled
+    expect(socket.close).not.toHaveBeenCalled();
+    expect(socket.sent.some((event) => event.type === "room:cancel")).toBe(false);
+
+    // And the lobby offers the way back to the match
+    expect(container.querySelector("a[href='/room/ABCDE']")?.textContent).toBe("Return to match");
+  });
   it("ignores a cancellation refusal that arrives after the match started", () => {
     // Given a host whose cancellation is in flight when a guest's join starts the match
     vi.stubGlobal("matchMedia", () => ({
