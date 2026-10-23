@@ -78,6 +78,16 @@ const MatchTools = ({
         props.view.turnHint
       )}
     </div>
+    {props.bombArmed && props.view.canAct ? (
+      <button
+        type="button"
+        className="arcade-bomb-cancel"
+        aria-label="Cancel bomb"
+        onClick={props.onToggleBomb}
+      >
+        Cancel
+      </button>
+    ) : null}
     <button
       type="button"
       className="arcade-zoom-button"

@@ -162,7 +162,7 @@ describe("bomb controls", () => {
     act(() => bomb.click());
     expect(bomb.getAttribute("aria-label")).toContain("cancel targeting");
     expect(container.querySelector("[role=status]")?.textContent).toContain(
-      "select a square or cancel"
+      "Bomb armed · tap a square"
     );
     expect(bomb.getAttribute("aria-pressed")).toBe("true");
     act(() => bomb.click());
@@ -171,5 +171,36 @@ describe("bomb controls", () => {
     expect(bomb.getAttribute("aria-label")).toContain("click to arm");
     expect(bomb.getAttribute("aria-pressed")).toBe("false");
     expect(onToggle).toHaveBeenCalledTimes(2);
+  });
+
+  it("disarms an armed bomb from the Cancel button in the status strip", () => {
+    // Given a player who has armed the bomb
+    const { bomb, onToggle } = render(createMatch());
+    act(() => bomb.click());
+
+    // When the player presses Cancel in the status strip
+    const cancel = container.querySelector<HTMLButtonElement>(
+      ".arcade-match-status button.arcade-bomb-cancel"
+    );
+    act(() => cancel?.click());
+
+    // Then the bomb is disarmed, stays available, and the Cancel button is gone
+    expect(cancel?.textContent).toBe("Cancel");
+    expect(bomb.getAttribute("aria-pressed")).toBe("false");
+    expect(bomb.disabled).toBe(false);
+    expect(onToggle).toHaveBeenCalledTimes(2);
+    expect(container.querySelector(".arcade-bomb-cancel")).toBeNull();
+    expect(container.querySelector("[role=status]")?.textContent).not.toContain("Bomb armed");
+  });
+
+  it("offers no bomb Cancel button while the bomb is not armed", () => {
+    // Given a player whose bomb is ready but not armed
+    render(createMatch());
+
+    // When the status strip renders
+    const cancel = container.querySelector(".arcade-bomb-cancel");
+
+    // Then there is nothing to cancel
+    expect(cancel).toBeNull();
   });
 });
