@@ -673,19 +673,24 @@ it("notifies subscribers with stable snapshots and respects unsubscribe", () => 
   expect(updated.error).toBeNull();
 });
 
-it("plays a fresh match at the chosen level and keeps it for the rematch", () => {
-  // Given a fresh session started at the hard level with an observed bot.
+it("plays a fresh match at the chosen level", () => {
+  // Given a fresh session whose player has chosen the hard level, with an observed bot.
   const scheduler = createScheduler();
   const storage = createStorage();
   const chooseAction = vi.fn(() => null);
-  const session = createSoloSession({ storage, scheduler, difficulty: "hard", chooseAction });
-  session.start();
+  const session = createSoloSession({
+    storage,
+    scheduler,
+    preferredDifficulty: () => "hard",
+    chooseAction
+  });
 
-  // When the player asks for a rematch, which the bot starts.
+  // When the match starts and the player asks for a rematch, which the bot starts.
+  session.start();
   session.rematch();
   scheduler.runOne();
 
-  // Then the snapshot and the saved replay keep the hard level.
+  // Then the snapshot and the saved replay use the hard level.
   expect(session.getSnapshot().difficulty).toBe("hard");
   expect(storage.saved?.difficulty).toBe("hard");
 
@@ -693,14 +698,41 @@ it("plays a fresh match at the chosen level and keeps it for the rematch", () =>
   expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "hard");
 });
 
-it("resumes a saved match at its own level, not the newly chosen one", () => {
-  // Given a saved bot turn played at the easy level and a session that asks for hard.
+it("plays again at the level picked after a finished match was restored", () => {
+  // Given a finished normal match saved in this tab and a player who has since picked hard.
+  const earlier = createStorage();
+  const finished = createSoloSession({
+    storage: earlier,
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal"
+  });
+  finished.start();
+  finished.resign();
+  finished.dispose();
+  const storage = createStorage(earlier.saved);
+  const session = createSoloSession({
+    storage,
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "hard"
+  });
+  session.start();
+
+  // When the player chooses Play again.
+  session.rematch();
+
+  // Then the new match is played and saved at the hard level.
+  expect(session.getSnapshot().difficulty).toBe("hard");
+  expect(storage.saved?.difficulty).toBe("hard");
+});
+
+it("resumes a saved match at its own level and says the new level comes next", () => {
+  // Given a saved bot turn played at the easy level and a player who has since picked hard.
   const scheduler = createScheduler();
   const chooseAction = vi.fn(() => null);
   const session = createSoloSession({
     storage: createStorage({ ...replayFor(), difficulty: "easy" }),
     scheduler,
-    difficulty: "hard",
+    preferredDifficulty: () => "hard",
     chooseAction
   });
 
@@ -711,6 +743,11 @@ it("resumes a saved match at its own level, not the newly chosen one", () => {
   // Then the restored match stays at the easy level.
   expect(session.getSnapshot().difficulty).toBe("easy");
   expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "easy");
+
+  // And the player is told that hard starts with the next match.
+  expect(session.getSnapshot().recoveryNotice).toBe(
+    "Resumed your Easy match. Hard starts with your next match."
+  );
 });
 
 it("lets the default bot reason at the match's level", () => {

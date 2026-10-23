@@ -11,10 +11,10 @@ interface SoloDifficultyPickerProps {
 // Native radios give the segmented control its arrow-key movement and single tab stop.
 export const SoloDifficultyPicker = ({ value, onChange }: SoloDifficultyPickerProps) => (
   <div className="solo-difficulty">
-    <h2>Play the bot</h2>
+    <h2 id="solo-difficulty-heading">Play the bot</h2>
     <fieldset
       className="solo-mode-tabs solo-difficulty-options"
-      aria-label="Bot level"
+      aria-labelledby="solo-difficulty-heading"
       aria-describedby="solo-difficulty-note"
     >
       {SOLO_DIFFICULTIES.map((difficulty) => (

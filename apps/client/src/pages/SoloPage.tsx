@@ -54,7 +54,7 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
 };
 
 // A fresh match uses the level last chosen on the home page.
-const createPreferredSession = () => createSoloSession({ difficulty: readSoloDifficulty() });
+const createPreferredSession = () => createSoloSession({ preferredDifficulty: readSoloDifficulty });
 
 export const SoloPage = ({ createSession = createPreferredSession }: SoloPageProps) => {
   const [session, setSession] = useState<SoloSession | null>(null);

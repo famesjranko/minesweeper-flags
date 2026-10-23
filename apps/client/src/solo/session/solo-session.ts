@@ -7,6 +7,7 @@ import {
 import { toMatchStateDto } from "@minesweeper-flags/shared";
 import { DEFAULT_SOLO_DIFFICULTY, type SoloDifficulty } from "../bot/bot-profiles.js";
 import { chooseSoloAction } from "../bot/solo-bot.js";
+import { SOLO_DIFFICULTY_COPY } from "../solo-difficulty-options.js";
 import { createBrowserSoloStorage, type SoloStorage } from "../storage/solo-storage.js";
 import {
   SOLO_BOT_ID,
@@ -34,8 +35,11 @@ export interface SoloSessionOptions {
   storage?: SoloStorage;
   now?: () => number;
   nextSeed?: () => number;
-  /** The level for a fresh match; a restored match keeps the level it was saved with. */
-  difficulty?: SoloDifficulty;
+  /**
+   * The player's current level choice, read whenever a fresh match begins (including
+   * Play again). A restored match keeps the level it was saved with.
+   */
+  preferredDifficulty?: () => SoloDifficulty;
   chooseAction?: (
     match: SoloSnapshot["match"],
     botPlayerId: string,
@@ -56,6 +60,16 @@ export interface SoloSession {
   rematch: () => void;
   dispose: () => void;
 }
+
+// A resumed live match keeps its level; say so when the player has since picked another.
+const levelNotice = (
+  state: MatchState | null,
+  saved: SoloDifficulty,
+  preferred: SoloDifficulty
+): string | null =>
+  state?.phase === "live" && saved !== preferred
+    ? `Resumed your ${SOLO_DIFFICULTY_COPY[saved].label} match. ${SOLO_DIFFICULTY_COPY[preferred].label} starts with your next match.`
+    : null;
 
 const starterId = (starter: "human" | "bot"): string =>
   starter === "human" ? SOLO_HUMAN_ID : SOLO_BOT_ID;
@@ -111,7 +125,8 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   let state: MatchState | null = null;
   let record: SoloReplayRecord | null = null;
   let starter: "human" | "bot" = "human";
-  let difficulty = options.difficulty ?? DEFAULT_SOLO_DIFFICULTY;
+  const preferredDifficulty = options.preferredDifficulty ?? (() => DEFAULT_SOLO_DIFFICULTY);
+  let difficulty = preferredDifficulty();
   let botTimer: unknown = null;
   let generation = 0;
   let started = false;
@@ -247,6 +262,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   const beginFresh = (nextStarter: "human" | "bot", notice: string | null): void => {
     cancelBot();
     starter = nextStarter;
+    difficulty = preferredDifficulty();
     record = freshRecord(nextSeed() >>> 0, now(), starter, difficulty);
     state = createState(record);
     bombArmed = false;
@@ -272,7 +288,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       if (recovered.record && restore(recovered.record)) {
         starter = recovered.record.starter;
         difficulty = recovered.record.difficulty;
-        recoveryNotice = recovered.notice;
+        recoveryNotice = recovered.notice ?? levelNotice(state, difficulty, preferredDifficulty());
         scheduleBot();
         notify();
         return;
