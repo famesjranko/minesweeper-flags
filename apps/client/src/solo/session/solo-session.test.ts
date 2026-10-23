@@ -214,60 +214,86 @@ describe("solo session", () => {
     expect(scheduler.size()).toBe(1);
   });
 
-  it("restores an explicit resignation as a finished local game", () => {
-    // Given a session that saves a human resignation.
-    const storage = createStorage();
-    const first = createSoloSession({
-      storage,
-      scheduler: createScheduler(),
-      now: () => 8,
-      nextSeed: () => 9
-    });
-    first.start();
-    first.resign();
-    expect(storage.saved?.resignedBy).toBe("human");
+  it.each(["natural win", "resignation", "bot-started resignation"])(
+    "starts fresh at the chosen level after a saved %s",
+    (finish) => {
+      // Given an Easy match that finished and was left for the lobby.
+      const storage = createStorage();
+      const earlier = createSoloSession({
+        storage,
+        scheduler: createScheduler(),
+        preferredDifficulty: () => "easy",
+        nextSeed: () => 11,
+        now: () => 20
+      });
+      earlier.start();
+      if (finish === "bot-started resignation") earlier.rematch();
+      else {
+        const mines = boardFor().filter((cell) => cell.hasMine);
+        for (const cell of mines.slice(0, finish === "natural win" ? 26 : 1)) {
+          earlier.submitCellAction(cell.row, cell.column);
+        }
+      }
+      if (finish !== "natural win") earlier.resign();
+      expect(earlier.getSnapshot().match.phase).toBe("finished");
+      expect(storage.saved?.difficulty).toBe("easy");
+      expect(storage.saved?.actions).toHaveLength(
+        finish === "natural win" ? 26 : finish === "resignation" ? 1 : 0
+      );
+      earlier.dispose();
+      const scheduler = createScheduler();
+      const session = createSoloSession({
+        storage,
+        scheduler,
+        preferredDifficulty: () => "hard",
+        nextSeed: () => 22,
+        now: () => 99
+      });
 
-    // When a new session restores the saved replay.
-    const restored = createSoloSession({ storage, scheduler: createScheduler(), now: () => 10 });
-    restored.start();
+      // When Start is chosen after selecting Hard in the lobby.
+      session.start();
+      const snapshot = session.getSnapshot();
 
-    // Then the match stays finished and no bot callback is scheduled.
-    expect(restored.getSnapshot().match.phase).toBe("finished");
-    expect(restored.getSnapshot().match.winnerPlayerId).toBe(SOLO_BOT_ID);
-  });
+      // Then a fresh Hard match starts on the human turn with no recovery warning or bot work.
+      expect(snapshot.match.phase).toBe("live");
+      expect(snapshot.difficulty).toBe("hard");
+      expect(snapshot.match.currentTurnPlayerId).toBe(SOLO_HUMAN_ID);
+      expect(snapshot.match.players.map((player) => player.score)).toEqual([0, 0]);
+      expect(snapshot.match.board.cells.flat().every((cell) => cell.status === "hidden")).toBe(
+        true
+      );
+      expect(snapshot.match.lastAction).toBeNull();
+      expect(snapshot.match.winnerPlayerId).toBeNull();
+      expect(snapshot.bombArmed).toBe(false);
+      expect(snapshot.botThinking).toBe(false);
+      expect(snapshot.error).toBeNull();
+      expect(snapshot.recoveryNotice).toBeNull();
+      expect(scheduler.size()).toBe(0);
 
-  it("restores a naturally won replay with deterministic action times", () => {
-    // Given a replay that claims every winning mine on one retained human turn.
-    const raw = createMatchState({
-      roomId: "solo-local",
-      players: [
-        { playerId: SOLO_HUMAN_ID, displayName: "You" },
-        { playerId: SOLO_BOT_ID, displayName: "Bot" }
-      ],
-      seed: 11,
-      createdAt: 20,
-      startingPlayerId: SOLO_HUMAN_ID
-    });
-    const actions = raw.board.cells
-      .flat()
+      // And the completed save is replaced with an empty replay for the new match.
+      expect(storage.saved).toEqual({
+        version: 1,
+        seed: 22,
+        createdAt: 99,
+        starter: "human",
+        difficulty: "hard",
+        actions: []
+      });
+    }
+  );
+
+  it("restores live progress identically with different wall clocks", () => {
+    // Given a live replay one mine short of a natural win.
+    const replay = replayFor("human");
+    replay.actions = boardFor()
       .filter((cell) => cell.hasMine)
-      .slice(0, 26)
+      .slice(0, 25)
       .map((cell) => ({
-        type: "select" as const,
+        type: "select",
         playerId: SOLO_HUMAN_ID,
         row: cell.row,
         column: cell.column
       }));
-    const replay = {
-      version: 1 as const,
-      seed: 11,
-      createdAt: 20,
-      starter: "human" as const,
-      difficulty: "normal" as const,
-      actions
-    };
-
-    // When two sessions restore it with different wall clocks.
     const first = createSoloSession({
       storage: createStorage(replay),
       scheduler: createScheduler(),
@@ -278,11 +304,14 @@ describe("solo session", () => {
       scheduler: createScheduler(),
       now: () => 4
     });
+
+    // When two sessions restore the same progress with different wall clocks.
     first.start();
     second.start();
 
-    // Then both retain the finished game and the public result is identical.
-    expect(first.getSnapshot().match.phase).toBe("finished");
+    // Then both retain the live progress and expose identical public state.
+    expect(first.getSnapshot().match.phase).toBe("live");
+    expect(first.getSnapshot().match.players[0].score).toBe(25);
     expect(second.getSnapshot()).toEqual(first.getSnapshot());
   });
 
@@ -696,37 +725,6 @@ it("plays a fresh match at the chosen level", () => {
 
   // And the bot is asked to choose at the hard level.
   expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "hard");
-});
-
-it("plays again at the level picked after a finished match was restored", () => {
-  // Given a finished normal match saved in this tab and a player who has since picked hard.
-  const earlier = createStorage();
-  const finished = createSoloSession({
-    storage: earlier,
-    scheduler: createScheduler(),
-    preferredDifficulty: () => "normal"
-  });
-  finished.start();
-  finished.resign();
-  finished.dispose();
-  const storage = createStorage(earlier.saved);
-  const session = createSoloSession({
-    storage,
-    scheduler: createScheduler(),
-    preferredDifficulty: () => "hard"
-  });
-  session.start();
-  const noticeAfterRestore = session.getSnapshot().recoveryNotice;
-
-  // When the player chooses Play again.
-  session.rematch();
-
-  // Then the restored finished match carried no level notice.
-  expect(noticeAfterRestore).toBeNull();
-
-  // And the new match is played and saved at the hard level.
-  expect(session.getSnapshot().difficulty).toBe("hard");
-  expect(storage.saved?.difficulty).toBe("hard");
 });
 
 it("resumes a saved match at its own level and says the new level comes next", () => {

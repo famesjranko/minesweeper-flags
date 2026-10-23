@@ -37,7 +37,7 @@ export interface SoloSessionOptions {
   nextSeed?: () => number;
   /**
    * The player's current level choice, read whenever a fresh match begins (including
-   * Play again). A restored match keeps the level it was saved with.
+   * Play again). A resumed live match keeps the level it was saved with.
    */
   preferredDifficulty?: () => SoloDifficulty;
   chooseAction?: (
@@ -239,7 +239,10 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     });
   };
 
-  const restore = (candidate: SoloReplayRecord): MatchState | null => {
+  const restore = (candidate: SoloReplayRecord | null): MatchState | null => {
+    if (!candidate) {
+      return null;
+    }
     const restored = createState(candidate);
     state = restored;
     record = { ...candidate, actions: [] };
@@ -285,7 +288,12 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       }
       started = true;
       const recovered = storage.read();
-      if (recovered.record && restore(recovered.record)) {
+      const restored = restore(recovered.record);
+      if (restored?.phase === "finished") {
+        beginFresh("human", recovered.notice);
+        return;
+      }
+      if (recovered.record && restored) {
         starter = recovered.record.starter;
         difficulty = recovered.record.difficulty;
         recoveryNotice = recovered.notice ?? levelNotice(state, difficulty, preferredDifficulty());
