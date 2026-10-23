@@ -126,7 +126,7 @@ it("keeps Red as You and routes only the local inline bomb through arm, cancel a
   act(() => bomb.click());
   expect(bomb.getAttribute("aria-pressed")).toBe("true");
   expect(container.querySelector("[role=status]")?.textContent).toContain(
-    "Bomb armed · pick a square"
+    "Bomb armed · tap a square"
   );
   act(() => bomb.click());
   expect(bomb.getAttribute("aria-pressed")).toBe("false");

@@ -162,7 +162,7 @@ describe("bomb controls", () => {
     act(() => bomb.click());
     expect(bomb.getAttribute("aria-label")).toContain("cancel targeting");
     expect(container.querySelector("[role=status]")?.textContent).toContain(
-      "Bomb armed · pick a square"
+      "Bomb armed · tap a square"
     );
     expect(bomb.getAttribute("aria-pressed")).toBe("true");
     act(() => bomb.click());

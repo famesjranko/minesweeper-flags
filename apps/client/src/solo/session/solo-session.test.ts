@@ -716,11 +716,15 @@ it("plays again at the level picked after a finished match was restored", () => 
     preferredDifficulty: () => "hard"
   });
   session.start();
+  const noticeAfterRestore = session.getSnapshot().recoveryNotice;
 
   // When the player chooses Play again.
   session.rematch();
 
-  // Then the new match is played and saved at the hard level.
+  // Then the restored finished match carried no level notice.
+  expect(noticeAfterRestore).toBeNull();
+
+  // And the new match is played and saved at the hard level.
   expect(session.getSnapshot().difficulty).toBe("hard");
   expect(storage.saved?.difficulty).toBe("hard");
 });
@@ -748,6 +752,13 @@ it("resumes a saved match at its own level and says the new level comes next", (
   expect(session.getSnapshot().recoveryNotice).toBe(
     "Resumed your Easy match. Hard starts with your next match."
   );
+
+  // When the player then chooses Play again.
+  session.rematch();
+
+  // Then the notice is gone and the new match is at the hard level.
+  expect(session.getSnapshot().recoveryNotice).toBeNull();
+  expect(session.getSnapshot().difficulty).toBe("hard");
 });
 
 it("lets the default bot reason at the match's level", () => {

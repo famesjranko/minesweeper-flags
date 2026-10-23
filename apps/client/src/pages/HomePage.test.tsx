@@ -231,7 +231,7 @@ describe("solo bot level", () => {
       expect(second.radio("Hard")?.checked).toBe(true);
       expect(second.radio("Normal")?.checked).toBe(false);
       expect(second.container.querySelector("#solo-difficulty-note")?.textContent).toBe(
-        "Works out the odds across the whole board."
+        "Hard · Expert that works out the odds across the whole board."
       );
     } finally {
       second.dispose();

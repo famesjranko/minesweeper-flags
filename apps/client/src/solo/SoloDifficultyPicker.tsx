@@ -12,6 +12,7 @@ interface SoloDifficultyPickerProps {
 export const SoloDifficultyPicker = ({ value, onChange }: SoloDifficultyPickerProps) => (
   <div className="solo-difficulty">
     <h2 id="solo-difficulty-heading">Play the bot</h2>
+    <p className="solo-difficulty-intro">Choose how hard it thinks.</p>
     <fieldset
       className="solo-mode-tabs solo-difficulty-options"
       aria-labelledby="solo-difficulty-heading"
@@ -31,7 +32,7 @@ export const SoloDifficultyPicker = ({ value, onChange }: SoloDifficultyPickerPr
       ))}
     </fieldset>
     <p id="solo-difficulty-note" className="solo-difficulty-note">
-      {SOLO_DIFFICULTY_COPY[value].description}
+      {SOLO_DIFFICULTY_COPY[value].label} · {SOLO_DIFFICULTY_COPY[value].description}
     </p>
   </div>
 );

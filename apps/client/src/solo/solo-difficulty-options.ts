@@ -6,7 +6,7 @@ export const SOLO_DIFFICULTIES: readonly SoloDifficulty[] = ["easy", "normal", "
 export const SOLO_DIFFICULTY_COPY: Readonly<
   Record<SoloDifficulty, { label: string; description: string }>
 > = {
-  easy: { label: "Easy", description: "Reads each clue on its own. Good for learning." },
-  normal: { label: "Normal", description: "Reads every clue it can see. A steady opponent." },
-  hard: { label: "Hard", description: "Works out the odds across the whole board." }
+  easy: { label: "Easy", description: "Beginner that reads each clue on its own." },
+  normal: { label: "Normal", description: "Solid player that reads every clue it can see." },
+  hard: { label: "Hard", description: "Expert that works out the odds across the whole board." }
 };
