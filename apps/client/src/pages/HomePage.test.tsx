@@ -65,7 +65,9 @@ it("moves keyboard focus and visible content between both game mode tabs", () =>
     expect(solo?.getAttribute("aria-selected")).toBe("true");
     expect(soloPanel?.hidden).toBe(false);
     expect(friendPanel?.hidden).toBe(true);
-    expect(container.querySelector<HTMLAnchorElement>("a[href='/solo']")).not.toBeNull();
+    expect(
+      container.querySelector<HTMLAnchorElement>("a[href='/solo?difficulty=normal']")
+    ).not.toBeNull();
   } finally {
     act(() => root.unmount());
     container.remove();
@@ -308,7 +310,9 @@ describe("saved solo entry actions", () => {
           kind === "live" ? ["Return to game", "Start new"] : ["Start solo match"]
         );
         expect(actions.map((action) => action.getAttribute("href"))).toEqual(
-          kind === "live" ? ["/solo", "/solo?new=1"] : ["/solo"]
+          kind === "live"
+            ? ["/solo?difficulty=hard", "/solo?difficulty=hard&new=1"]
+            : ["/solo?difficulty=hard"]
         );
         if (kind === "live") expect(savedBefore(SOLO_STORAGE_KEY)).toBe(before);
         expect(network).not.toHaveBeenCalled();

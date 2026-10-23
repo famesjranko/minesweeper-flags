@@ -3,9 +3,9 @@ import "../solo/solo.css";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { MatchView } from "../features/match/MatchView.js";
 import { ArcadeHeader } from "../shared-ui/ArcadeHeader.js";
-import { createSoloSession, type SoloSession } from "../solo/session/solo-session.js";
+import type { SoloSession } from "../solo/session/solo-session.js";
 import { SOLO_DIFFICULTY_COPY } from "../solo/solo-difficulty-options.js";
-import { readSoloDifficulty } from "../solo/storage/solo-difficulty-preference.js";
+import { createSoloEntrySessionFactory } from "../solo/solo-entry-intent.js";
 
 interface SoloPageProps {
   createSession?: () => SoloSession;
@@ -53,27 +53,17 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
   );
 };
 
-// A fresh match uses the level last chosen on the home page.
-const createPreferredSession = () => {
-  const url = new URL(window.location.href);
-  const startFresh = url.searchParams.get("new") === "1";
-  if (startFresh) {
-    // Consume the intent before Strict Mode reactivation or a later refresh can repeat it.
-    url.searchParams.delete("new");
-    window.history.replaceState(window.history.state, "", url);
-  }
-  return createSoloSession({ preferredDifficulty: readSoloDifficulty, startFresh });
-};
-
-export const SoloPage = ({ createSession = createPreferredSession }: SoloPageProps) => {
+export const SoloPage = ({ createSession }: SoloPageProps) => {
+  const [createEntrySession] = useState(createSoloEntrySessionFactory);
+  const sessionFactory = createSession ?? createEntrySession;
   const [session, setSession] = useState<SoloSession | null>(null);
 
   useEffect(() => {
-    const nextSession = createSession();
+    const nextSession = sessionFactory();
     nextSession.start();
     setSession(nextSession);
     return () => nextSession.dispose();
-  }, [createSession]);
+  }, [sessionFactory]);
 
   return session ? <SoloMatch session={session} /> : null;
 };

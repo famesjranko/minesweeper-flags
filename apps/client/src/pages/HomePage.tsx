@@ -6,6 +6,7 @@ import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
 import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";
 import { SoloDifficultyPicker } from "../solo/SoloDifficultyPicker.js";
 import { replaySoloRecord } from "../solo/session/solo-replay.js";
+import { soloEntryHref } from "../solo/solo-entry-intent.js";
 import {
   readSoloDifficulty,
   writeSoloDifficulty
@@ -32,7 +33,6 @@ const SoloEntry = () => {
     const { record } = createBrowserSoloStorage().read();
     return record !== null && replaySoloRecord(record)?.phase === "live";
   });
-  // The solo page reads the saved level when it starts a fresh match.
   const [difficulty, setDifficulty] = useState(readSoloDifficulty);
   const selectDifficulty = (nextDifficulty: SoloDifficulty) => {
     setDifficulty(nextDifficulty);
@@ -43,15 +43,15 @@ const SoloEntry = () => {
       <SoloDifficultyPicker value={difficulty} onChange={selectDifficulty} />
       {hasLiveGame ? (
         <div className="solo-entry-actions">
-          <a className="solo-entry-primary" href="/solo">
+          <a className="solo-entry-primary" href={soloEntryHref(difficulty)}>
             Return to game
           </a>
-          <a className="solo-entry-primary solo-entry-new" href="/solo?new=1">
+          <a className="solo-entry-primary solo-entry-new" href={soloEntryHref(difficulty, true)}>
             Start new
           </a>
         </div>
       ) : (
-        <a className="solo-entry-primary" href="/solo">
+        <a className="solo-entry-primary" href={soloEntryHref(difficulty)}>
           Start solo match
         </a>
       )}
