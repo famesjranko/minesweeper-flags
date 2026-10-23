@@ -71,6 +71,7 @@ describe("solo session", () => {
       seed: 6,
       createdAt: 1,
       starter: "bot",
+      difficulty: "normal",
       actions: []
     };
 
@@ -99,6 +100,7 @@ describe("solo session", () => {
       seed: 1,
       createdAt: 1,
       starter: "bot",
+      difficulty: "normal",
       actions: []
     });
     const session = createSoloSession({
@@ -130,7 +132,14 @@ describe("solo session", () => {
     const queuedScheduler = createScheduler();
     const queued = createSoloSession({
       scheduler: queuedScheduler,
-      storage: createStorage({ version: 1, seed: 3, createdAt: 1, starter: "bot", actions: [] })
+      storage: createStorage({
+        version: 1,
+        seed: 3,
+        createdAt: 1,
+        starter: "bot",
+        difficulty: "normal",
+        actions: []
+      })
     });
     queued.start();
     queued.restart();
@@ -145,6 +154,7 @@ describe("solo session", () => {
       seed: 2,
       createdAt: 1,
       starter: "bot" as const,
+      difficulty: "normal" as const,
       actions: []
     };
     const session = createSoloSession({
@@ -253,6 +263,7 @@ describe("solo session", () => {
       seed: 11,
       createdAt: 20,
       starter: "human" as const,
+      difficulty: "normal" as const,
       actions
     };
 
@@ -311,6 +322,7 @@ const replayFor = (starter: "human" | "bot" = "bot"): SoloReplayRecord => ({
   seed: 11,
   createdAt: 20,
   starter,
+  difficulty: "normal",
   actions: []
 });
 
@@ -659,4 +671,79 @@ it("notifies subscribers with stable snapshots and respects unsubscribe", () => 
   expect(updated.match.players[0].score).toBe(1);
   expect(updated.humanId).toBe(SOLO_HUMAN_ID);
   expect(updated.error).toBeNull();
+});
+
+it("plays a fresh match at the chosen level and keeps it for the rematch", () => {
+  // Given a fresh session started at the hard level with an observed bot.
+  const scheduler = createScheduler();
+  const storage = createStorage();
+  const chooseAction = vi.fn(() => null);
+  const session = createSoloSession({ storage, scheduler, difficulty: "hard", chooseAction });
+  session.start();
+
+  // When the player asks for a rematch, which the bot starts.
+  session.rematch();
+  scheduler.runOne();
+
+  // Then the snapshot and the saved replay keep the hard level.
+  expect(session.getSnapshot().difficulty).toBe("hard");
+  expect(storage.saved?.difficulty).toBe("hard");
+
+  // And the bot is asked to choose at the hard level.
+  expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "hard");
+});
+
+it("resumes a saved match at its own level, not the newly chosen one", () => {
+  // Given a saved bot turn played at the easy level and a session that asks for hard.
+  const scheduler = createScheduler();
+  const chooseAction = vi.fn(() => null);
+  const session = createSoloSession({
+    storage: createStorage({ ...replayFor(), difficulty: "easy" }),
+    scheduler,
+    difficulty: "hard",
+    chooseAction
+  });
+
+  // When the session restores the replay and the bot takes its turn.
+  session.start();
+  scheduler.runOne();
+
+  // Then the restored match stays at the easy level.
+  expect(session.getSnapshot().difficulty).toBe("easy");
+  expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "easy");
+});
+
+it("lets the default bot reason at the match's level", () => {
+  // Given a saved hard-level position where the hard and normal bots choose different squares.
+  const random = () => 0.5;
+  const scheduler = createScheduler();
+  const session = createSoloSession({
+    storage: createStorage({
+      version: 1,
+      seed: 4,
+      createdAt: 1,
+      starter: "bot",
+      difficulty: "hard",
+      actions: [
+        { type: "select", playerId: SOLO_BOT_ID, row: 8, column: 0 },
+        { type: "select", playerId: SOLO_HUMAN_ID, row: 0, column: 0 }
+      ]
+    }),
+    scheduler,
+    random
+  });
+  session.start();
+  const position = session.getSnapshot().match;
+  const hardMove = chooseSoloAction(position, SOLO_BOT_ID, { difficulty: "hard", random });
+  const normalMove = chooseSoloAction(position, SOLO_BOT_ID, { difficulty: "normal", random });
+
+  // When the bot takes its turn.
+  scheduler.runOne();
+
+  // Then it plays the hard move.
+  const { lastAction } = session.getSnapshot().match;
+  expect(hardMove).not.toEqual(normalMove);
+  expect({ type: lastAction?.type, row: lastAction?.row, column: lastAction?.column }).toEqual(
+    hardMove
+  );
 });

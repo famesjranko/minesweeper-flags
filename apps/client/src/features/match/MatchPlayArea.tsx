@@ -18,7 +18,7 @@ type PlayProps = {
   lastMove: LastMoveMarks;
   onResign: () => void;
   resignDisabled?: boolean;
-  solo?: { botThinking: boolean } | undefined;
+  solo?: { botThinking: boolean; botLevel?: string | undefined } | undefined;
   hidePresence?: boolean;
 };
 
@@ -102,6 +102,7 @@ export const MatchPlayArea = (props: PlayProps) => {
             slot={slot}
             match={props.match}
             hidePresence={props.hidePresence ?? false}
+            note={slot.isSelf ? undefined : props.solo?.botLevel}
             bombArmed={props.bombArmed}
             canAct={props.view.canAct}
             onToggleBomb={props.onToggleBomb}

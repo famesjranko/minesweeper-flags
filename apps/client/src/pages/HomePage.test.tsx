@@ -2,7 +2,7 @@
 
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomLobby } from "../features/room/RoomLobby.js";
 import { HomePage } from "./HomePage.js";
 
@@ -192,4 +192,49 @@ it("follows the route when browser history changes the selected mode", () => {
   } finally {
     act(() => root.unmount());
   }
+});
+
+describe("solo bot level", () => {
+  afterEach(() => window.localStorage.clear());
+
+  const renderHome = () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() =>
+      root.render(
+        <HomePage connectionStatus="connected" onFriendSelected={vi.fn()} friendContent={null} />
+      )
+    );
+    const radio = (label: string) =>
+      [...container.querySelectorAll<HTMLLabelElement>(".solo-difficulty-options label")]
+        .find((element) => element.textContent === label)
+        ?.querySelector("input");
+    const dispose = () => {
+      act(() => root.unmount());
+      container.remove();
+    };
+    return { container, radio, dispose };
+  };
+
+  it("selects a level and remembers it for the next visit", () => {
+    // Given a first visit to the home page.
+    const first = renderHome();
+
+    // When the player chooses the hard level and later comes back.
+    act(() => first.radio("Hard")?.click());
+    first.dispose();
+    const second = renderHome();
+
+    // Then the hard level is still selected and described.
+    try {
+      expect(second.radio("Hard")?.checked).toBe(true);
+      expect(second.radio("Normal")?.checked).toBe(false);
+      expect(second.container.querySelector("#solo-difficulty-note")?.textContent).toBe(
+        "Works out the odds across the whole board."
+      );
+    } finally {
+      second.dispose();
+    }
+  });
 });

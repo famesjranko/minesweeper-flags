@@ -4,6 +4,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { MatchView } from "../features/match/MatchView.js";
 import { ArcadeHeader } from "../shared-ui/ArcadeHeader.js";
 import { createSoloSession, type SoloSession } from "../solo/session/solo-session.js";
+import { SOLO_DIFFICULTY_COPY } from "../solo/solo-difficulty-options.js";
+import { readSoloDifficulty } from "../solo/storage/solo-difficulty-preference.js";
 
 interface SoloPageProps {
   createSession?: () => SoloSession;
@@ -43,6 +45,7 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
           onResign={session.resign}
           presentation="solo"
           botThinking={snapshot.botThinking}
+          botLevel={SOLO_DIFFICULTY_COPY[snapshot.difficulty].label}
           onRematch={session.rematch}
         />
       </div>
@@ -50,7 +53,10 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
   );
 };
 
-export const SoloPage = ({ createSession = createSoloSession }: SoloPageProps) => {
+// A fresh match uses the level last chosen on the home page.
+const createPreferredSession = () => createSoloSession({ difficulty: readSoloDifficulty() });
+
+export const SoloPage = ({ createSession = createPreferredSession }: SoloPageProps) => {
   const [session, setSession] = useState<SoloSession | null>(null);
 
   useEffect(() => {

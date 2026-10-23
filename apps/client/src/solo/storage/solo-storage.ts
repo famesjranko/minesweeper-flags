@@ -1,3 +1,4 @@
+import { BOT_PROFILES, DEFAULT_SOLO_DIFFICULTY, type SoloDifficulty } from "../bot/bot-profiles.js";
 import type { SoloReplayRecord } from "../session/solo-session.types.js";
 
 export const SOLO_STORAGE_KEY = "msf:solo:v1";
@@ -36,14 +37,22 @@ const hasControlCharacter = (value: string): boolean => {
   return false;
 };
 
+export const isSoloDifficulty = (value: unknown): value is SoloDifficulty =>
+  typeof value === "string" && Object.hasOwn(BOT_PROFILES, value);
+
+const RECORD_KEYS = [
+  "version",
+  "seed",
+  "createdAt",
+  "starter",
+  "difficulty",
+  "actions",
+  "resignedBy"
+];
+
 // Reserve deterministic timestamps for a full replay and a final resignation.
 export const validateSoloReplay = (value: unknown): SoloReplayRecord | null => {
-  if (
-    !isPlainObject(value) ||
-    Object.keys(value).some(
-      (key) => !["version", "seed", "createdAt", "starter", "actions", "resignedBy"].includes(key)
-    )
-  ) {
+  if (!isPlainObject(value) || Object.keys(value).some((key) => !RECORD_KEYS.includes(key))) {
     return null;
   }
   if (
@@ -54,11 +63,15 @@ export const validateSoloReplay = (value: unknown): SoloReplayRecord | null => {
     !Array.isArray(value.actions) ||
     value.actions.length > SOLO_STORAGE_MAX_ACTIONS ||
     !value.actions.every(isAction) ||
-    (value.resignedBy !== undefined && value.resignedBy !== "human" && value.resignedBy !== "bot")
+    (value.resignedBy !== undefined &&
+      value.resignedBy !== "human" &&
+      value.resignedBy !== "bot") ||
+    (value.difficulty !== undefined && !isSoloDifficulty(value.difficulty))
   ) {
     return null;
   }
-  return value as unknown as SoloReplayRecord;
+  // Records saved before levels existed were all played at the default level.
+  return { difficulty: DEFAULT_SOLO_DIFFICULTY, ...value } as unknown as SoloReplayRecord;
 };
 
 const getBrowserStorage = (): BrowserStorage | null => {

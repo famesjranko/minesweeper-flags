@@ -1,0 +1,81 @@
+/* The segmented control reuses .solo-mode-tabs from game-mode.css. */
+#solo-panel {
+  display: grid;
+  gap: 14px;
+}
+.solo-difficulty {
+  display: grid;
+  gap: 8px;
+}
+.solo-difficulty h2 {
+  margin: 0;
+  color: #bacbe4;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.solo-difficulty-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+/* Each label is the visible segment; .solo-mode-tabs styles its buttons the same way. */
+.solo-difficulty-options label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 6px;
+  border-radius: 8px;
+  color: #b8c9df;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.solo-difficulty-options label:has(:checked) {
+  background: #304d6e;
+  color: #f3f7ff;
+  box-shadow: 0 1px 0 #6ecfff66;
+}
+.solo-difficulty-options label:has(:focus-visible) {
+  outline: 2px solid #9bdcff;
+  outline-offset: 2px;
+}
+/* The radio stays focusable and announced; the label draws it. */
+.solo-difficulty-options input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.solo-difficulty-note {
+  margin: 0;
+  color: #b0bed3;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (min-width: 680px) {
+  #solo-panel {
+    gap: 24px;
+  }
+  .solo-difficulty {
+    gap: 12px;
+  }
+  .solo-difficulty h2 {
+    color: #f3f7ff;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .solo-difficulty-options label {
+    min-height: 44px;
+    font-size: 15px;
+  }
+  .solo-difficulty-note {
+    font-size: 14px;
+  }
+}

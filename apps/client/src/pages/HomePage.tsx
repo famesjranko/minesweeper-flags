@@ -3,6 +3,12 @@ import "../shared-ui/game-mode.css";
 import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
 import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
+import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";
+import { SoloDifficultyPicker } from "../solo/SoloDifficultyPicker.js";
+import {
+  readSoloDifficulty,
+  writeSoloDifficulty
+} from "../solo/storage/solo-difficulty-preference.js";
 
 export type Mode = "solo" | "friend";
 
@@ -18,6 +24,23 @@ const FriendPanelActiveContext = createContext(false);
  * so the hidden panel reserves its height, but networking must wait for this intent.
  */
 export const useFriendPanelActive = () => useContext(FriendPanelActiveContext);
+
+const SoloEntry = () => {
+  // The solo page reads the saved level when it starts a fresh match.
+  const [difficulty, setDifficulty] = useState(readSoloDifficulty);
+  const selectDifficulty = (nextDifficulty: SoloDifficulty) => {
+    setDifficulty(nextDifficulty);
+    writeSoloDifficulty(nextDifficulty);
+  };
+  return (
+    <>
+      <SoloDifficultyPicker value={difficulty} onChange={selectDifficulty} />
+      <a className="solo-entry-primary" href="/solo">
+        Start solo match
+      </a>
+    </>
+  );
+};
 
 interface HomePageProps {
   initialMode?: Mode;
@@ -105,9 +128,7 @@ export const HomePage = ({
             hidden={mode !== "solo"}
             inert={mode !== "solo"}
           >
-            <a className="solo-entry-primary" href="/solo">
-              Start solo match
-            </a>
+            <SoloEntry />
           </div>
           <div
             id="friend-panel"

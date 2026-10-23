@@ -5,6 +5,8 @@ import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import type { SoloSession, SoloSnapshot } from "../solo/session/solo-session.js";
+import { SOLO_DIFFICULTY_KEY } from "../solo/storage/solo-difficulty-preference.js";
+import { SOLO_STORAGE_KEY } from "../solo/storage/solo-storage.js";
 import { SoloPage } from "./SoloPage.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -84,6 +86,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
   const { session } = sessionFor({
     match: match("live", "solo-bot"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: true,
     error: null,
@@ -117,6 +120,7 @@ it("offers only a local rematch after the match finishes", () => {
   const { session } = sessionFor({
     match: match("finished", null),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: "Last move was invalid.",
@@ -155,6 +159,7 @@ it("offers only resign while a local match is live", () => {
   const { session } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -187,6 +192,7 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
   const { session: first } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -195,6 +201,7 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
   const { session: second } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -232,6 +239,7 @@ it("updates the persistent local status in place while bot input is disabled", (
   const { session, setSnapshot } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -252,6 +260,7 @@ it("updates the persistent local status in place while bot input is disabled", (
       setSnapshot({
         match: match("live", "solo-bot"),
         humanId: "solo-human",
+        difficulty: "normal",
         bombArmed: false,
         botThinking: true,
         error: null,
@@ -270,6 +279,7 @@ it("updates the persistent local status in place while bot input is disabled", (
       setSnapshot({
         match: match("finished", null),
         humanId: "solo-human",
+        difficulty: "normal",
         bombArmed: false,
         botThinking: false,
         error: null,
@@ -285,5 +295,59 @@ it("updates the persistent local status in place while bot input is disabled", (
     act(() => root.unmount());
     expect(session.dispose).toHaveBeenCalledOnce();
     container.remove();
+  }
+});
+
+it("names the bot's level on its card", () => {
+  // Given a local session played at the hard level
+  const { session } = sessionFor({
+    match: match("live", "solo-human"),
+    humanId: "solo-human",
+    difficulty: "hard",
+    bombArmed: false,
+    botThinking: false,
+    error: null,
+    recoveryNotice: null
+  });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  document.body.append(container);
+
+  // When the match renders
+  act(() => root.render(<SoloPage createSession={() => session} />));
+
+  try {
+    // Then only the bot's card carries the level
+    const [humanCard, botCard] = container.querySelectorAll(".sidebar-player-header");
+    expect(botCard?.textContent).toBe("RED · Hard");
+    expect(humanCard?.textContent).toBe("BLUE · You");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
+it("starts a fresh local match at the level chosen on the home page", () => {
+  // Given no saved solo progress and easy as the remembered level
+  window.sessionStorage.clear();
+  window.localStorage.setItem(SOLO_DIFFICULTY_KEY, "easy");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  document.body.append(container);
+
+  // When the solo page opens with its own session
+  act(() => root.render(<SoloPage />));
+
+  try {
+    // Then the new match is saved and shown at the easy level
+    expect(JSON.parse(window.sessionStorage.getItem(SOLO_STORAGE_KEY) ?? "{}").difficulty).toBe(
+      "easy"
+    );
+    expect(container.querySelectorAll(".sidebar-player-header")[1]?.textContent).toBe("RED · Easy");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+    window.localStorage.clear();
+    window.sessionStorage.clear();
   }
 });

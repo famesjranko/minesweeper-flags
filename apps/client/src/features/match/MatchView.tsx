@@ -54,7 +54,9 @@ export const MatchView = (props: MatchViewProps) => {
           onResign={props.onResign}
           resignDisabled={!isSolo && props.connectionStatus !== "connected"}
           solo={
-            props.presentation === "solo" ? { botThinking: props.botThinking ?? false } : undefined
+            props.presentation === "solo"
+              ? { botThinking: props.botThinking ?? false, botLevel: props.botLevel }
+              : undefined
           }
           hidePresence={isSolo}
         />

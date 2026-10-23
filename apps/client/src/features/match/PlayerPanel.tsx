@@ -39,19 +39,38 @@ interface PlayerPanelProps {
   slot: PlayerSlot;
   match: MatchStateDto;
   hidePresence?: boolean;
+  /** A short tag after the colour, such as the bot's level. */
+  note?: string | undefined;
   bombArmed: boolean;
   canAct: boolean;
   onToggleBomb: () => void;
 }
 
-export const PlayerPanel = ({ slot, match, hidePresence = false, ...bomb }: PlayerPanelProps) => {
+const describeSlot = (slot: PlayerSlot, note: string | undefined) => {
+  const tag = slot.isSelf ? "You" : note;
+  return {
+    header: tag ? `${slot.title} · ${tag}` : slot.title,
+    region: [slot.title, slot.isSelf ? "You" : "Opponent", slot.player.displayName, note]
+      .filter(Boolean)
+      .join(" · ")
+  };
+};
+
+export const PlayerPanel = ({
+  slot,
+  match,
+  hidePresence = false,
+  note,
+  ...bomb
+}: PlayerPanelProps) => {
   const opponent = match.players.find((player) => player.playerId !== slot.player.playerId);
   const canBomb = Boolean(opponent && opponent.score - slot.player.score >= MIN_BOMB_DEFICIT);
   const isWinner = match.phase === "finished" && match.winnerPlayerId === slot.player.playerId;
+  const labels = describeSlot(slot, note);
 
   return (
     <section
-      aria-label={`${slot.title} · ${slot.isSelf ? "You" : "Opponent"} · ${slot.player.displayName}`}
+      aria-label={labels.region}
       className={[
         "sidebar-player-panel",
         `sidebar-player-panel-${slot.tone}`,
@@ -69,10 +88,7 @@ export const PlayerPanel = ({ slot, match, hidePresence = false, ...bomb }: Play
         </span>
       </p>
       <header className="sidebar-player-header">
-        <span>
-          {slot.title}
-          {slot.isSelf ? " · You" : ""}
-        </span>
+        <span>{labels.header}</span>
         {!hidePresence ? (
           <span
             className={`arcade-player-presence${slot.player.connected ? " is-online" : ""}`}
