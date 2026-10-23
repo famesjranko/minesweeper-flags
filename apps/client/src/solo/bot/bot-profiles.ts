@@ -23,9 +23,10 @@ export interface BotProfile {
    */
   choiceTemperature: number;
   /**
-   * Attention: the bot notices only cells, certain mines, and clues within this many
-   * steps (Chebyshev distance) of the most recent action. When nothing plausible is in
-   * reach it doubles the radius until something is. Infinity notices the whole board.
+   * Attention: the bot notices only cells, certain mines included, within this many
+   * steps (Chebyshev distance) of the most recent action, and reads only the clues
+   * bordering them. When nothing plausible is in reach it doubles the radius until
+   * something is. Infinity notices the whole board.
    */
   attentionRadius: number;
   /** Score bonus for a cell next to the focus point, scaled by 1 / distance. */

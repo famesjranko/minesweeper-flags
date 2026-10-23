@@ -162,6 +162,26 @@ describe("decide", () => {
     expect(choices).not.toContain("select 12,12");
   });
 
+  it("keeps a loose spread on the best cell when it is the only plausible one", () => {
+    // Given a 1×12 strip whose only clue makes (0,1) the single plausible cell
+    // And (0,1) rates better than every far cell
+    const match = createSizedMatch(1, 12, 3);
+    reveal(match, 0, 0, 1);
+    const board = readBoard(match);
+    const analysis: BotAnalysis = {
+      board,
+      facts: board.hidden.map((): Fact => "unknown"),
+      probabilities: board.hidden.map((hidden, cell) => (!hidden ? 0 : cell === 1 ? 0.6 : 0.3)),
+      attention: null
+    };
+
+    // When a bot with a loose spread decides over many seeds
+    const choices = new Set(decideOverSeeds(analysis, looseSpread, match));
+
+    // Then it always takes the plausible cell rather than a worse far one
+    expect(choices).toEqual(new Set(["select 0,1"]));
+  });
+
   it("does not notice a certain mine outside its attention", () => {
     // Given a last action at (14,12) whose clue leaves plausible cells near it
     // And the clue of 3 at (11,12), three steps away, proves the mines at (10,11) to (10,13), four steps away

@@ -140,18 +140,15 @@ const chooseOpening = (shape: BoardShape, hidden: number[], random: () => number
 // The best cell is the bot's own judgement and may lie away from the clues when the
 // odds there are better; other cells with the same odds are just as good. Any worse
 // cell must be plausible, so a looser spread never becomes a random click far from
-// the clues. Excluding far equal-odds cells too was measured to make Normal stronger,
-// so this rule keeps Normal and Hard as they were.
+// the clues, even when no other plausible cell exists. Excluding far equal-odds cells
+// too was measured to make Normal stronger, so this rule keeps Normal and Hard as
+// they were.
 const choicePool = (input: PolicyInput, ranked: Scored[], size: number): Scored[] => {
   const { board, probabilities } = input.analysis;
   const [best, ...rest] = ranked;
   const bestOdds = roundScore(probabilities[best!.cell]!);
-  const anyPlausible = rest.some((item) => isPlausible(board, item.cell));
   const eligible = rest.filter(
-    (item) =>
-      !anyPlausible ||
-      isPlausible(board, item.cell) ||
-      roundScore(probabilities[item.cell]!) === bestOdds
+    (item) => isPlausible(board, item.cell) || roundScore(probabilities[item.cell]!) === bestOdds
   );
   return [best!, ...eligible.slice(0, size - 1)];
 };
