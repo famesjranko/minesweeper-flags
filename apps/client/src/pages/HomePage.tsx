@@ -46,7 +46,7 @@ const SoloEntry = () => {
           <a className="solo-entry-primary" href="/solo">
             Return to game
           </a>
-          <a className="solo-entry-primary" href="/solo?new=1">
+          <a className="solo-entry-primary solo-entry-new" href="/solo?new=1">
             Start new
           </a>
         </div>

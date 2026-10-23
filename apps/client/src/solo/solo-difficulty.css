@@ -93,3 +93,8 @@
   min-width: 0;
   text-align: center;
 }
+.solo-entry-primary.solo-entry-new {
+  border-color: #ffe267;
+  background: linear-gradient(180deg, #ffe267 0%, #ffc214 100%);
+  color: #18243d;
+}
