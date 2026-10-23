@@ -61,16 +61,6 @@ export const RoomWaitingPanel = ({
           <span>{opponent ? "Your friend joined." : "Waiting for your friend…"}</span>
         </div>
       }
-      footer={
-        <button
-          type="button"
-          className="arcade-back room-waiting-back"
-          disabled={cancelPending}
-          onClick={onCancelRoom}
-        >
-          {cancelPending ? "Cancelling room…" : "Cancel room and return"}
-        </button>
-      }
     >
       <section className="solo-entry-card room-waiting-card" aria-labelledby="room-ready-heading">
         <div className="room-waiting-intro">
@@ -133,6 +123,14 @@ export const RoomWaitingPanel = ({
             {error}
           </p>
         ) : null}
+        <button
+          type="button"
+          className="arcade-back room-waiting-back"
+          disabled={cancelPending}
+          onClick={onCancelRoom}
+        >
+          {cancelPending ? "Cancelling room…" : "Cancel room and return"}
+        </button>
       </section>
     </LobbyLayout>
   );

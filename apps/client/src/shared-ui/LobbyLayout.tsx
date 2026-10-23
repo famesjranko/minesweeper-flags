@@ -9,7 +9,7 @@ interface LobbyLayoutProps {
   /** Sits between the heading and the frame, so the frame never carries mode-dependent chrome. */
   stage?: ReactNode;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
   onHome?: () => void;
 }
 

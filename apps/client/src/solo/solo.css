@@ -1,5 +1,6 @@
+/* --match-board-fit comes from the match page shell in match-view.css. */
 .solo-match {
-  width: min(100%, 500px);
+  width: min(100%, 500px, var(--match-board-fit));
   margin: 0 auto;
 }
 .solo-match > .arcade-header {
@@ -8,6 +9,9 @@
   margin-bottom: 12px;
 }
 .solo-leave-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: #c2d3e9;
   font-size: 13px;
 }
@@ -28,11 +32,19 @@
 }
 @media (max-width: 1000px) {
   .solo-match {
-    width: min(100%, 624px);
+    width: min(100%, 624px, var(--match-board-fit));
   }
 }
 @media (max-width: 600px) {
   .solo-match {
-    width: min(100%, 760px);
+    width: min(100%, 760px, var(--match-board-fit));
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .solo-match {
+    width: min(100%, 880px);
+  }
+  .solo-match .arcade-match.is-solo {
+    max-width: none;
   }
 }
