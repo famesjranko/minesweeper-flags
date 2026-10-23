@@ -3,6 +3,15 @@ import "../shared-ui/game-mode.css";
 import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
 import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
+import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";
+import { SoloDifficultyPicker } from "../solo/SoloDifficultyPicker.js";
+import { replaySoloRecord } from "../solo/session/solo-replay.js";
+import { soloEntryHref } from "../solo/solo-entry-intent.js";
+import {
+  readSoloDifficulty,
+  writeSoloDifficulty
+} from "../solo/storage/solo-difficulty-preference.js";
+import { createBrowserSoloStorage } from "../solo/storage/solo-storage.js";
 
 export type Mode = "solo" | "friend";
 
@@ -18,6 +27,37 @@ const FriendPanelActiveContext = createContext(false);
  * so the hidden panel reserves its height, but networking must wait for this intent.
  */
 export const useFriendPanelActive = () => useContext(FriendPanelActiveContext);
+
+const SoloEntry = () => {
+  const [hasLiveGame] = useState(() => {
+    const { record } = createBrowserSoloStorage().read();
+    return record !== null && replaySoloRecord(record)?.phase === "live";
+  });
+  const [difficulty, setDifficulty] = useState(readSoloDifficulty);
+  const selectDifficulty = (nextDifficulty: SoloDifficulty) => {
+    setDifficulty(nextDifficulty);
+    writeSoloDifficulty(nextDifficulty);
+  };
+  return (
+    <>
+      <SoloDifficultyPicker value={difficulty} onChange={selectDifficulty} />
+      {hasLiveGame ? (
+        <div className="solo-entry-actions">
+          <a className="solo-entry-primary" href={soloEntryHref(difficulty)}>
+            Return to game
+          </a>
+          <a className="solo-entry-primary solo-entry-new" href={soloEntryHref(difficulty, true)}>
+            Start new
+          </a>
+        </div>
+      ) : (
+        <a className="solo-entry-primary" href={soloEntryHref(difficulty)}>
+          Start solo match
+        </a>
+      )}
+    </>
+  );
+};
 
 interface HomePageProps {
   initialMode?: Mode;
@@ -105,9 +145,7 @@ export const HomePage = ({
             hidden={mode !== "solo"}
             inert={mode !== "solo"}
           >
-            <a className="solo-entry-primary" href="/solo">
-              Start solo match
-            </a>
+            <SoloEntry />
           </div>
           <div
             id="friend-panel"

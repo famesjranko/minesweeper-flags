@@ -168,6 +168,7 @@ Solo has no environment variables. It runs as a browser-local human-versus-bot m
 - `VITE_DEPLOYMENT_MODE=server` keeps the current hosted WebSocket flow.
 - `VITE_DEPLOYMENT_MODE=p2p` removes the hosted room flow from the product UI and requires `VITE_P2P_SIGNALING_URL`.
 - `/solo` starts locally and does not create a friend-play transport. The bot uses public revealed clues and claimed mines, makes certain claims when possible, and otherwise uses bounded probability estimates. It may make estimated moves rather than fully solve a position.
+- The Solo panel offers three bot levels: Easy, Normal (the default), and Hard. The last choice is remembered in `localStorage`. Every fresh match, including Play again, uses the current choice. A saved match keeps its own level when it resumes, and the page says when that differs from the current choice. A record saved before levels existed restores at Normal.
 - Solo progress uses `sessionStorage`, so it can survive a reload in the same tab. A saved record that cannot be restored is reset and starts a fresh match. If the browser cannot save progress, the current match continues without reload recovery. Closing the tab ends that session.
 - A static frontend still needs its first download.
 - `p2p` builds do not require `VITE_SOCKET_URL`.

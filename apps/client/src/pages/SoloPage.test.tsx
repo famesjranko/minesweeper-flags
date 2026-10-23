@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 
+import { createMatchState } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import type { SoloSession, SoloSnapshot } from "../solo/session/solo-session.js";
+import { createSoloSession } from "../solo/session/solo-session.js";
+import { SOLO_DIFFICULTY_KEY } from "../solo/storage/solo-difficulty-preference.js";
+import { SOLO_STORAGE_KEY } from "../solo/storage/solo-storage.js";
 import { SoloPage } from "./SoloPage.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -84,6 +88,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
   const { session } = sessionFor({
     match: match("live", "solo-bot"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: true,
     error: null,
@@ -117,6 +122,7 @@ it("offers only a local rematch after the match finishes", () => {
   const { session } = sessionFor({
     match: match("finished", null),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: "Last move was invalid.",
@@ -155,6 +161,7 @@ it("offers only resign while a local match is live", () => {
   const { session } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -167,13 +174,12 @@ it("offers only resign while a local match is live", () => {
   act(() => root.render(<SoloPage createSession={() => session} />));
 
   try {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    // When the player resigns the live local match
+    // When the player resigns the live local match and confirms
     act(() => container.querySelector<HTMLButtonElement>("button[name='resign']")?.click());
+    act(() => container.querySelector<HTMLButtonElement>("button[name='confirm-resign']")?.click());
 
     // Then resign uses the local authority and rematch or restart are unavailable
     expect(session.resign).toHaveBeenCalledOnce();
-    confirm.mockRestore();
     expect(container.querySelector("button[name='rematch']")).toBeNull();
     expect(container.querySelector("button[name='restart']")).toBeNull();
   } finally {
@@ -187,6 +193,7 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
   const { session: first } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -195,6 +202,7 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
   const { session: second } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -232,6 +240,7 @@ it("updates the persistent local status in place while bot input is disabled", (
   const { session, setSnapshot } = sessionFor({
     match: match("live", "solo-human"),
     humanId: "solo-human",
+    difficulty: "normal",
     bombArmed: false,
     botThinking: false,
     error: null,
@@ -252,6 +261,7 @@ it("updates the persistent local status in place while bot input is disabled", (
       setSnapshot({
         match: match("live", "solo-bot"),
         humanId: "solo-human",
+        difficulty: "normal",
         bombArmed: false,
         botThinking: true,
         error: null,
@@ -270,6 +280,7 @@ it("updates the persistent local status in place while bot input is disabled", (
       setSnapshot({
         match: match("finished", null),
         humanId: "solo-human",
+        difficulty: "normal",
         bombArmed: false,
         botThinking: false,
         error: null,
@@ -287,3 +298,130 @@ it("updates the persistent local status in place while bot input is disabled", (
     container.remove();
   }
 });
+
+it("names the bot's level on its card", () => {
+  // Given a local session played at the hard level
+  const { session } = sessionFor({
+    match: match("live", "solo-human"),
+    humanId: "solo-human",
+    difficulty: "hard",
+    bombArmed: false,
+    botThinking: false,
+    error: null,
+    recoveryNotice: null
+  });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  document.body.append(container);
+
+  // When the match renders
+  act(() => root.render(<SoloPage createSession={() => session} />));
+
+  try {
+    // Then only the bot's card carries the level
+    const [humanCard, botCard] = container.querySelectorAll(".sidebar-player-header");
+    expect(botCard?.textContent).toBe("RED · Hard");
+    expect(humanCard?.textContent).toBe("BLUE · You");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
+it("starts a fresh local match at the level chosen on the home page", () => {
+  // Given no saved solo progress and easy as the remembered level
+  window.sessionStorage.clear();
+  window.localStorage.setItem(SOLO_DIFFICULTY_KEY, "easy");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  document.body.append(container);
+
+  // When the solo page opens with its own session
+  act(() => root.render(<SoloPage />));
+
+  try {
+    // Then the new match is saved and shown at the easy level
+    expect(JSON.parse(window.sessionStorage.getItem(SOLO_STORAGE_KEY) ?? "{}").difficulty).toBe(
+      "easy"
+    );
+    expect(container.querySelectorAll(".sidebar-player-header")[1]?.textContent).toBe("RED · Easy");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  }
+});
+
+it.each(["easy", "hard"])(
+  "consumes Start new once at %s and resumes that new game after refresh",
+  (difficulty) => {
+    // Given saved Easy progress on a pending bot turn and an explicit new-game route.
+    window.sessionStorage.clear();
+    let staleBot: (() => void) | undefined;
+    const earlier = createSoloSession({
+      nextSeed: () => 11,
+      preferredDifficulty: () => "easy",
+      scheduler: {
+        set: (callback) => {
+          staleBot = callback;
+          return 1;
+        },
+        clear: () => {}
+      }
+    });
+    earlier.start();
+    const safe = createMatchState({
+      roomId: "solo-local",
+      players: [
+        { playerId: "solo-human", displayName: "You" },
+        { playerId: "solo-bot", displayName: "Bot" }
+      ],
+      seed: 11,
+      createdAt: 1,
+      startingPlayerId: "solo-human"
+    })
+      .board.cells.flat()
+      .find((cell) => !cell.hasMine)!;
+    earlier.submitCellAction(safe.row, safe.column);
+    expect(earlier.getSnapshot().botThinking).toBe(true);
+    earlier.dispose();
+    const old = window.sessionStorage.getItem(SOLO_STORAGE_KEY);
+    window.localStorage.setItem(SOLO_DIFFICULTY_KEY, difficulty);
+    window.history.replaceState(null, "", "/solo?new=1");
+    const container = document.createElement("div");
+    let root = createRoot(container);
+
+    // When Start new opens in Strict Mode and the page is later refreshed.
+    act(() =>
+      root.render(
+        <StrictMode>
+          <SoloPage />
+        </StrictMode>
+      )
+    );
+    const fresh = window.sessionStorage.getItem(SOLO_STORAGE_KEY)!;
+    staleBot?.();
+    expect(window.sessionStorage.getItem(SOLO_STORAGE_KEY)).toBe(fresh);
+    act(() => root.unmount());
+    root = createRoot(container);
+    act(() => root.render(<SoloPage />));
+
+    try {
+      // Then the old game is replaced once by a clean human-turn game at the chosen level.
+      expect(fresh).not.toBe(old);
+      expect(JSON.parse(fresh)).toMatchObject({ starter: "human", difficulty, actions: [] });
+      expect(window.location.search).toBe("");
+      expect(window.sessionStorage.getItem(SOLO_STORAGE_KEY)).toBe(fresh);
+      expect(container.textContent).not.toContain("Bot thinking");
+      expect(
+        container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']")?.disabled
+      ).toBe(false);
+    } finally {
+      act(() => root.unmount());
+      window.sessionStorage.clear();
+      window.localStorage.clear();
+      window.history.replaceState(null, "", "/");
+    }
+  }
+);

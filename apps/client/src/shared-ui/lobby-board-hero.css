@@ -162,8 +162,8 @@
 }
 @media (min-width: 680px) and (max-height: 500px) {
   .lobby-board-hero--full {
-    width: 200px;
-    height: 200px;
+    width: 280px;
+    height: 280px;
     padding: 5px;
   }
   .lobby-board-hero--full .lobby-board-hero-grid {
@@ -172,6 +172,12 @@
   }
   .lobby-board-hero--full .lobby-board-hero-cell {
     font-size: 8px;
+  }
+}
+@media (min-width: 900px) and (max-height: 500px) {
+  .lobby-board-hero--full {
+    width: 320px;
+    height: 320px;
   }
 }
 /* Short phones: the thumbnail matches the heading's height instead of setting the row height. */

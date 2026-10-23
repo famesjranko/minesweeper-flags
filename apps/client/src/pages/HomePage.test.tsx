@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 
+import { createMatchState } from "@minesweeper-flags/game-engine";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomLobby } from "../features/room/RoomLobby.js";
+import { createSoloSession } from "../solo/session/solo-session.js";
+import { SOLO_STORAGE_KEY } from "../solo/storage/solo-storage.js";
 import { HomePage } from "./HomePage.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -62,7 +65,9 @@ it("moves keyboard focus and visible content between both game mode tabs", () =>
     expect(solo?.getAttribute("aria-selected")).toBe("true");
     expect(soloPanel?.hidden).toBe(false);
     expect(friendPanel?.hidden).toBe(true);
-    expect(container.querySelector<HTMLAnchorElement>("a[href='/solo']")).not.toBeNull();
+    expect(
+      container.querySelector<HTMLAnchorElement>("a[href='/solo?difficulty=normal']")
+    ).not.toBeNull();
   } finally {
     act(() => root.unmount());
     container.remove();
@@ -192,4 +197,129 @@ it("follows the route when browser history changes the selected mode", () => {
   } finally {
     act(() => root.unmount());
   }
+});
+
+describe("solo bot level", () => {
+  afterEach(() => window.localStorage.clear());
+
+  const renderHome = () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() =>
+      root.render(
+        <HomePage connectionStatus="connected" onFriendSelected={vi.fn()} friendContent={null} />
+      )
+    );
+    const radio = (label: string) =>
+      [...container.querySelectorAll<HTMLLabelElement>(".solo-difficulty-options label")]
+        .find((element) => element.textContent === label)
+        ?.querySelector("input");
+    const dispose = () => {
+      act(() => root.unmount());
+      container.remove();
+    };
+    return { container, radio, dispose };
+  };
+
+  it("selects a level and remembers it for the next visit", () => {
+    // Given a first visit to the home page.
+    const first = renderHome();
+
+    // When the player chooses the hard level and later comes back.
+    act(() => first.radio("Hard")?.click());
+    first.dispose();
+    const second = renderHome();
+
+    // Then the hard level is still selected.
+    try {
+      expect(second.radio("Hard")?.checked).toBe(true);
+      expect(second.radio("Normal")?.checked).toBe(false);
+    } finally {
+      second.dispose();
+    }
+  });
+});
+
+describe("saved solo entry actions", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  const saveProgress = (kind: string) => {
+    const session = createSoloSession({ nextSeed: () => 11, now: () => 20 });
+    session.start();
+    const board = createMatchState({
+      roomId: "solo-local",
+      players: [
+        { playerId: "solo-human", displayName: "You" },
+        { playerId: "solo-bot", displayName: "Bot" }
+      ],
+      seed: 11,
+      createdAt: 20,
+      startingPlayerId: "solo-human"
+    }).board.cells.flat();
+    for (const cell of board
+      .filter((cell) => cell.hasMine)
+      .slice(0, kind === "natural win" ? 26 : 1)) {
+      session.submitCellAction(cell.row, cell.column);
+    }
+    if (kind === "resigned") session.resign();
+    expect(session.getSnapshot().match.phase).toBe(
+      ["natural win", "resigned"].includes(kind) ? "finished" : "live"
+    );
+    session.dispose();
+    if (kind === "illegal replay") {
+      const saved = JSON.parse(window.sessionStorage.getItem(SOLO_STORAGE_KEY)!);
+      saved.actions.push(saved.actions[0]);
+      window.sessionStorage.setItem(SOLO_STORAGE_KEY, JSON.stringify(saved));
+    }
+    if (kind === "malformed") window.sessionStorage.setItem(SOLO_STORAGE_KEY, "{");
+    if (kind === "denied")
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("denied");
+      });
+  };
+
+  it.each(["live", "natural win", "resigned", "illegal replay", "malformed", "denied"])(
+    "offers explicit actions only for valid live progress: %s",
+    (kind) => {
+      // Given real saved progress or an unavailable or invalid save.
+      saveProgress(kind);
+      const savedBefore = window.sessionStorage.getItem.bind(window.sessionStorage);
+      const before = kind === "denied" ? null : savedBefore(SOLO_STORAGE_KEY);
+      const network = vi.fn();
+      for (const name of ["fetch", "WebSocket", "RTCPeerConnection"]) vi.stubGlobal(name, network);
+      const container = document.createElement("div");
+      const root = createRoot(container);
+
+      // When the lobby opens and the player picks a different difficulty.
+      act(() =>
+        root.render(
+          <HomePage connectionStatus="connected" onFriendSelected={network} friendContent={null} />
+        )
+      );
+      act(() => container.querySelector<HTMLInputElement>("input[value='hard']")!.click());
+
+      try {
+        // Then only a valid live replay has Return and Start new and choosing a level preserves it.
+        const actions = [...container.querySelectorAll<HTMLAnchorElement>(".solo-entry-primary")];
+        expect(actions.map((action) => action.textContent)).toEqual(
+          kind === "live" ? ["Return to game", "Start new"] : ["Start solo match"]
+        );
+        expect(actions.map((action) => action.getAttribute("href"))).toEqual(
+          kind === "live"
+            ? ["/solo?difficulty=hard", "/solo?difficulty=hard&new=1"]
+            : ["/solo?difficulty=hard"]
+        );
+        if (kind === "live") expect(savedBefore(SOLO_STORAGE_KEY)).toBe(before);
+        expect(network).not.toHaveBeenCalled();
+      } finally {
+        act(() => root.unmount());
+        vi.restoreAllMocks();
+      }
+    }
+  );
 });

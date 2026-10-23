@@ -1,12 +1,15 @@
 .arcade-match.is-solo {
-  max-width: 500px;
+  max-width: 720px;
 }
 .arcade-match.is-solo .arcade-match-main {
   grid-template-columns: minmax(0, 1fr);
 }
 .arcade-match-status {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  /* The hint takes the spare width; the bomb cancel and zoom controls size to content. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
   align-items: center;
   gap: 4px;
   min-height: 52px;
@@ -43,6 +46,20 @@
   border-radius: 8px;
   background: transparent;
   color: #dbeeff;
+}
+.arcade-bomb-cancel {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #526888;
+  border-radius: 8px;
+  background: #243c59;
+  color: #dfedff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+}
+.arcade-bomb-cancel:hover {
+  background: #2d4a6c;
 }
 .arcade-zoom-button:hover {
   background: #ffffff0b;
@@ -268,6 +285,18 @@ button.inline-bomb.is-armed::after {
   font-size: 16px;
   font-weight: 750;
   box-shadow: inset 0 1px 0 #ffffff33;
+}
+.match-resign-confirm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+.match-resign-action.is-danger {
+  border-color: #b8695d;
+  background: #4a2c31;
+  color: #ffd8cf;
+  font-weight: 650;
 }
 .match-rematch-action {
   display: grid;

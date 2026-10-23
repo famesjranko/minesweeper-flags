@@ -12,6 +12,7 @@ const record = {
   seed: 4,
   createdAt: 7,
   starter: "human" as const,
+  difficulty: "normal" as const,
   actions: []
 };
 
@@ -170,6 +171,8 @@ it.each([
     { ...record, actions: [{ type: "select", playerId: "solo-human", row: 0, column: 0.5 }] }
   ],
   ["resignation", { ...record, resignedBy: "guest" }],
+  ["difficulty", { ...record, difficulty: "expert" }],
+  ["inherited difficulty", { ...record, difficulty: "constructor" }],
   ["copied board", { ...record, board: [] }]
 ])("rejects invalid %s with a valid record control", (_name, invalid) => {
   // Given a valid replay and one malformed value of the same record.
@@ -239,4 +242,27 @@ it("distinguishes a missing record from malformed JSON", () => {
   // Then absence is a valid fresh start and clears nothing.
   expect(result).toEqual({ record: null, notice: null });
   expect(removeItem).not.toHaveBeenCalled();
+});
+
+it("restores a record saved before bot levels existed at the normal level", () => {
+  // Given a saved replay from an earlier release, with no level field.
+  const { difficulty: _omitted, ...oldRecord } = record;
+  installRaw(JSON.stringify(oldRecord));
+
+  // When the record is restored.
+  const result = createBrowserSoloStorage().read();
+
+  // Then the replay is kept and plays at the normal level.
+  expect(result).toEqual({ record: { ...oldRecord, difficulty: "normal" }, notice: null });
+});
+
+it("keeps the saved level of a current record", () => {
+  // Given a saved replay played at the hard level.
+  installRaw(JSON.stringify({ ...record, difficulty: "hard" }));
+
+  // When the record is restored.
+  const result = createBrowserSoloStorage().read();
+
+  // Then the hard level is restored with it.
+  expect(result.record?.difficulty).toBe("hard");
 });

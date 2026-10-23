@@ -29,6 +29,8 @@ export interface SoloMatchViewProps extends CommonMatchViewProps {
   presentation: "solo";
   onRematch: () => void;
   botThinking?: boolean;
+  /** Shown on the bot's card, for example "Hard". */
+  botLevel?: string;
 }
 
 export type MatchViewProps = MultiplayerMatchViewProps | SoloMatchViewProps;

@@ -10,8 +10,9 @@
 
 .arcade-match {
   width: 100%;
-  /* The side chat column takes 288px plus a 24px gap. */
-  max-width: min(812px, calc(var(--match-board-fit) + 312px));
+  /* The side chat column takes 288px plus a 24px gap. The board grows with the window height
+     up to 720px, so short windows keep the height-fitted size. */
+  max-width: min(1032px, calc(var(--match-board-fit) + 312px));
   margin: 0 auto;
 }
 

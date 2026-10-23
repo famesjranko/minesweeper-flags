@@ -3,7 +3,9 @@ import "../solo/solo.css";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { MatchView } from "../features/match/MatchView.js";
 import { ArcadeHeader } from "../shared-ui/ArcadeHeader.js";
-import { createSoloSession, type SoloSession } from "../solo/session/solo-session.js";
+import type { SoloSession } from "../solo/session/solo-session.js";
+import { SOLO_DIFFICULTY_COPY } from "../solo/solo-difficulty-options.js";
+import { createSoloEntrySessionFactory } from "../solo/solo-entry-intent.js";
 
 interface SoloPageProps {
   createSession?: () => SoloSession;
@@ -43,6 +45,7 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
           onResign={session.resign}
           presentation="solo"
           botThinking={snapshot.botThinking}
+          botLevel={SOLO_DIFFICULTY_COPY[snapshot.difficulty].label}
           onRematch={session.rematch}
         />
       </div>
@@ -50,15 +53,17 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
   );
 };
 
-export const SoloPage = ({ createSession = createSoloSession }: SoloPageProps) => {
+export const SoloPage = ({ createSession }: SoloPageProps) => {
+  const [createEntrySession] = useState(createSoloEntrySessionFactory);
+  const sessionFactory = createSession ?? createEntrySession;
   const [session, setSession] = useState<SoloSession | null>(null);
 
   useEffect(() => {
-    const nextSession = createSession();
+    const nextSession = sessionFactory();
     nextSession.start();
     setSession(nextSession);
     return () => nextSession.dispose();
-  }, [createSession]);
+  }, [sessionFactory]);
 
   return session ? <SoloMatch session={session} /> : null;
 };

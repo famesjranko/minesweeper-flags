@@ -1,6 +1,6 @@
 /* --match-board-fit comes from the match page shell in match-view.css. */
 .solo-match {
-  width: min(100%, 500px, var(--match-board-fit));
+  width: min(100%, 720px, var(--match-board-fit));
   margin: 0 auto;
 }
 .solo-match > .arcade-header {

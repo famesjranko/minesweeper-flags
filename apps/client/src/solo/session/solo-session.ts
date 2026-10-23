@@ -1,12 +1,10 @@
-import {
-  createMatchState,
-  type MatchState,
-  resignMatch,
-  resolveAction
-} from "@minesweeper-flags/game-engine";
+import { type MatchState, resignMatch, resolveAction } from "@minesweeper-flags/game-engine";
 import { toMatchStateDto } from "@minesweeper-flags/shared";
+import { DEFAULT_SOLO_DIFFICULTY, type SoloDifficulty } from "../bot/bot-profiles.js";
 import { chooseSoloAction } from "../bot/solo-bot.js";
+import { SOLO_DIFFICULTY_COPY } from "../solo-difficulty-options.js";
 import { createBrowserSoloStorage, type SoloStorage } from "../storage/solo-storage.js";
+import { createSoloState, replaySoloRecord } from "./solo-replay.js";
 import {
   SOLO_BOT_ID,
   SOLO_HUMAN_ID,
@@ -29,11 +27,22 @@ const defaultScheduler: SoloScheduler = {
 };
 
 export interface SoloSessionOptions {
+  /** Explicit lobby Start new intent; ordinary entry restores live progress. */
+  startFresh?: boolean;
   scheduler?: SoloScheduler;
   storage?: SoloStorage;
   now?: () => number;
   nextSeed?: () => number;
-  chooseAction?: (match: SoloSnapshot["match"], botPlayerId: string) => SoloAction | null;
+  /**
+   * The player's current level choice, read whenever a fresh match begins (including
+   * Play again). A resumed live match keeps the level it was saved with.
+   */
+  preferredDifficulty?: () => SoloDifficulty;
+  chooseAction?: (
+    match: SoloSnapshot["match"],
+    botPlayerId: string,
+    difficulty: SoloDifficulty
+  ) => SoloAction | null;
   /** Uniform numbers in [0, 1) for the default bot's choices. */
   random?: () => number;
 }
@@ -50,32 +59,29 @@ export interface SoloSession {
   dispose: () => void;
 }
 
-const starterId = (starter: "human" | "bot"): string =>
-  starter === "human" ? SOLO_HUMAN_ID : SOLO_BOT_ID;
+// A resumed live match keeps its level; say so when the player has since picked another.
+const levelNotice = (
+  state: MatchState | null,
+  saved: SoloDifficulty,
+  preferred: SoloDifficulty
+): string | null =>
+  state?.phase === "live" && saved !== preferred
+    ? `Resumed your ${SOLO_DIFFICULTY_COPY[saved].label} match. ${SOLO_DIFFICULTY_COPY[preferred].label} starts with your next match.`
+    : null;
 
 const freshRecord = (
   seed: number,
   createdAt: number,
-  starter: "human" | "bot"
+  starter: "human" | "bot",
+  difficulty: SoloDifficulty
 ): SoloReplayRecord => ({
   version: 1,
   seed,
   createdAt,
   starter,
+  difficulty,
   actions: []
 });
-
-const createState = (record: SoloReplayRecord): MatchState =>
-  createMatchState({
-    roomId: "solo-local",
-    players: [
-      { playerId: SOLO_HUMAN_ID, displayName: "You" },
-      { playerId: SOLO_BOT_ID, displayName: "Bot" }
-    ],
-    seed: record.seed,
-    createdAt: record.createdAt,
-    startingPlayerId: starterId(record.starter)
-  });
 
 const fallbackAction = (snapshot: SoloSnapshot["match"]): SoloAction | null => {
   for (const row of snapshot.board.cells) {
@@ -96,12 +102,14 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   const random = options.random ?? Math.random;
   const chooseAction =
     options.chooseAction ??
-    ((match: SoloSnapshot["match"], botPlayerId: string) =>
-      chooseSoloAction(match, botPlayerId, { random }));
+    ((match: SoloSnapshot["match"], botPlayerId: string, difficulty: SoloDifficulty) =>
+      chooseSoloAction(match, botPlayerId, { difficulty, random }));
   const listeners = new Set<() => void>();
   let state: MatchState | null = null;
   let record: SoloReplayRecord | null = null;
   let starter: "human" | "bot" = "human";
+  const preferredDifficulty = options.preferredDifficulty ?? (() => DEFAULT_SOLO_DIFFICULTY);
+  let difficulty = preferredDifficulty();
   let botTimer: unknown = null;
   let generation = 0;
   let started = false;
@@ -118,6 +126,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     cachedSnapshot ??= {
       match: toMatchStateDto(state),
       humanId: SOLO_HUMAN_ID,
+      difficulty,
       bombArmed,
       botThinking:
         state.phase === "live" && state.currentTurnPlayerId === SOLO_BOT_ID && botTimer !== null,
@@ -152,7 +161,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     }
   };
 
-  const applyAction = (playerId: string, action: SoloAction, replaying: boolean): boolean => {
+  const applyAction = (playerId: string, action: SoloAction): boolean => {
     if (!state || !record) {
       return false;
     }
@@ -162,10 +171,8 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       record.createdAt + record.actions.length + 1
     );
     if (!result.ok) {
-      if (!replaying) {
-        error = result.error;
-        notify();
-      }
+      error = result.error;
+      notify();
       return false;
     }
     if (result.action.revealedCount + result.action.claimedMineCount < 1) {
@@ -196,12 +203,12 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       const publicMatch = toMatchStateDto(state);
       let selected: SoloAction | null = null;
       try {
-        selected = chooseAction(publicMatch, SOLO_BOT_ID);
+        selected = chooseAction(publicMatch, SOLO_BOT_ID, difficulty);
       } catch {
         // A bot failure must not leave its turn permanently pending.
       }
       const action = selected ?? fallbackAction(publicMatch);
-      if (!action || !applyAction(SOLO_BOT_ID, action, false)) {
+      if (!action || !applyAction(SOLO_BOT_ID, action)) {
         error = "The bot could not choose a legal move.";
         notify();
         return;
@@ -213,37 +220,45 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     });
   };
 
-  const restore = (candidate: SoloReplayRecord): MatchState | null => {
-    const restored = createState(candidate);
-    state = restored;
-    record = { ...candidate, actions: [] };
-    for (const action of candidate.actions) {
-      if (!applyAction(action.playerId, action, true)) {
-        return null;
-      }
-    }
-    if (candidate.resignedBy) {
-      const playerId = starterId(candidate.resignedBy);
-      if (state.phase !== "live" || !state.players.some((player) => player.playerId === playerId)) {
-        return null;
-      }
-      state = resignMatch(state, playerId, record.createdAt + record.actions.length + 1);
-      record.resignedBy = candidate.resignedBy;
-    }
-    return state;
-  };
-
   const beginFresh = (nextStarter: "human" | "bot", notice: string | null): void => {
     cancelBot();
     starter = nextStarter;
-    record = freshRecord(nextSeed() >>> 0, now(), starter);
-    state = createState(record);
+    difficulty = preferredDifficulty();
+    record = freshRecord(nextSeed() >>> 0, now(), starter, difficulty);
+    state = createSoloState(record);
     bombArmed = false;
     error = null;
     recoveryNotice = notice;
     persist();
     scheduleBot();
     notify();
+  };
+
+  const restoreSaved = (): void => {
+    const recovered = storage.read();
+    const restored = recovered.record ? replaySoloRecord(recovered.record) : null;
+    if (restored?.phase === "finished") {
+      beginFresh("human", recovered.notice);
+      return;
+    }
+    if (recovered.record && restored) {
+      state = restored;
+      record = { ...recovered.record, actions: [...recovered.record.actions] };
+      starter = recovered.record.starter;
+      difficulty = recovered.record.difficulty;
+      recoveryNotice = recovered.notice ?? levelNotice(state, difficulty, preferredDifficulty());
+      scheduleBot();
+      notify();
+      return;
+    }
+    if (recovered.record) {
+      storage.clear();
+    }
+    beginFresh(
+      "human",
+      recovered.notice ??
+        (recovered.record ? "Saved solo progress was invalid and was reset." : null)
+    );
   };
 
   return {
@@ -257,22 +272,11 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
         return;
       }
       started = true;
-      const recovered = storage.read();
-      if (recovered.record && restore(recovered.record)) {
-        starter = recovered.record.starter;
-        recoveryNotice = recovered.notice;
-        scheduleBot();
-        notify();
+      if (options.startFresh) {
+        beginFresh("human", null);
         return;
       }
-      if (recovered.record) {
-        storage.clear();
-      }
-      beginFresh(
-        "human",
-        recovered.notice ??
-          (recovered.record ? "Saved solo progress was invalid and was reset." : null)
-      );
+      restoreSaved();
     },
     submitCellAction: (row, column) => {
       if (
@@ -285,7 +289,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       }
       error = null;
       const action: SoloAction = { type: bombArmed ? "bomb" : "select", row, column };
-      if (!applyAction(SOLO_HUMAN_ID, action, false)) {
+      if (!applyAction(SOLO_HUMAN_ID, action)) {
         return;
       }
       bombArmed = false;
