@@ -1,5 +1,5 @@
 .arcade-match.is-solo {
-  max-width: 500px;
+  max-width: 720px;
 }
 .arcade-match.is-solo .arcade-match-main {
   grid-template-columns: minmax(0, 1fr);
