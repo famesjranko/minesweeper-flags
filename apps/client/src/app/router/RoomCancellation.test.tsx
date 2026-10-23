@@ -116,6 +116,55 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("waiting room exit", () => {
+  it("cancels a room created from the lobby when browser Back returns there", async () => {
+    // Given a host on the lobby with a connected game client
+    Socket.instances = [];
+    vi.stubGlobal("WebSocket", Socket);
+    vi.stubGlobal("fetch", async () => ({ json: async () => ({ activeRooms: 0, maxRooms: 4 }) }));
+    window.history.replaceState(null, "", "/lobby");
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(<AppRouter />));
+    const socket = Socket.instances.at(-1)!;
+    act(() => {
+      socket.readyState = 1;
+      socket.dispatchEvent(new Event("open"));
+    });
+
+    // And the host creates a room that the server confirms
+    act(() => container.querySelector<HTMLElement>(".lobby-create-button")?.click());
+    socket.receive("room:created", {
+      roomId: session.roomId,
+      roomCode: session.roomCode,
+      inviteToken: session.inviteToken,
+      self: { playerId: session.playerId, displayName: "Host", sessionToken: session.sessionToken },
+      players: [{ playerId: session.playerId, displayName: "Host" }]
+    });
+    expect(window.location.pathname).toBe("/room/ABCDE");
+
+    // When the host presses browser Back
+    await act(async () => {
+      window.history.back();
+      // jsdom queues history traversal as two nested immediate tasks.
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
+    });
+
+    // Then the host is back on the lobby
+    expect(window.location.pathname).toBe("/lobby");
+
+    // And the waiting room is cancelled
+    const cancellation = socket.sent.find((event) => event.type === "room:cancel");
+    expect(cancellation).toBeDefined();
+
+    // And the confirmed cancellation keeps the host on the lobby
+    socket.receive("room:cancelled", {
+      roomCode: session.roomCode,
+      requestId: cancellation?.payload.requestId
+    });
+    expect(window.location.pathname).toBe("/lobby");
+  });
   it.each(["/", "/lobby"])(
     "keeps cancellation connected after browser navigation to %s and refreshes capacity",
     async (path) => {

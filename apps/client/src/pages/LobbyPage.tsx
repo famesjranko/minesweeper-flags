@@ -30,7 +30,8 @@ const FriendLobby = () => {
   }, [friendActive, openLobby, roomCancelAttempted]);
 
   if (isReady && session?.roomCode && !roomCancelPending) {
-    return <Navigate to={`/room/${session.roomCode}`} replace />;
+    // Push, so browser Back returns here and the router cancels the abandoned waiting room.
+    return <Navigate to={`/room/${session.roomCode}`} />;
   }
 
   return (
