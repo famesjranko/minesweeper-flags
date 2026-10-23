@@ -1,6 +1,10 @@
-/* The segmented control reuses .solo-mode-tabs from game-mode.css. */
-#solo-panel {
+/* The segmented control reuses .solo-mode-tabs from game-mode.css. The display rule must not
+   apply while the panel is hidden: an ID selector would outrank the tab panel's [hidden] rule
+   and draw the Solo panel over the friend form. */
+#solo-panel:not([hidden]) {
   display: grid;
+}
+#solo-panel {
   gap: 14px;
 }
 .solo-difficulty {
