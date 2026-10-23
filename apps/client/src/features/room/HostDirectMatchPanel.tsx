@@ -2,6 +2,7 @@ import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { Link } from "react-router-dom";
 import type { P2PHostSetupState } from "../../p2p/setup/p2p-setup.types.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";
+import type { InviteNotice } from "./RoomWaitingPanel.js";
 
 const formatSetupStage = (stage: string | null | undefined): string => {
   if (!stage) {
@@ -135,7 +136,7 @@ const ShareDirectLinkCard = ({
         disabled={!directJoinLink}
         onClick={() => (directJoinLink ? onCopy(directJoinLink, "Direct link copied.") : undefined)}
       >
-        Copy Direct Link
+        Copy direct link
       </button>
     </div>
 
@@ -151,7 +152,7 @@ interface HostDirectMatchPanelProps {
   roomCode: string;
   connectionStatus: string;
   hostSetup: P2PHostSetupState | null;
-  inviteNotice: string | null;
+  inviteNotice: InviteNotice | null;
   error: string | null;
   onCopy: (value: string, successMessage: string) => void;
 }
@@ -238,10 +239,16 @@ export const HostDirectMatchPanel = ({
         </div>
 
         <div className="status-strip lobby-status-strip">
-          <span className="lobby-status-note">{inviteNotice ?? hostSetupSummary}</span>
+          {inviteNotice?.failed ? (
+            <span className="error-text" role="alert">
+              {inviteNotice.message}
+            </span>
+          ) : (
+            <span className="lobby-status-note">{inviteNotice?.message ?? hostSetupSummary}</span>
+          )}
           <span className="lobby-status-note">{hostSetupDetails}</span>
           <Link className="lobby-status-link" to="/lobby">
-            Back To Lobby
+            Back to lobby
           </Link>
           {hostSetup?.error ? <span className="error-text">{hostSetup.error}</span> : null}
           {error ? <span className="error-text">{error}</span> : null}

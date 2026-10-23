@@ -196,7 +196,7 @@ describe("GameClientProvider", () => {
     expect(controller.openLobby).toHaveBeenCalledTimes(1);
 
     // And the lobby renders its create-room action
-    expect(document.body.textContent).toContain("Create Room");
+    expect(document.body.textContent).toContain("Create room");
     vi.unstubAllGlobals();
   });
 

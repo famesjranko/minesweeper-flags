@@ -1,19 +1,24 @@
 .page-shell.arcade-page-shell.arcade-match-page {
+  --match-page-padding: 24px;
+  /* The board is square, so it must also fit the height left after the rest of the column:
+     header 65px, status row 52px, scores 80px, resign control 46px, and three 12px gaps. The
+     floor keeps phone boards at their width-driven size. */
+  --match-board-fit: max(288px, calc(100dvh - 2 * var(--match-page-padding) - 279px));
   min-height: 100dvh;
-  padding: 24px;
+  padding: var(--match-page-padding);
 }
 
 .arcade-match {
   width: 100%;
-  max-width: 812px;
+  /* The side chat column takes 288px plus a 24px gap. */
+  max-width: min(812px, calc(var(--match-board-fit) + 312px));
   margin: 0 auto;
 }
 
 .arcade-match .arcade-header {
   min-height: 44px;
-  padding: 0;
-  border: 0;
-  margin-bottom: 16px;
+  padding: 0 0 8px;
+  margin-bottom: 12px;
 }
 
 .arcade-match-options {
@@ -181,43 +186,21 @@
   font-size: calc(var(--board-cell-size) * 0.68);
 }
 
-.arcade-chat-toggle,
-.arcade-chat-close,
-.arcade-options-close,
-.arcade-match .sidebar-resign-button {
+.arcade-match :is(.arcade-options-close, .arcade-chat-close) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   min-height: 44px;
-  padding: 9px 12px;
   border: 1px solid #526888;
   border-radius: 10px;
   background: #243c59;
   color: #dfedff;
   font: inherit;
-  font-size: 12px;
-}
-.arcade-match .sidebar-resign-button {
-  width: 100%;
-  grid-area: auto;
-  border-color: #98605e;
-  background: #412c33;
-  color: #ffd2c2;
-}
-.arcade-match :is(.arcade-options-close, .arcade-chat-close) {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
   padding: 0;
   font-size: 24px;
-}
-.arcade-match .sidebar-resign-button:disabled {
-  opacity: 0.5;
-}
-
-.arcade-chat-toggle {
-  display: none;
 }
 
 .arcade-chat-region {
@@ -240,7 +223,8 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
-.arcade-chat-close {
+/* The desktop side panel has nowhere to reopen from, so only the compact dialog may close. */
+.arcade-match .arcade-chat-close {
   display: none;
 }
 
@@ -413,7 +397,7 @@
 
 @media (max-width: 1000px) {
   .page-shell.arcade-page-shell.arcade-match-page {
-    padding: 20px;
+    --match-page-padding: 20px;
   }
 
   .arcade-match-main {
@@ -421,16 +405,11 @@
   }
 
   .arcade-match {
-    max-width: 624px;
+    max-width: min(624px, var(--match-board-fit));
   }
 }
 
 @media (max-width: 1000px), (max-height: 500px) {
-  .arcade-chat-toggle {
-    display: flex;
-    justify-content: space-between;
-  }
-
   .arcade-chat-region {
     position: fixed;
     inset: auto 16px 16px;
@@ -446,28 +425,20 @@
     background: #081120aa;
   }
 
-  .arcade-chat-close {
+  .arcade-match .arcade-chat-close {
     display: inline-flex;
   }
 }
 
 @media (max-width: 600px) {
   .page-shell.arcade-page-shell.arcade-match-page {
-    padding: 16px;
-  }
-
-  .arcade-match .arcade-header {
-    min-height: 44px;
-    margin-bottom: 16px;
+    --match-page-padding: 16px;
   }
 
   .arcade-match .arcade-header-actions > :is(.arcade-room-code, .arcade-connection) {
     display: none;
   }
 
-  .arcade-brand {
-    font-size: 14px;
-  }
   .arcade-header-actions {
     gap: 8px;
   }
@@ -477,15 +448,52 @@
   }
 
   .arcade-match {
-    max-width: 760px;
+    max-width: min(760px, var(--match-board-fit));
+  }
+
+  /* Dock the full chat to the bottom edge like a sheet, so no page shows beneath it. */
+  .arcade-chat-region {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 16px);
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
   }
 }
 
-@media (min-width: 1001px) and (max-height: 500px) {
-  .arcade-match {
-    max-width: 500px;
+/* Landscape phones and short windows: a stacked column would leave a tiny board, so the board
+   takes the full height and the match controls sit beside it. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .page-shell.arcade-page-shell.arcade-match-page {
+    --match-page-padding: 16px;
+    /* Only the header (65px) shares the height with the board here. */
+    --match-board-fit: max(200px, calc(100dvh - 2 * var(--match-page-padding) - 65px));
   }
+
+  .arcade-match {
+    max-width: 880px;
+  }
+
   .arcade-match-main {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .arcade-play-area {
+    display: grid;
+    grid-template-columns: min(var(--match-board-fit), 624px) minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    align-items: start;
+    gap: 12px 16px;
+  }
+
+  .arcade-play-area > * {
+    grid-column: 2;
+  }
+
+  .arcade-play-area > .arcade-board-stage {
+    grid-column: 1;
+    grid-row: 1 / -1;
   }
 }

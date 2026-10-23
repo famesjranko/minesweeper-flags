@@ -439,4 +439,205 @@ describe("game client controller", () => {
     expect(store.getSnapshot().chatPendingText).toBeNull();
     expect(store.getSnapshot().chatError).toBeNull();
   });
+
+  it("forgets room credentials only after its matching cancellation acknowledgement", () => {
+    // Given a connected host with a saved waiting-room session
+    const { controller, persistence, store, transport } = createHarness({
+      sessions: [storedSession]
+    });
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+    controller.reconnect("ABCDE");
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+
+    // When the host asks to cancel but receives a stale acknowledgement first
+    controller.cancelRoom();
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomCancelled,
+      payload: { roomCode: "ABCDE", requestId: "cancel-old" }
+    });
+
+    // Then the credentials remain until the current request is acknowledged
+    expect(store.getSnapshot().session?.roomCode).toBe("ABCDE");
+    expect(persistence.read("ABCDE")).not.toBeNull();
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomCancelled,
+      payload: { roomCode: "ABCDE", requestId: "cancel-1" }
+    });
+    expect(store.getSnapshot().session).toBeNull();
+    expect(persistence.read("ABCDE")).toBeNull();
+  });
+
+  it("keeps waiting-room credentials when cancellation fails", () => {
+    // Given a connected host with a saved waiting-room session
+    const { controller, persistence, store, transport } = createHarness({
+      sessions: [storedSession]
+    });
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+    controller.reconnect("ABCDE");
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+
+    // When cancellation is rejected by the server
+    controller.cancelRoom();
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.serverError,
+      payload: { message: "Delete failed." }
+    });
+
+    // Then no false success clears the current or stored credentials
+    expect(store.getSnapshot().session?.roomCode).toBe("ABCDE");
+    expect(persistence.read("ABCDE")).not.toBeNull();
+    expect(store.getSnapshot().error).toBe("Delete failed.");
+  });
+});
+
+describe("pending room cancellation", () => {
+  it("reconciles a matching acknowledgement after cancellation times out", () => {
+    // Given a connected host has requested cancellation
+    const { controller, store, transport, persistence, scheduler } = createHarness({
+      sessions: [storedSession]
+    });
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+    controller.reconnect("ABCDE");
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+    controller.cancelRoom();
+    const sentCount = transport.sentEvents.length;
+
+    // When lobby effects and competing bootstrap actions race its acknowledgement
+    controller.openLobby();
+    controller.createRoom("Again");
+    controller.joinRoom("Guest", "other-invite");
+    controller.reconnect("ABCDE");
+    controller.cancelRoom();
+
+    // Then the single request owns the session while its status is reconciled
+    expect(transport.sentEvents).toHaveLength(sentCount);
+    expect(store.getSnapshot().session?.roomCode).toBe("ABCDE");
+    scheduler.runNextTimeout();
+    expect(store.getSnapshot().roomCancelPending).toBe(false);
+    expect(persistence.read("ABCDE")).not.toBeNull();
+
+    // And the delayed acknowledgement confirms the original cancellation
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomCancelled,
+      payload: { roomCode: "ABCDE", requestId: "cancel-1" }
+    });
+    expect(store.getSnapshot().session).toBeNull();
+    expect(persistence.read("ABCDE")).toBeNull();
+  });
+
+  it("invalidates a deleted session when cancellation acknowledgement is fully lost", () => {
+    // Given a connected host with a cancellation awaiting confirmation
+    const { controller, persistence, scheduler, store, transport } = createHarness({
+      sessions: [storedSession]
+    });
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+    controller.reconnect("ABCDE");
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+    controller.cancelRoom();
+
+    // When reconnect reports that the cancelled session no longer exists
+    scheduler.runNextTimeout();
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.serverError,
+      payload: { message: "This session is no longer valid." }
+    });
+
+    // Then recovery clears the invalid room state and shows the lobby again
+    expect(store.getSnapshot().session).toBeNull();
+    expect(store.getSnapshot().roomCancelAttempted).toBe(false);
+    expect(persistence.read("ABCDE")).toBeNull();
+  });
+
+  it("clears a pending cancellation timeout when disposed", () => {
+    // Given a connected host with a pending cancellation timeout
+    const { controller, persistence, scheduler, store, transport } = createHarness({
+      sessions: [storedSession]
+    });
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+    controller.reconnect("ABCDE");
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+    controller.cancelRoom();
+
+    // When the provider disposes before its acknowledgement arrives
+    controller.dispose();
+
+    // Then no cancellation timer remains and persisted credentials are unchanged
+    expect(scheduler.getTimeoutCount()).toBe(0);
+    expect(store.getSnapshot().session?.roomCode).toBe("ABCDE");
+    expect(persistence.read("ABCDE")).not.toBeNull();
+  });
+
+  it("ignores a stale cancellation acknowledgement after timeout", () => {
+    // Given a timed-out cancellation that is reconciling its original request
+    const { controller, persistence, scheduler, store, transport } = createHarness({
+      sessions: [storedSession]
+    });
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+    controller.reconnect("ABCDE");
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomState,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+    controller.cancelRoom();
+    scheduler.runNextTimeout();
+
+    // When another room and a different request report success
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomCancelled,
+      payload: { roomCode: "OTHER", requestId: "cancel-1" }
+    });
+    transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomCancelled,
+      payload: { roomCode: "ABCDE", requestId: "cancel-old" }
+    });
+
+    // Then the current session and credentials remain until the matching response
+    expect(store.getSnapshot().session?.roomCode).toBe("ABCDE");
+    expect(persistence.read("ABCDE")).not.toBeNull();
+  });
 });

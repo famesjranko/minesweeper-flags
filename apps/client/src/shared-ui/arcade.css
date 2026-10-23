@@ -14,17 +14,22 @@
   align-items: center;
 }
 
+/* One header for every page; the home page's sizes are the reference. */
 .arcade-header {
   justify-content: space-between;
-  gap: 16px;
-  min-height: 53px;
-  padding-bottom: 20px;
+  gap: 8px;
+  min-height: 44px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #ffffff1a;
 }
 
 .arcade-brand {
+  /* Keeps a usable tap target when the mark shrinks on narrow phones. */
+  min-height: 32px;
+  color: inherit;
+  text-decoration: none;
   gap: 8px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 750;
   letter-spacing: -0.4px;
   white-space: nowrap;
@@ -33,20 +38,25 @@
 .arcade-brand-mark {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   background: #5bcaff;
 }
 
+.arcade-brand-mark svg {
+  width: 20px;
+  height: 20px;
+}
+
 .arcade-header-actions {
-  gap: 20px;
+  gap: 12px;
 }
 
 .arcade-connection {
-  gap: 7px;
+  gap: 5px;
   color: #d0daeb;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: capitalize;
   white-space: nowrap;
 }
@@ -342,28 +352,59 @@
   font-size: 13px;
 }
 
+@media (min-width: 680px) {
+  .arcade-header {
+    gap: 16px;
+    min-height: 53px;
+    padding-bottom: 20px;
+  }
+
+  .arcade-brand {
+    font-size: 16px;
+  }
+
+  .arcade-brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .arcade-brand-mark svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .arcade-connection {
+    gap: 7px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 901px) {
+  .arcade-header-actions {
+    gap: 20px;
+  }
+}
+
 @media (max-width: 900px) {
   .page-shell.arcade-page-shell {
     padding: 20px;
   }
+}
 
-  .arcade-header {
-    gap: 8px;
-    padding-bottom: 16px;
-    min-height: 49px;
-  }
-
+@media (max-width: 350px) {
   .arcade-brand {
-    font-size: 15px;
+    gap: 6px;
+    font-size: 12px;
   }
 
-  .arcade-header-actions {
-    gap: 12px;
+  .arcade-brand-mark {
+    width: 24px;
+    height: 24px;
   }
 
   .arcade-connection {
-    gap: 5px;
-    font-size: 11px;
+    font-size: 10px;
   }
 }
 

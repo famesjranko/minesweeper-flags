@@ -28,7 +28,7 @@ const getTurnHint = ({
   if (bombArmed) return "Bomb armed · select a square or cancel.";
   if (canBomb) return "Your turn · Bomb ready.";
   if (scoreDeficit > 0 && scoreDeficit < MIN_BOMB_DEFICIT) {
-    return `Your turn · Bomb unlocks at down ${MIN_BOMB_DEFICIT}.`;
+    return `Your turn · Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`;
   }
   return "Your turn · First to 26";
 };

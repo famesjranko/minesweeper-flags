@@ -25,7 +25,7 @@ export const DirectMatchActionCards = ({ canCreateRoom, onCreateRoom }: CreateAc
         className="lobby-action-button lobby-create-button"
         disabled={!canCreateRoom}
       >
-        Host Direct Match
+        Host direct match
       </button>
     </form>
 
@@ -40,7 +40,7 @@ export const DirectMatchActionCards = ({ canCreateRoom, onCreateRoom }: CreateAc
       </p>
 
       <button className="lobby-action-button lobby-join-button" disabled type="button">
-        Join Direct Match
+        Join direct match
       </button>
     </div>
   </>
@@ -66,7 +66,7 @@ export const SlotIndicator = ({
       aria-label="Rooms in use"
       title={`${slotAvailability.activeRooms} of ${slotAvailability.maxRooms} rooms in use`}
     >
-      {slotAvailability.activeRooms}/{slotAvailability.maxRooms}
+      {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
     </span>
     <button
       type="button"
@@ -112,10 +112,10 @@ export const ServerMatchActionCards = ({
         className="lobby-action-button lobby-create-button"
         disabled={!canCreateRoom}
       >
-        Create Room
+        Create room
       </button>
       <p className="lobby-create-description">
-        {slotsFull ? "All room slots are in use." : "Host a room and share a private invite link."}
+        {slotsFull ? "All room slots are in use." : "Share an invite link with a friend."}
       </p>
     </form>
 
@@ -127,7 +127,7 @@ export const ServerMatchActionCards = ({
       }}
     >
       <div className="lobby-card-heading">
-        <h3>Join by Token</h3>
+        <h3>Have an invite?</h3>
       </div>
 
       <div className="lobby-join-entry">
@@ -138,7 +138,7 @@ export const ServerMatchActionCards = ({
             value={inviteValue}
             onChange={(event) => onInviteValueChange(event.target.value)}
             maxLength={INVITE_TOKEN_LENGTH}
-            placeholder="Paste invite token"
+            placeholder="Invite token"
             spellCheck={false}
             autoCapitalize="none"
             autoCorrect="off"
@@ -152,7 +152,7 @@ export const ServerMatchActionCards = ({
             .join(" ")}
           disabled={!canJoinRoom}
         >
-          Join Match
+          Join
         </button>
       </div>
     </form>

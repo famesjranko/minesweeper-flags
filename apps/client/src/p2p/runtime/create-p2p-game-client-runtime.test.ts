@@ -688,6 +688,33 @@ afterEach(() => {
 });
 
 describe("createP2PGameClientRuntime", () => {
+  it("cancels waiting setup through direct teardown without a server cancellation command", async () => {
+    // Given a host has created a direct room and invitation
+    const peer = new PairedFakePeer();
+    const send = vi.spyOn(peer, "send");
+    const disconnect = vi.spyOn(peer, "disconnect");
+    const runtime = createP2PGameClientRuntime({
+      createPeer: () => peer,
+      rendezvousClient: new FakeRendezvousClient()
+    });
+    runtime.controller.start();
+    runtime.controller.createRoom("Host");
+    await flushPromises();
+    expect(runtime.store.getSnapshot().session).not.toBeNull();
+    const sentBefore = send.mock.calls.length;
+    const disconnectsBefore = disconnect.mock.calls.length;
+
+    // When its host cancels the direct setup
+    runtime.controller.cancelRoom();
+
+    // Then setup and peer state are cleared through direct teardown without sending a room command
+    expect(runtime.store.getSnapshot().session).toBeNull();
+    expect(runtime.p2p?.getSnapshot().host.stage).toBe("idle");
+    expect(disconnect.mock.calls.length).toBeGreaterThan(disconnectsBefore);
+    expect(send).toHaveBeenCalledTimes(sentBefore);
+    runtime.controller.dispose();
+  });
+
   it("connects host and guest runtimes through the automated direct-match flow", async () => {
     const hostPeer = new PairedFakePeer();
     const guestPeer = new PairedFakePeer();

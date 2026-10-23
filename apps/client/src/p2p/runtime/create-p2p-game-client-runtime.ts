@@ -211,6 +211,10 @@ class P2PBootstrapController implements GameClientRuntimeController {
     this.context.activeController.cancelRematch();
   };
 
+  cancelRoom = (): void => {
+    this.openLobby();
+  };
+
   clearError = (): void => {
     this.store.clearError();
   };

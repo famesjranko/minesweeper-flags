@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: The controller owns one transport lifecycle.
 import {
   CLIENT_EVENT_NAMES,
   type ClientEvent,
@@ -27,6 +28,7 @@ type ServerEventPayload<TType extends ServerEvent["type"]> = Extract<
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 10_000;
 const RECONNECT_JITTER_MS = 250;
+const ROOM_CANCEL_TIMEOUT_MS = 8_000;
 export interface GameClientScheduler {
   setTimeout: (callback: () => void, delayMs: number) => number;
   clearTimeout: (timeoutId: number) => void;
@@ -65,6 +67,12 @@ export class GameClientController {
   private reconnectTimeoutId: number | null = null;
   private shouldReconnect = false;
   private unsubscribeTransport: (() => void) | null = null;
+  private pendingRoomCancellation: {
+    roomCode: string;
+    requestId: string;
+    timeoutId: number | null;
+  } | null = null;
+  private nextRoomCancelRequestId = 1;
 
   constructor({ store, transport, persistence, scheduler, copy }: GameClientControllerOptions) {
     this.store = store;
@@ -95,6 +103,7 @@ export class GameClientController {
   dispose = (): void => {
     this.shouldReconnect = false;
     this.clearReconnectTimer();
+    this.clearPendingRoomCancellation();
     this.unsubscribeTransport?.();
     this.unsubscribeTransport = null;
     this.transport.disconnect();
@@ -103,11 +112,17 @@ export class GameClientController {
   hasStoredSession = (roomCode: string): boolean => this.persistence.read(roomCode) !== null;
 
   openLobby = (): void => {
+    if (
+      this.pendingRoomCancellation ||
+      (this.store.getSnapshot().roomCancelAttempted && this.store.getSnapshot().session)
+    )
+      return;
     this.clearActiveRoomState();
     this.restartTransport();
   };
 
   createRoom = (displayName: string): void => {
+    if (this.pendingRoomCancellation) return;
     this.startLobbyTransition();
     this.sendEvent({
       type: CLIENT_EVENT_NAMES.roomCreate,
@@ -116,6 +131,7 @@ export class GameClientController {
   };
 
   joinRoom = (displayName: string, inviteToken: string): void => {
+    if (this.pendingRoomCancellation) return;
     this.startLobbyTransition();
     this.joiningInviteToken = inviteToken;
     this.sendEvent({
@@ -124,7 +140,13 @@ export class GameClientController {
     });
   };
 
-  reconnect = (roomCode: string): void => {
+  reconnect = (roomCode: string, allowPendingCancellation = false): void => {
+    const pendingCancellation = this.pendingRoomCancellation;
+    if (
+      pendingCancellation &&
+      (!allowPendingCancellation || pendingCancellation.roomCode !== roomCode)
+    )
+      return;
     const storedSession = this.persistence.read(roomCode);
 
     if (!storedSession) {
@@ -280,6 +302,41 @@ export class GameClientController {
     });
   };
 
+  cancelRoom = (): void => {
+    this.withSession((activeSession) => {
+      if (this.store.getSnapshot().match || this.pendingRoomCancellation) return;
+
+      const requestId = `cancel-${this.nextRoomCancelRequestId++}`;
+      const sent = this.sendEvent({
+        type: CLIENT_EVENT_NAMES.roomCancel,
+        payload: {
+          roomCode: activeSession.roomCode,
+          sessionToken: activeSession.sessionToken,
+          requestId
+        }
+      });
+      if (!sent) {
+        // Leaving must never depend on the network. The server's reconnect grace releases the
+        // slot, and the stored session stays so the host can still return to the room.
+        this.clearActiveRoomState();
+        this.restartTransport();
+        return;
+      }
+      this.store.setRoomCancelAttempted(true);
+
+      const timeoutId = this.scheduler.setTimeout(() => {
+        if (this.pendingRoomCancellation?.requestId !== requestId) return;
+        this.pendingRoomCancellation.timeoutId = null;
+        this.store.setRoomCancelPending(false);
+        this.reconnect(activeSession.roomCode, true);
+        this.store.setError("Room cancellation status is unknown. Reconnecting to confirm it.");
+      }, ROOM_CANCEL_TIMEOUT_MS);
+      this.pendingRoomCancellation = { roomCode: activeSession.roomCode, requestId, timeoutId };
+      this.store.setRoomCancelPending(true);
+      this.store.setError(null);
+    });
+  };
+
   clearError = (): void => {
     this.store.clearError();
   };
@@ -373,6 +430,9 @@ export class GameClientController {
       case SERVER_EVENT_NAMES.roomState:
         this.applyRoomState(event.payload);
         break;
+      case SERVER_EVENT_NAMES.roomCancelled:
+        this.handleRoomCancelled(event.payload.roomCode, event.payload.requestId);
+        break;
       case SERVER_EVENT_NAMES.chatHistory:
         this.chatRecovery.applyHistory(event.payload.messages);
         break;
@@ -387,6 +447,7 @@ export class GameClientController {
       case SERVER_EVENT_NAMES.matchEnded:
         this.store.setMatch(event.payload.match);
         this.store.setBombArmed(false);
+        this.settleFailedRoomCancellation();
         break;
       case SERVER_EVENT_NAMES.matchRematchUpdated:
         this.store.applyRematchUpdate(event.payload.players);
@@ -401,6 +462,12 @@ export class GameClientController {
             this.reconnectAttempt.roomCode,
             "Your saved room session is no longer valid. Join the room again."
           );
+          break;
+        }
+        if (this.pendingRoomCancellation) {
+          this.clearPendingRoomCancellation();
+          // A match can start before the refusal arrives; the refusal is moot by then.
+          if (!this.store.getSnapshot().match) this.store.setError(event.payload.message);
           break;
         }
 
@@ -428,6 +495,10 @@ export class GameClientController {
       this.store.setSession(nextSession);
       this.persistence.write(nextSession);
       this.store.setBombArmed(false);
+      if (this.pendingRoomCancellation?.roomCode === payload.roomCode) {
+        this.clearPendingRoomCancellation();
+        this.store.setRoomCancelAttempted(false);
+      }
       this.store.setError(null);
       return;
     }
@@ -457,10 +528,43 @@ export class GameClientController {
     ) {
       this.store.setSession(null);
       this.store.clearTransientRoomState();
+      this.store.setRoomCancelAttempted(false);
     }
 
+    this.clearPendingRoomCancellation();
     this.clearReconnectAttempt();
     this.store.setError(message);
+  }
+
+  private handleRoomCancelled(roomCode: string, requestId: string): void {
+    const pending = this.pendingRoomCancellation;
+    const session = this.store.getSnapshot().session;
+    if (
+      !pending ||
+      pending.roomCode !== roomCode ||
+      pending.requestId !== requestId ||
+      session?.roomCode !== roomCode
+    )
+      return;
+
+    this.persistence.remove(roomCode);
+    this.clearPendingRoomCancellation();
+    this.store.setRoomCancelAttempted(false);
+    this.clearActiveRoomState();
+  }
+
+  /** A started match ends any cancellation attempt, so its error must not hold the host back. */
+  private settleFailedRoomCancellation(): void {
+    if (!this.store.getSnapshot().roomCancelAttempted) return;
+    this.store.setRoomCancelAttempted(false);
+    this.store.setError(null);
+  }
+
+  private clearPendingRoomCancellation(): void {
+    const pending = this.pendingRoomCancellation;
+    if (pending && pending.timeoutId !== null) this.scheduler.clearTimeout(pending.timeoutId);
+    this.pendingRoomCancellation = null;
+    this.store.setRoomCancelPending(false);
   }
 
   private connectTransport(): void {
@@ -503,6 +607,7 @@ export class GameClientController {
   private clearActiveRoomState(): void {
     this.joiningInviteToken = null;
     this.clearReconnectAttempt();
+    this.store.setRoomCancelAttempted(false);
     this.store.setSession(null);
     this.store.clearTransientRoomState();
     this.store.setError(null);

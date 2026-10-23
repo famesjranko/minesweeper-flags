@@ -1,0 +1,186 @@
+.room-waiting-card {
+  gap: 12px;
+}
+
+/* Fills the lobby stage slot where the mode tabs sit on the home page, so the frame stays put. */
+.solo-stage-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(100%, 440px);
+  min-height: 52px;
+  margin: 0 auto;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: #101e34;
+  color: #b8c9df;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.solo-stage-status .arcade-room-code {
+  color: #f3f7ff;
+  font-size: 12px;
+}
+
+.room-waiting-intro h2 {
+  margin: 0;
+  color: #f3f7ff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+}
+
+.room-waiting-intro p {
+  margin: 4px 0 0;
+  color: #afc0d9;
+  font-size: 13px;
+}
+
+.room-waiting-card .arcade-people {
+  gap: 10px;
+}
+
+.room-waiting-card .arcade-seat {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-color: #435b79;
+  border-radius: 10px;
+}
+
+.room-waiting-card .arcade-field {
+  gap: 6px;
+}
+
+.room-waiting-card .arcade-invite-value {
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+.room-waiting-card .arcade-primary {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
+.room-waiting-notice {
+  margin: 0;
+  color: #afe0c6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.room-waiting-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: #afc0d9;
+  font-size: 12px;
+}
+
+.room-waiting-meta > span {
+  white-space: nowrap;
+}
+
+.room-waiting-card .arcade-token-details {
+  display: contents;
+}
+
+.room-waiting-card .arcade-token-details::details-content {
+  display: contents;
+}
+
+.room-waiting-card .arcade-token-details summary {
+  display: flex;
+  grid-column: 2;
+  align-items: center;
+  min-height: 44px;
+  color: #b9cfe8;
+  cursor: pointer;
+  list-style: none;
+}
+
+.room-waiting-card .arcade-token-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.room-waiting-card .arcade-token-details:not([open]) > :not(summary) {
+  display: none;
+}
+
+.room-waiting-token-expanded {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #ffffff1a;
+}
+
+.room-waiting-card .arcade-token-details .arcade-field,
+.room-waiting-card .arcade-token-details button {
+  margin-top: 0;
+}
+
+.room-waiting-card .arcade-secondary {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.room-waiting-card .arcade-flow-error {
+  margin: 0;
+  color: #ffb9a9;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.room-waiting-card .room-waiting-back {
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0;
+  border: 1px solid #536b8e;
+  border-radius: 10px;
+  background: #233650;
+  color: #dce8f8;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 12px;
+}
+
+@media (max-width: 350px) {
+  .room-waiting-card {
+    gap: 10px;
+  }
+
+  .room-waiting-card .arcade-seat {
+    padding: 10px;
+  }
+
+  .room-waiting-card .arcade-seat strong {
+    font-size: 13px;
+  }
+}
+
+/* Short phones: tighter air keeps the cancel action on screen. */
+@media (max-width: 679px) and (max-height: 600px) {
+  .solo-stage-status {
+    min-height: 40px;
+  }
+
+  .room-waiting-card {
+    gap: 8px;
+  }
+
+  .room-waiting-card .arcade-field {
+    gap: 4px;
+  }
+
+  .room-waiting-card .arcade-invite-value {
+    padding: 8px 12px;
+  }
+}

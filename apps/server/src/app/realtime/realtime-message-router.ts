@@ -127,6 +127,15 @@ export class RealtimeMessageRouter {
       case CLIENT_EVENT_NAMES.roomJoin:
         await this.handleRoomJoin(socket, context, event);
         break;
+      case CLIENT_EVENT_NAMES.roomCancel: {
+        const session = await this.requireSession(socket, event.payload);
+        await dispatchExecution(
+          socket,
+          await commandService.cancelRoom(session, event.payload.requestId)
+        );
+        this.dependencies.connectionRegistry.detachIfCurrent(socket);
+        break;
+      }
       case CLIENT_EVENT_NAMES.chatSend:
         await this.handleChatSend(socket, context, event);
         break;
@@ -209,7 +218,17 @@ export class RealtimeMessageRouter {
       return;
     }
 
-    await dispatchExecution(socket, await commandService.createRoom(event.payload.displayName));
+    const attachedSession = this.dependencies.connectionRegistry.getSessionForSocket(socket);
+    const previousSession =
+      attachedSession &&
+      this.dependencies.connectionRegistry.isCurrentSocket(attachedSession.playerId, socket)
+        ? attachedSession
+        : undefined;
+
+    await dispatchExecution(
+      socket,
+      await commandService.createRoom(event.payload.displayName, previousSession)
+    );
   }
 
   private async handleRoomJoin(

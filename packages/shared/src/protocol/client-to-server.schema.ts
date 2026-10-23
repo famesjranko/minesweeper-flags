@@ -36,6 +36,15 @@ export const roomJoinEventSchema = z.object({
   })
 });
 
+export const roomCancelEventSchema = z.object({
+  type: z.literal(CLIENT_EVENT_NAMES.roomCancel),
+  payload: z.object({
+    roomCode: roomCodeSchema,
+    sessionToken: sessionTokenSchema,
+    requestId: z.string().min(1)
+  })
+});
+
 export const chatSendEventSchema = z.object({
   type: z.literal(CLIENT_EVENT_NAMES.chatSend),
   payload: z.object({
@@ -89,6 +98,7 @@ export const playerReconnectEventSchema = z.object({
 export const clientEventSchema = z.discriminatedUnion("type", [
   roomCreateEventSchema,
   roomJoinEventSchema,
+  roomCancelEventSchema,
   chatSendEventSchema,
   matchActionEventSchema,
   matchResignEventSchema,

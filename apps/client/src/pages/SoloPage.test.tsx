@@ -103,7 +103,7 @@ it("disables local input while the bot thinks and disposes its session on unmoun
     expect(session.start).toHaveBeenCalledBefore(session.getSnapshot as ReturnType<typeof vi.fn>);
     expect(container.textContent).toContain("Bot thinking");
     expect(cell?.disabled).toBe(true);
-    expect(container.querySelector(".arcade-chat-toggle")).toBeNull();
+    expect(container.querySelector(".arcade-chat-preview")).toBeNull();
     expect(container.querySelector(".arcade-player-presence")).toBeNull();
   } finally {
     act(() => root.unmount());
@@ -143,7 +143,7 @@ it("offers only a local rematch after the match finishes", () => {
     expect(container.querySelectorAll(".arcade-play-area [role=status]")).toHaveLength(1);
     expect(container.querySelectorAll(".match-primary-action")).toHaveLength(1);
     expect(container.querySelector(".solo-result")).toBeNull();
-    expect(container.textContent).not.toContain("Request Rematch");
+    expect(container.textContent).not.toContain("Request rematch");
   } finally {
     act(() => root.unmount());
     container.remove();
@@ -167,11 +167,13 @@ it("offers only resign while a local match is live", () => {
   act(() => root.render(<SoloPage createSession={() => session} />));
 
   try {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     // When the player resigns the live local match
     act(() => container.querySelector<HTMLButtonElement>("button[name='resign']")?.click());
 
     // Then resign uses the local authority and rematch or restart are unavailable
     expect(session.resign).toHaveBeenCalledOnce();
+    confirm.mockRestore();
     expect(container.querySelector("button[name='rematch']")).toBeNull();
     expect(container.querySelector("button[name='restart']")).toBeNull();
   } finally {

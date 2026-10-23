@@ -7,13 +7,17 @@ import {
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import type { z } from "zod";
+import type { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import { logger } from "../../lib/logging/logger.js";
 import type { ChatService } from "../../modules/chat/chat.service.js";
+import type { MatchRepository } from "../../modules/matches/match.repository.js";
 import type { MatchService } from "../../modules/matches/match.service.js";
 import type { RematchService } from "../../modules/rematch/rematch.service.js";
+import type { RoomRepository } from "../../modules/rooms/room.repository.js";
 import type { RoomService } from "../../modules/rooms/room.service.js";
 import type { RoomRecord } from "../../modules/rooms/room.types.js";
 import type { PlayerSession, PlayerSessionService } from "../realtime/player-session.service.js";
+import type { StateStores } from "../state/state-store.js";
 import {
   type CommandExecution,
   createBroadcastStep,
@@ -28,6 +32,10 @@ interface GameCommandServiceDependencies {
   chatService: ChatService;
   rematchService: RematchService;
   playerSessionService: PlayerSessionService;
+  roomRepository: RoomRepository;
+  matchRepository: MatchRepository;
+  roomTaskRunner: KeyedSerialTaskRunner;
+  deleteRoomState?: StateStores["deleteRoomState"];
   maxConcurrentRooms?: number;
   now?: () => number;
 }
@@ -39,8 +47,15 @@ export class GameCommandService {
     this.now = dependencies.now ?? (() => Date.now());
   }
 
-  async createRoom(displayName: string): Promise<CommandExecution> {
-    const { roomService, playerSessionService, maxConcurrentRooms } = this.dependencies;
+  async createRoom(
+    displayName: string,
+    previousSession?: PlayerSession
+  ): Promise<CommandExecution> {
+    const { roomService, playerSessionService, maxConcurrentRooms, deleteRoomState } =
+      this.dependencies;
+    if (previousSession && deleteRoomState) {
+      await this.cancelEligibleWaitingRoom(previousSession, deleteRoomState, false);
+    }
     const { room, player } = await roomService.createRoom(displayName, maxConcurrentRooms);
 
     if (!room.inviteToken) {
@@ -93,6 +108,57 @@ export class GameCommandService {
         })
       ]
     };
+  }
+
+  async cancelRoom(session: PlayerSession, requestId: string): Promise<CommandExecution> {
+    const { deleteRoomState } = this.dependencies;
+
+    if (!deleteRoomState) {
+      throw new Error("Room cancellation is unavailable.");
+    }
+
+    await this.cancelEligibleWaitingRoom(session, deleteRoomState, true);
+
+    return {
+      steps: [
+        createDirectStep({
+          type: SERVER_EVENT_NAMES.roomCancelled,
+          payload: { roomCode: session.roomCode, requestId }
+        })
+      ]
+    };
+  }
+
+  private async cancelEligibleWaitingRoom(
+    session: PlayerSession,
+    deleteRoomState: StateStores["deleteRoomState"],
+    requireEligible: boolean
+  ): Promise<void> {
+    const { roomRepository, matchRepository, roomTaskRunner } = this.dependencies;
+
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Each guard protects deletion.
+    await roomTaskRunner.run(session.roomCode, async () => {
+      const room = await roomRepository.getByCode(session.roomCode);
+
+      if (!room) {
+        if (requireEligible) throw new Error("That room no longer exists.");
+        return;
+      }
+
+      if (room.players.length !== 1 || room.players[0]?.playerId !== session.playerId) {
+        if (requireEligible) throw new Error("Only the waiting room host can cancel this room.");
+        return;
+      }
+
+      const match = await matchRepository.getByRoomId(room.roomId);
+
+      if (match) {
+        if (requireEligible) throw new Error("A started room cannot be cancelled.");
+        return;
+      }
+
+      await deleteRoomState(room);
+    });
   }
 
   async reconnectPlayer(roomCode: string, sessionToken: string): Promise<CommandExecution> {

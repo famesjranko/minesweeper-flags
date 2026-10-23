@@ -8,6 +8,10 @@ export type CreateRoomCommand = Extract<
   { type: typeof CLIENT_EVENT_NAMES.roomCreate }
 >;
 export type JoinRoomCommand = Extract<GameCommand, { type: typeof CLIENT_EVENT_NAMES.roomJoin }>;
+export type CancelRoomCommand = Extract<
+  GameCommand,
+  { type: typeof CLIENT_EVENT_NAMES.roomCancel }
+>;
 export type SendChatCommand = Extract<GameCommand, { type: typeof CLIENT_EVENT_NAMES.chatSend }>;
 export type ApplyMatchActionCommand = Extract<
   GameCommand,

@@ -69,8 +69,7 @@ it("lets a player zoom, select the same square, and return to the fitted board",
         onToggleBomb={vi.fn()}
         onRequestRematch={vi.fn()}
         onCancelRematch={vi.fn()}
-        chatMessageCount={0}
-        onOpenChat={vi.fn()}
+        onResign={() => {}}
       />
     )
   );

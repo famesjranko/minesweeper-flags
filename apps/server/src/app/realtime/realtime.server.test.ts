@@ -89,7 +89,7 @@ const flushAsyncWork = async (): Promise<void> => {
   await new Promise((resolve) => setImmediate(resolve));
 };
 
-const connectSocket = (server: TestRealtimeServer) => {
+const connectSocket = (server: TestRealtimeServer, remoteAddress = "127.0.0.1") => {
   const socket = new FakeSocket();
 
   server.webSocketServer.emit(
@@ -97,7 +97,7 @@ const connectSocket = (server: TestRealtimeServer) => {
     socket as unknown as WebSocket,
     {
       headers: {},
-      socket: { remoteAddress: "127.0.0.1" }
+      socket: { remoteAddress }
     } as IncomingMessage
   );
 
@@ -125,6 +125,139 @@ describe("realtime server", () => {
     vi.restoreAllMocks();
     await activeServer?.shutdown();
     activeServer = undefined;
+  });
+
+  it("cancels only an attached current host and invalidates its invite and reconnect", async () => {
+    // Given a waiting host, a foreign room with a guest, and a replacement host socket
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+    const oldHost = connectSocket(activeServer);
+    const foreign = connectSocket(activeServer);
+    await emitClientEvent(oldHost, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host" }
+    });
+    await emitClientEvent(foreign, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Foreign" }
+    });
+    const foreignRoom = readSentEvents(foreign)[0]!;
+    const guest = connectSocket(activeServer);
+    await emitClientEvent(guest, {
+      type: CLIENT_EVENT_NAMES.roomJoin,
+      payload: { displayName: "Guest", inviteToken: foreignRoom.payload.inviteToken }
+    });
+    const created = readSentEvents(oldHost)[0]!;
+    const credentials = {
+      roomCode: created.payload.roomCode,
+      sessionToken: created.payload.self.sessionToken
+    };
+    const host = connectSocket(activeServer);
+    await emitClientEvent(host, { type: CLIENT_EVENT_NAMES.playerReconnect, payload: credentials });
+    const unattached = connectSocket(activeServer);
+
+    // When foreign host, guest, unattached, and replaced sockets present the stolen host credential
+    for (const socket of [foreign, guest, unattached, oldHost]) {
+      await emitClientEvent(socket, {
+        type: CLIENT_EVENT_NAMES.roomCancel,
+        payload: { ...credentials, requestId: "unauthorized" }
+      });
+      expect(readSentEvents(socket).at(-1)?.type).toBe(SERVER_EVENT_NAMES.serverError);
+    }
+
+    // Then only the current host can free its slot and both old access paths fail
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(2);
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCancel,
+      payload: { ...credentials, requestId: "authorized" }
+    });
+    expect(readSentEvents(host).at(-1)).toMatchObject({
+      type: SERVER_EVENT_NAMES.roomCancelled,
+      payload: { requestId: "authorized" }
+    });
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(1);
+    await emitClientEvent(unattached, {
+      type: CLIENT_EVENT_NAMES.roomJoin,
+      payload: { displayName: "Guest", inviteToken: created.payload.inviteToken }
+    });
+    expect(readSentEvents(unattached).at(-1)?.type).toBe(SERVER_EVENT_NAMES.serverError);
+    await emitClientEvent(host, { type: CLIENT_EVENT_NAMES.playerReconnect, payload: credentials });
+    expect(readSentEvents(host).at(-1)?.type).toBe(SERVER_EVENT_NAMES.serverError);
+  });
+
+  it("replaces an attached waiting room at capacity and detaches after explicit cancellation", async () => {
+    // Given all four room slots are occupied
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+    const hosts = Array.from({ length: 4 }, (_, index) =>
+      connectSocket(activeServer!, `10.0.0.${index + 1}`)
+    );
+    for (const host of hosts)
+      await emitClientEvent(host, {
+        type: CLIENT_EVENT_NAMES.roomCreate,
+        payload: { displayName: "Host" }
+      });
+    const host = hosts[0]!;
+    const old = readSentEvents(host)[0]!;
+
+    // When the attached host creates again without waiting for inactivity cleanup
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Again" }
+    });
+    const replacement = readSentEvents(host)
+      .filter((event) => event.type === SERVER_EVENT_NAMES.roomCreated)
+      .at(-1)!;
+
+    // Then capacity stays bounded and cancellation detaches the socket for its next create
+    expect(replacement.type).toBe(SERVER_EVENT_NAMES.roomCreated);
+    expect(replacement.payload.roomCode).not.toBe(old.payload.roomCode);
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(4);
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCancel,
+      payload: {
+        roomCode: replacement.payload.roomCode,
+        sessionToken: replacement.payload.self.sessionToken,
+        requestId: "free"
+      }
+    });
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(3);
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Third" }
+    });
+    expect(
+      readSentEvents(host).filter((event) => event.type === SERVER_EVENT_NAMES.roomCreated)
+    ).toHaveLength(3);
+    expect((await sendRequest(activeServer, "/health")).payload.activeRooms).toBe(4);
+  });
+
+  it("retires a raw same-socket waiting room without the disconnect grace", async () => {
+    // Given a connected host creates a waiting room twice on the same socket
+    vi.useFakeTimers({
+      toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"]
+    });
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+    const host = connectSocket(activeServer);
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "First" }
+    });
+    await emitClientEvent(host, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Second" }
+    });
+
+    // When the normal disconnect grace period passes without any socket closing
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    const afterGrace = (await sendRequest(activeServer, "/health")).payload.activeRooms;
+    await vi.advanceTimersByTimeAsync(30 * 60 * 1000 - 30_000);
+    const afterInactivityExpiry = (await sendRequest(activeServer, "/health")).payload.activeRooms;
+
+    // Then the replacement frees its old slot before the thirty-minute inactivity expiry
+    expect([afterGrace, afterInactivityExpiry]).toEqual([1, 1]);
   });
 
   it("reports health separately from readiness", async () => {

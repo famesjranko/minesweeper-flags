@@ -71,8 +71,7 @@ const Controls = ({ match, onToggle }: { match: MatchStateDto; onToggle: () => v
       }}
       onRequestRematch={() => {}}
       onCancelRematch={() => {}}
-      chatMessageCount={0}
-      onOpenChat={() => {}}
+      onResign={() => {}}
     />
   );
 };

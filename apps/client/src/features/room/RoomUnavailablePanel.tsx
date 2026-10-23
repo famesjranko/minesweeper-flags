@@ -77,7 +77,7 @@ export const RoomUnavailablePanel = ({
               className={canReconnect && !showClaimVictory ? "arcade-secondary" : "arcade-primary"}
               to="/lobby"
             >
-              Go To Lobby
+              Back to lobby
             </Link>
           </div>
         </div>

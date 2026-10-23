@@ -113,7 +113,7 @@ describe("MatchView bomb availability", () => {
 
     expect(html).toContain('class="inline-bomb is-locked"');
     expect(html).toContain('disabled=""');
-    expect(html).toContain(`Bomb unlocks at down ${MIN_BOMB_DEFICIT}.`);
+    expect(html).toContain(`Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`);
     expect(html).toContain(`trailing by ${MIN_BOMB_DEFICIT} or more`);
   });
 
@@ -383,5 +383,6 @@ it("keeps multiplayer header, presence, and chat UI by default", () => {
   expect(html).toContain('aria-label="Match options"');
   expect(html).toContain("Room ABCDE");
   expect(html).toContain('aria-label="Connected"');
-  expect(html).toContain("Chat · 0 messages");
+  expect(html).toContain("Full chat ↗");
+  expect(html).toContain("No messages yet.");
 });

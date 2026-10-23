@@ -27,6 +27,8 @@ export interface LobbyRuntimeState {
   chatDraft: string;
   chatError: string | null;
   chatPendingText: string | null;
+  roomCancelPending: boolean;
+  roomCancelAttempted: boolean;
   pendingEvents: ClientEvent[];
 }
 
@@ -39,6 +41,8 @@ export const createLobbyRuntimeState = (): LobbyRuntimeState => ({
   chatDraft: "",
   chatError: null,
   chatPendingText: null,
+  roomCancelPending: false,
+  roomCancelAttempted: false,
   pendingEvents: []
 });
 
