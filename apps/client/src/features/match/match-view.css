@@ -218,7 +218,8 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
-.arcade-chat-close {
+/* The desktop side panel has nowhere to reopen from, so only the compact dialog may close. */
+.arcade-match .arcade-chat-close {
   display: none;
 }
 
@@ -419,7 +420,7 @@
     background: #081120aa;
   }
 
-  .arcade-chat-close {
+  .arcade-match .arcade-chat-close {
     display: inline-flex;
   }
 }
