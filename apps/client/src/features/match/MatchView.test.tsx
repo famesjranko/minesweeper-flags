@@ -281,7 +281,7 @@ describe("MatchView last-move marks", () => {
     // When the match renders
     // Then only that cell carries is-last-move, in the opponent's tone
     expect(html.match(/is-last-move/g)).toHaveLength(1);
-    expect(html).toMatch(/is-last-move last-move-red last-move-age-0[^>]*title="Row 2, Column 3"/);
+    expect(html).toMatch(/is-last-move last-move-red"[^>]*title="Row 2, Column 3"/);
   });
 
   it("outlines a bomb on a 2x2 board as the whole board and rings the centre only", () => {
@@ -292,7 +292,7 @@ describe("MatchView last-move marks", () => {
 
     // When the match renders
     // Then the area spans the whole clamped 2x2 and only the centre cell is ringed
-    expect(html).toContain("board-last-move-area last-move-red last-move-age-0");
+    expect(html).toContain('class="board-last-move-area last-move-red"');
     expect(html).toContain("width:calc(2 * var(--board-cell-size) + 1 * 2px)");
     expect(html.match(/is-last-move/g)).toHaveLength(1);
   });

@@ -30,7 +30,7 @@ const play = (steps: Array<[number, Action | null]>): LastMoveTrail =>
   );
 
 describe("last move trail", () => {
-  it("marks two mine claims then a safe reveal by the opponent, newest strongest", () => {
+  it("marks two mine claims then a safe reveal by the opponent, all alike", () => {
     // Given the opponent claims two mines and then reveals a safe cell
     const trail = play([
       [2, action("opp", 0, 0)],
@@ -41,11 +41,11 @@ describe("last move trail", () => {
     // When the marks are computed
     const { cells } = getLastMoveMarks(trail, 4, 4, tones);
 
-    // Then all three cells are marked and the newest has age 0
-    expect(cells.map((c) => [c.row, c.column, c.age])).toEqual([
-      [1, 1, 0],
-      [0, 1, 1],
-      [0, 0, 2]
+    // Then all three cells carry the same mark, with no fading for older moves
+    expect(cells).toEqual([
+      { row: 1, column: 1, tone: "red" },
+      { row: 0, column: 1, tone: "red" },
+      { row: 0, column: 0, tone: "red" }
     ]);
   });
 
@@ -140,6 +140,6 @@ describe("last move trail", () => {
 
     // Then the area is clamped to the board edge and the centre is marked
     expect(marks.areas[0]?.bounds).toEqual({ minRow: 0, maxRow: 4, minColumn: 0, maxColumn: 4 });
-    expect(marks.cells).toEqual([{ row: 0, column: 0, age: 0, tone: "red" }]);
+    expect(marks.cells).toEqual([{ row: 0, column: 0, tone: "red" }]);
   });
 });

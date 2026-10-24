@@ -33,17 +33,17 @@ const render = (lastMove?: Parameters<typeof BoardGrid>[0]["lastMove"]) =>
   );
 
 describe("BoardGrid last-move marks", () => {
-  it("adds is-last-move with tone and age classes to the marked cell only", () => {
+  it("adds is-last-move with the tone class to the marked cell only", () => {
     // Given one marked cell
     // When the board renders
     const html = render({
-      cells: [{ row: 1, column: 0, age: 1, tone: "red" }],
+      cells: [{ row: 1, column: 0, tone: "red" }],
       areas: []
     });
 
     // Then exactly one cell carries the marker classes
     expect(html.match(/is-last-move/g)).toHaveLength(1);
-    expect(html).toContain("is-last-move last-move-red last-move-age-1");
+    expect(html).toContain('class="board-cell status-hidden is-last-move last-move-red"');
     expect(html).toContain('title="Row 2, Column 1"');
   });
 
@@ -59,13 +59,11 @@ describe("BoardGrid last-move marks", () => {
     // When the board renders
     const html = render({
       cells: [],
-      areas: [
-        { bounds: { minRow: 0, maxRow: 1, minColumn: 0, maxColumn: 1 }, age: 0, tone: "blue" }
-      ]
+      areas: [{ bounds: { minRow: 0, maxRow: 1, minColumn: 0, maxColumn: 1 }, tone: "blue" }]
     });
 
     // Then the overlay spans two cells
-    expect(html).toContain("board-last-move-area last-move-blue last-move-age-0");
+    expect(html).toContain('class="board-last-move-area last-move-blue"');
     expect(html).toContain("width:calc(2 * var(--board-cell-size) + 1 * 2px)");
   });
 });

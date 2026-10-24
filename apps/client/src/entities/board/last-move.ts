@@ -11,19 +11,14 @@ export interface LastMoveTrailEntry {
 
 export type LastMoveTrail = readonly LastMoveTrailEntry[];
 
-/** 0 is the newest move; higher levels are older and drawn fainter. */
-export type LastMoveAge = 0 | 1 | 2;
-
 export interface LastMoveCell {
   row: number;
   column: number;
-  age: LastMoveAge;
   tone: Tone;
 }
 
 export interface LastMoveArea {
   bounds: BombPreviewBounds;
-  age: LastMoveAge;
   tone: Tone;
 }
 
@@ -76,21 +71,20 @@ export const getLastMoveMarks = (
   const cells: LastMoveCell[] = [];
   const areas: LastMoveArea[] = [];
 
-  // Newest first so a cell hit by several moves keeps its strongest mark.
-  [...trail].reverse().forEach(({ action }, index) => {
-    const age = Math.min(index, 2) as LastMoveAge;
+  // Every move in the opponent's turn gets the same mark; the board shows what they did, not
+  // the order. Newest first, and a cell hit by several moves is marked once.
+  [...trail].reverse().forEach(({ action }) => {
     const tone = playerTones[action.playerId] ?? "blue";
 
     if (action.type === "bomb") {
       areas.push({
         bounds: getBombPreviewBounds(rows, columns, action.row, action.column),
-        age,
         tone
       });
     }
 
     if (!cells.some((cell) => cell.row === action.row && cell.column === action.column)) {
-      cells.push({ row: action.row, column: action.column, age, tone });
+      cells.push({ row: action.row, column: action.column, tone });
     }
   });
 
