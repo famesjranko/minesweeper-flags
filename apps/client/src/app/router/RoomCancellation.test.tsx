@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createMatchState } from "@minesweeper-flags/game-engine";
-import { toMatchStateDto } from "@minesweeper-flags/shared";
+import { matchStateWireSchema, toMatchStateDto } from "@minesweeper-flags/shared";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -71,7 +71,10 @@ const startMatchWithGuest = (socket: Socket) => {
       { playerId: "guest-1", displayName: "Guest" }
     ]
   });
-  socket.receive("match:started", { roomCode: session.roomCode, match: startedMatch() });
+  socket.receive("match:started", {
+    roomCode: session.roomCode,
+    match: matchStateWireSchema.encode(startedMatch())
+  });
 };
 let root: Root | undefined;
 let container: HTMLDivElement;

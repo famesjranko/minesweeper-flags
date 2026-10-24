@@ -12,5 +12,6 @@ export * from "./protocol/room-stream-events.js";
 export * from "./protocol/server-to-client.schema.js";
 export * from "./schemas/chat.schema.js";
 export * from "./schemas/match.schema.js";
+export * from "./schemas/match-wire.schema.js";
 export * from "./schemas/primitives.js";
 export * from "./schemas/room.schema.js";

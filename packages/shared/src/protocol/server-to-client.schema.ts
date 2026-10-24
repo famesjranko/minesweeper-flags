@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { chatMessageDtoSchema } from "../schemas/chat.schema.js";
-import { matchStateDtoSchema, playerMatchDtoSchema } from "../schemas/match.schema.js";
+import { playerMatchDtoSchema } from "../schemas/match.schema.js";
+import { matchStateWireSchema } from "../schemas/match-wire.schema.js";
 import {
   displayNameSchema,
   inviteTokenSchema,
@@ -85,7 +86,7 @@ export const matchStartedEventSchema = z.object({
   type: z.literal(SERVER_EVENT_NAMES.matchStarted),
   payload: z.object({
     roomCode: roomCodeSchema,
-    match: matchStateDtoSchema
+    match: matchStateWireSchema
   })
 });
 
@@ -93,7 +94,7 @@ export const matchStateEventSchema = z.object({
   type: z.literal(SERVER_EVENT_NAMES.matchState),
   payload: z.object({
     roomCode: roomCodeSchema,
-    match: matchStateDtoSchema
+    match: matchStateWireSchema
   })
 });
 
@@ -109,7 +110,7 @@ export const matchEndedEventSchema = z.object({
   type: z.literal(SERVER_EVENT_NAMES.matchEnded),
   payload: z.object({
     roomCode: roomCodeSchema,
-    match: matchStateDtoSchema
+    match: matchStateWireSchema
   })
 });
 
@@ -168,4 +169,24 @@ export const serverEventSchema = z.discriminatedUnion("type", [
   serverErrorEventSchema
 ]);
 
-export type ServerEvent = z.infer<typeof serverEventSchema>;
+/** The decoded form, as code builds and reads it. Parsing a received event decodes it. */
+export type ServerEvent = z.output<typeof serverEventSchema>;
+export type ServerEventWire = z.input<typeof serverEventSchema>;
+
+/**
+ * The form to send. Only the match codec runs: other fields have one-way transforms, such as the
+ * upper-cased room code, and they are already in their parsed form.
+ */
+export const encodeServerEvent = (event: ServerEvent): ServerEventWire => {
+  switch (event.type) {
+    case SERVER_EVENT_NAMES.matchStarted:
+    case SERVER_EVENT_NAMES.matchState:
+    case SERVER_EVENT_NAMES.matchEnded:
+      return {
+        ...event,
+        payload: { ...event.payload, match: matchStateWireSchema.encode(event.payload.match) }
+      };
+    default:
+      return event;
+  }
+};
