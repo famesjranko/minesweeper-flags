@@ -269,7 +269,7 @@ describe("AppRouter", () => {
         expect(fetchMock).not.toHaveBeenCalled();
         const header = app.container.querySelector("header");
         act(() => app?.container.querySelector<HTMLButtonElement>("#friend-tab")?.click());
-        expect(window.location.pathname).toBe("/");
+        expect(window.location.pathname).toBe("/lobby");
         expect(app.container.querySelector("header")).toBe(header);
         expect(app.container.querySelector(".lobby-create-button")).not.toBeNull();
         const startedSocketCount = sockets.length;
