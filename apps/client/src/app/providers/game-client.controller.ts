@@ -89,14 +89,6 @@ export class GameClientController {
   start = (): void => {
     this.shouldReconnect = true;
     this.reconnectAttemptCount = 0;
-
-    if (!this.unsubscribeTransport) {
-      this.unsubscribeTransport = this.transport.subscribe({
-        onServerEvent: this.handleServerEvent,
-        onStatusChange: this.handleTransportStatusChange
-      });
-    }
-
     this.connectTransport();
   };
 
@@ -568,6 +560,14 @@ export class GameClientController {
   }
 
   private connectTransport(): void {
+    // The lobby's openLobby effect can run before the provider's start effect, so every
+    // connect subscribes first. Otherwise the "connecting" status is emitted to no listener.
+    if (!this.unsubscribeTransport) {
+      this.unsubscribeTransport = this.transport.subscribe({
+        onServerEvent: this.handleServerEvent,
+        onStatusChange: this.handleTransportStatusChange
+      });
+    }
     this.transport.connect();
   }
 
