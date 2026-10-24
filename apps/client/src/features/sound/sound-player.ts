@@ -162,22 +162,55 @@ export const createSoundPlayer = (
     return NO_OP_PLAYER;
   }
   const AudioContextClass = window.AudioContext;
-  // Created on the first play so the browser sees it inside a user gesture.
+  // Created on the first play. Only the toggle path is inside a user gesture;
+  // after a refresh the first play comes from an effect and the context starts suspended.
   let context: AudioContext | null = null;
+  // While the context is not running, currentTime is frozen, so scheduling would queue
+  // every sound at the same instant. Keep only the latest request and play it on resume.
+  let pending: SoundName | null = null;
+  let resuming = false;
+
+  const schedule = (ctx: AudioContext, name: SoundName): void => {
+    const origin = ctx.currentTime;
+    let cursorMs = 0;
+    for (const segment of recipes[name].segments) {
+      const startMs = segment.offsetMs ?? cursorMs;
+      scheduleSegment(ctx, segment, origin + startMs / 1000);
+      cursorMs = startMs + segment.durationMs;
+    }
+  };
+
+  const resumeOnce = (ctx: AudioContext): void => {
+    if (resuming) {
+      return;
+    }
+    resuming = true;
+    void ctx
+      .resume()
+      .then(() => {
+        const name = pending;
+        pending = null;
+        if (name) {
+          schedule(ctx, name);
+        }
+      })
+      .catch(() => {
+        pending = null;
+      })
+      .finally(() => {
+        resuming = false;
+      });
+  };
 
   return {
     play(name) {
       context ??= new AudioContextClass();
-      if (context.state === "suspended") {
-        void context.resume().catch(() => {});
+      if (context.state !== "running") {
+        pending = name;
+        resumeOnce(context);
+        return;
       }
-      const origin = context.currentTime;
-      let cursorMs = 0;
-      for (const segment of recipes[name].segments) {
-        const startMs = segment.offsetMs ?? cursorMs;
-        scheduleSegment(context, segment, origin + startMs / 1000);
-        cursorMs = startMs + segment.durationMs;
-      }
+      schedule(context, name);
     }
   };
 };

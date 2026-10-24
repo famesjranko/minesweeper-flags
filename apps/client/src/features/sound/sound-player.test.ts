@@ -40,14 +40,21 @@ interface FakeSource {
   stop: ReturnType<typeof vi.fn>;
 }
 
-const stubAudioContext = (state: "running" | "suspended") => {
+const stubAudioContext = (state: "running" | "suspended", manualResume = false) => {
+  let finishResume: () => void = () => {};
   const created: unknown[] = [];
   const oscillators: FakeSource[] = [];
   const bufferSources: FakeSource[] = [];
   const filters: (FakeSource & { Q: FakeParam })[] = [];
   const gains: { gain: FakeParam }[] = [];
   const buffers: unknown[] = [];
-  const resume = vi.fn(() => Promise.resolve());
+  const resume = vi.fn(() =>
+    manualResume
+      ? new Promise<void>((resolve) => {
+          finishResume = resolve;
+        })
+      : Promise.resolve()
+  );
   const param = (): FakeParam => ({
     setValueAtTime: vi.fn(),
     linearRampToValueAtTime: vi.fn(),
@@ -95,7 +102,16 @@ const stubAudioContext = (state: "running" | "suspended") => {
     }
   }
   vi.stubGlobal("AudioContext", FakeAudioContext);
-  return { created, oscillators, bufferSources, filters, gains, buffers, resume };
+  return {
+    created,
+    oscillators,
+    bufferSources,
+    filters,
+    gains,
+    buffers,
+    resume,
+    finishResume: () => finishResume()
+  };
 };
 
 const NOISE_RECIPES: Record<SoundName, SoundRecipe> = {
@@ -273,5 +289,52 @@ describe("createSoundPlayer", () => {
     // And the default segment ramps exponentially to the floor
     expect(exponential?.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.0001, 0.1);
     expect(exponential?.gain.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
+  });
+
+  it("schedules nothing and resumes once while the context is suspended", () => {
+    // Given a suspended context whose resume has not finished
+    const audio = stubAudioContext("suspended", true);
+    const player = createSoundPlayer(RECIPES);
+
+    // When three sounds are requested
+    player.play("reveal");
+    player.play("reveal");
+    player.play("reveal");
+
+    // Then no node is scheduled
+    expect(audio.oscillators).toHaveLength(0);
+
+    // And resume is called once
+    expect(audio.resume).toHaveBeenCalledTimes(1);
+  });
+
+  it("plays only the latest requested sound, once, when the resume finishes", async () => {
+    // Given a suspended context and a bomb recipe with one noise segment
+    const audio = stubAudioContext("suspended", true);
+    const player = createSoundPlayer(NOISE_RECIPES);
+
+    // When reveal, bomb, reveal, bomb are requested before the resume finishes
+    player.play("reveal");
+    player.play("bomb");
+    player.play("reveal");
+    player.play("bomb");
+    audio.finishResume();
+    await vi.waitFor(() => expect(audio.bufferSources).toHaveLength(1));
+
+    // Then only the bomb segment is scheduled, once, and no reveal tone
+    expect(audio.bufferSources[0]?.start).toHaveBeenCalledTimes(1);
+    expect(audio.oscillators).toHaveLength(0);
+  });
+
+  it("schedules a sound immediately while the context is running", () => {
+    // Given a running context
+    const audio = stubAudioContext("running", true);
+
+    // When a sound is requested
+    createSoundPlayer(RECIPES).play("reveal");
+
+    // Then both segments are scheduled at once and resume is not called
+    expect(audio.oscillators).toHaveLength(2);
+    expect(audio.resume).not.toHaveBeenCalled();
   });
 });
