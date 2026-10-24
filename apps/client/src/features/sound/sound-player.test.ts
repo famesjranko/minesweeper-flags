@@ -10,8 +10,8 @@ afterEach(() => {
 const RECIPES: Record<SoundName, SoundRecipe> = {
   reveal: {
     segments: [
-      { wave: "sine", startHz: 400, endHz: 300, durationMs: 50, gain: 0.1 },
-      { wave: "sine", startHz: 300, endHz: 200, durationMs: 50, gain: 0.1 }
+      { kind: "tone", wave: "sine", startHz: 400, endHz: 300, durationMs: 50, gain: 0.1 },
+      { kind: "tone", wave: "sine", startHz: 300, endHz: 200, durationMs: 50, gain: 0.1 }
     ]
   },
   flag: { segments: [] },
@@ -21,36 +21,92 @@ const RECIPES: Record<SoundName, SoundRecipe> = {
   lose: { segments: [] }
 };
 
+interface FakeParam {
+  setValueAtTime: ReturnType<typeof vi.fn>;
+  linearRampToValueAtTime: ReturnType<typeof vi.fn>;
+  exponentialRampToValueAtTime: ReturnType<typeof vi.fn>;
+}
+
+interface FakeSource {
+  type?: string;
+  loop?: boolean;
+  buffer?: unknown;
+  frequency: FakeParam;
+  connect: ReturnType<typeof vi.fn>;
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+}
+
 const stubAudioContext = (state: "running" | "suspended") => {
   const created: unknown[] = [];
-  const oscillators: { start: ReturnType<typeof vi.fn> }[] = [];
+  const oscillators: FakeSource[] = [];
+  const bufferSources: FakeSource[] = [];
+  const filters: (FakeSource & { Q: FakeParam })[] = [];
+  const gains: { gain: FakeParam }[] = [];
+  const buffers: unknown[] = [];
   const resume = vi.fn(() => Promise.resolve());
-  const param = () => ({ setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() });
+  const param = (): FakeParam => ({
+    setValueAtTime: vi.fn(),
+    linearRampToValueAtTime: vi.fn(),
+    exponentialRampToValueAtTime: vi.fn()
+  });
+  const source = (): FakeSource => ({
+    frequency: param(),
+    connect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn()
+  });
   class FakeAudioContext {
     state = state;
     currentTime = 0;
+    sampleRate = 8000;
     destination = {};
     resume = resume;
     constructor() {
       created.push(this);
     }
     createOscillator() {
-      const oscillator = {
-        type: "sine",
-        frequency: param(),
-        connect: vi.fn(),
-        start: vi.fn(),
-        stop: vi.fn()
-      };
+      const oscillator = { ...source(), type: "sine" };
       oscillators.push(oscillator);
       return oscillator;
     }
+    createBufferSource() {
+      const node = source();
+      bufferSources.push(node);
+      return node;
+    }
+    createBiquadFilter() {
+      const filter = { ...source(), type: "lowpass", Q: param() };
+      filters.push(filter);
+      return filter;
+    }
+    createBuffer(_channels: number, length: number) {
+      const buffer = { length, getChannelData: () => new Float32Array(length) };
+      buffers.push(buffer);
+      return buffer;
+    }
     createGain() {
-      return { gain: param(), connect: vi.fn() };
+      const node = { gain: param(), connect: vi.fn(), disconnect: vi.fn() };
+      gains.push(node);
+      return node;
     }
   }
   vi.stubGlobal("AudioContext", FakeAudioContext);
-  return { created, oscillators, resume };
+  return { created, oscillators, bufferSources, filters, gains, buffers, resume };
+};
+
+const NOISE_RECIPES: Record<SoundName, SoundRecipe> = {
+  ...RECIPES,
+  bomb: {
+    segments: [
+      {
+        kind: "noise",
+        filter: { type: "bandpass", startHz: 3000, endHz: 120, q: 0.8 },
+        durationMs: 600,
+        gain: 0.4
+      }
+    ]
+  }
 };
 
 describe("createSoundPlayer", () => {
@@ -107,5 +163,112 @@ describe("createSoundPlayer", () => {
     expect(audio.oscillators).toHaveLength(2);
     expect(audio.oscillators[0]?.start).toHaveBeenCalledWith(0);
     expect(audio.oscillators[1]?.start).toHaveBeenCalledWith(0.05);
+  });
+
+  it("plays a noise segment through one looped buffer source and a filter of the recipe's type", () => {
+    // Given a recipe with one bandpass noise segment
+    const audio = stubAudioContext("running");
+
+    // When it is played
+    createSoundPlayer(NOISE_RECIPES).play("bomb");
+
+    // Then one buffer source loops, feeds one bandpass filter, and starts
+    expect(audio.bufferSources).toHaveLength(1);
+    expect(audio.bufferSources[0]?.loop).toBe(true);
+    expect(audio.bufferSources[0]?.start).toHaveBeenCalledWith(0);
+    expect(audio.filters).toHaveLength(1);
+    expect(audio.filters[0]?.type).toBe("bandpass");
+    expect(audio.bufferSources[0]?.connect).toHaveBeenCalledWith(audio.filters[0]);
+
+    // And the filter sweeps exponentially with the recipe's Q
+    expect(audio.filters[0]?.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(120, 0.6);
+    expect(audio.filters[0]?.Q.setValueAtTime).toHaveBeenCalledWith(0.8, 0);
+    expect(audio.oscillators).toHaveLength(0);
+  });
+
+  it("creates the noise buffer once per context and reuses it across plays", () => {
+    // Given a player with a noise recipe
+    const audio = stubAudioContext("running");
+    const player = createSoundPlayer(NOISE_RECIPES);
+
+    // When the sound is played twice
+    player.play("bomb");
+    player.play("bomb");
+
+    // Then one buffer exists and both sources use it
+    expect(audio.buffers).toHaveLength(1);
+    expect(audio.bufferSources[0]?.buffer).toBe(audio.buffers[0]);
+    expect(audio.bufferSources[1]?.buffer).toBe(audio.buffers[0]);
+  });
+
+  it("starts a segment without offsetMs when the previous segment ends", () => {
+    // Given a recipe whose second segment has no offsetMs
+    const audio = stubAudioContext("running");
+    const recipes: Record<SoundName, SoundRecipe> = {
+      ...RECIPES,
+      reveal: {
+        segments: [
+          {
+            kind: "tone",
+            wave: "sine",
+            startHz: 400,
+            endHz: 400,
+            durationMs: 100,
+            gain: 0.1,
+            offsetMs: 200
+          },
+          { kind: "tone", wave: "sine", startHz: 400, endHz: 400, durationMs: 100, gain: 0.1 }
+        ]
+      }
+    };
+
+    // When it is played
+    createSoundPlayer(recipes).play("reveal");
+
+    // Then the second segment starts at 200 ms + 100 ms
+    expect(audio.oscillators[1]?.start).toHaveBeenCalledWith(0.3);
+  });
+
+  it("fades linearly to 0 for decay linear and exponentially to the floor by default", () => {
+    // Given a linear-decay segment and a default-decay segment
+    const audio = stubAudioContext("running");
+    const recipes: Record<SoundName, SoundRecipe> = {
+      ...RECIPES,
+      reveal: {
+        segments: [
+          {
+            kind: "tone",
+            wave: "sine",
+            startHz: 400,
+            endHz: 400,
+            durationMs: 100,
+            gain: 0.1,
+            offsetMs: 0,
+            decay: "linear"
+          },
+          {
+            kind: "tone",
+            wave: "sine",
+            startHz: 400,
+            endHz: 400,
+            durationMs: 100,
+            gain: 0.1,
+            offsetMs: 0
+          }
+        ]
+      }
+    };
+
+    // When it is played
+    createSoundPlayer(recipes).play("reveal");
+
+    // Then the linear segment ramps its gain linearly to 0 at its end
+    const [linear, exponential] = audio.gains;
+    expect(linear?.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0, 0.1);
+    expect(linear?.gain.exponentialRampToValueAtTime).not.toHaveBeenCalled();
+
+    // And the default segment ramps exponentially to the floor
+    expect(exponential?.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.0001, 0.1);
+    expect(exponential?.gain.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
   });
 });
