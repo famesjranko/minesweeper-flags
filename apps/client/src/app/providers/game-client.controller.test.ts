@@ -26,6 +26,8 @@ class FakeTransport implements GameClientTransport {
 
   connect = (): void => {
     this.connectCalls += 1;
+    // Like the WebSocket transport, an open or opening connection is reused silently.
+    if (this.status !== "disconnected") return;
     this.emitStatus({ status: "connecting" });
   };
 
@@ -342,6 +344,18 @@ describe("game client controller", () => {
     );
     expect(scheduler.getTimeoutCount()).toBe(0);
     expect(store.getSnapshot().connectionStatus).toBe("disconnected");
+  });
+
+  it("reports connecting when the lobby opens before the client starts", () => {
+    // Given a client that has not started yet
+    const { controller, store } = createHarness();
+
+    // When the lobby opens the connection and the client then starts
+    controller.openLobby();
+    controller.start();
+
+    // Then the status shows the connection attempt in progress
+    expect(store.getSnapshot().connectionStatus).toBe("connecting");
   });
 
   it("keeps the connecting status through retry delays until the transport reconnects", () => {
