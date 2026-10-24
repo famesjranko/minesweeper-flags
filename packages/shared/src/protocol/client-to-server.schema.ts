@@ -1,3 +1,4 @@
+import { DEFAULT_BOARD_SIZE } from "@minesweeper-flags/game-engine";
 import { z } from "zod";
 import {
   boardSizeSchema,
@@ -26,8 +27,8 @@ export const roomCreateEventSchema = z.object({
   type: z.literal(CLIENT_EVENT_NAMES.roomCreate),
   payload: z.object({
     displayName: displayNameSchema,
-    // Optional so a client built before board sizes still creates a classic room.
-    boardSize: boardSizeSchema.optional()
+    // A client built before board sizes sends none; it gets the classic room it expects.
+    boardSize: boardSizeSchema.default(DEFAULT_BOARD_SIZE)
   })
 });
 

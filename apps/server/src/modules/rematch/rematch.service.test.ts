@@ -14,7 +14,7 @@ describe("rematch service", () => {
     const matchRepository = new InMemoryMatchRepository();
     const matchService = new MatchService(roomService, matchRepository, roomTaskRunner);
     const rematchService = new RematchService(roomService, matchService, roomTaskRunner);
-    const { room: lobbyRoom } = await roomService.createRoom("Host");
+    const { room: lobbyRoom } = await roomService.createRoom("Host", "classic");
     const { room } = await roomService.joinRoomByInviteToken(lobbyRoom.inviteToken ?? "", "Guest");
     const [host, guest] = room.players;
 
@@ -55,7 +55,7 @@ describe("rematch service", () => {
     const matchRepository = new InMemoryMatchRepository();
     const matchService = new MatchService(roomService, matchRepository);
     const rematchService = new RematchService(roomService, matchService);
-    const { room: lobbyRoom } = await roomService.createRoom("Host", undefined, "large");
+    const { room: lobbyRoom } = await roomService.createRoom("Host", "large");
     const { room } = await roomService.joinRoomByInviteToken(lobbyRoom.inviteToken ?? "", "Guest");
     const [host, guest] = room.players;
     if (!host || !guest) throw new Error("Expected the fixture room to include both players.");

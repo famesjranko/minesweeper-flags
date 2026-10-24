@@ -167,7 +167,7 @@ describe("game client state helpers", () => {
     expect(
       shouldQueueWhileOffline({
         type: CLIENT_EVENT_NAMES.roomCreate,
-        payload: { displayName: "Host" }
+        payload: { displayName: "Host", boardSize: "classic" }
       })
     ).toBe(true);
 

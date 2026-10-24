@@ -74,7 +74,7 @@ describe("GameCommandService", () => {
     vi.spyOn(logger, "info").mockImplementation(() => {});
 
     const { commandService } = createCommandService();
-    const roomCreated = await commandService.createRoom("Host");
+    const roomCreated = await commandService.createRoom("Host", "classic");
     const hostSession = roomCreated.sessionToBind;
 
     if (!hostSession) {
@@ -124,7 +124,7 @@ describe("GameCommandService", () => {
   it("cancels only the sole host's waiting room and acknowledges that request", async () => {
     // Given a host with a waiting room
     const { commandService, roomService } = createCommandService();
-    const created = await commandService.createRoom("Host");
+    const created = await commandService.createRoom("Host", "classic");
     const hostSession = created.sessionToBind;
     if (!hostSession) throw new Error("Expected a host session.");
 
@@ -142,7 +142,7 @@ describe("GameCommandService", () => {
   it("does not cancel a room after its guest has claimed the second seat", async () => {
     // Given a room whose join command has started its match
     const { commandService } = createCommandService();
-    const created = await commandService.createRoom("Host");
+    const created = await commandService.createRoom("Host", "classic");
     const hostSession = created.sessionToBind;
     const createdEvent = created.steps[0];
     if (
@@ -165,7 +165,7 @@ describe("GameCommandService", () => {
     vi.spyOn(logger, "info").mockImplementation(() => {});
 
     const { commandService, matchService } = createCommandService();
-    const roomCreated = await commandService.createRoom("Host");
+    const roomCreated = await commandService.createRoom("Host", "classic");
     const hostSession = roomCreated.sessionToBind;
 
     if (!hostSession) {
@@ -201,7 +201,7 @@ describe("GameCommandService", () => {
     vi.spyOn(logger, "info").mockImplementation(() => {});
 
     const { commandService } = createCommandService();
-    const roomCreated = await commandService.createRoom("Host");
+    const roomCreated = await commandService.createRoom("Host", "classic");
     const hostSession = roomCreated.sessionToBind;
 
     if (!hostSession) {
@@ -236,7 +236,7 @@ const deferred = () => {
   return { promise, resolve };
 };
 const waitingHost = async (h: ReturnType<typeof createCommandService>) => {
-  const session = (await h.commandService.createRoom("Host")).sessionToBind;
+  const session = (await h.commandService.createRoom("Host", "classic")).sessionToBind;
   if (!session) throw new Error("Expected session.");
   const room = await h.roomService.getRoomByCode(session.roomCode);
   if (!room.inviteToken) throw new Error("Expected invite.");
@@ -248,8 +248,10 @@ describe("waiting-room cancellation contracts", () => {
     const h = createCommandService(1);
     const { session, inviteToken } = await waitingHost(h);
     // When a stranger creates and the owner then creates again
-    await expect(h.commandService.createRoom("Foreign")).rejects.toThrow("All room slots");
-    const replacement = await h.commandService.createRoom("Host again", session);
+    await expect(h.commandService.createRoom("Foreign", "classic")).rejects.toThrow(
+      "All room slots"
+    );
+    const replacement = await h.commandService.createRoom("Host again", "classic", session);
     // Then only the replacement occupies capacity and the old invite is invalid
     expect(await h.roomRepository.listAll()).toHaveLength(1);
     expect(replacement.sessionToBind?.roomCode).not.toBe(session.roomCode);

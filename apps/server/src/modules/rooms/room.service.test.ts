@@ -5,7 +5,7 @@ import { RoomService } from "./room.service.js";
 describe("room service", () => {
   it("serializes invite joins and activity touches so players are not lost", async () => {
     const roomService = new RoomService(new InMemoryRoomRepository());
-    const { room } = await roomService.createRoom("Host");
+    const { room } = await roomService.createRoom("Host", "classic");
 
     const [joinResult] = await Promise.all([
       roomService.joinRoomByInviteToken(room.inviteToken ?? "", "Guest"),
@@ -23,7 +23,7 @@ describe("room service", () => {
 
   it("serializes concurrent invite joins so only one guest can claim the open seat", async () => {
     const roomService = new RoomService(new InMemoryRoomRepository());
-    const { room } = await roomService.createRoom("Host");
+    const { room } = await roomService.createRoom("Host", "classic");
 
     const results = await Promise.allSettled([
       roomService.joinRoomByInviteToken(room.inviteToken ?? "", "Guest A"),
@@ -40,7 +40,7 @@ describe("room service", () => {
 
   it("rejects invalid invite tokens", async () => {
     const roomService = new RoomService(new InMemoryRoomRepository());
-    await roomService.createRoom("Host");
+    await roomService.createRoom("Host", "classic");
 
     await expect(
       roomService.joinRoomByInviteToken("AbCdEfGhIjKlMnOpQrStUv", "Guest")

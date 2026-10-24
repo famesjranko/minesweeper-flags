@@ -1,4 +1,4 @@
-import { TOTAL_MINES } from "../board/board.constants.js";
+import { BOARD_SIZES } from "../board/board.constants.js";
 import type { MatchState } from "./match.types.js";
 
 /** The bomb deficit on the classic board. */
@@ -9,7 +9,7 @@ export const MIN_BOMB_DEFICIT = 4;
  * on every size: 4, 6, 9 and 14 for the presets.
  */
 export const getBombDeficit = (mineCount: number): number =>
-  Math.max(1, Math.round((mineCount * MIN_BOMB_DEFICIT) / TOTAL_MINES));
+  Math.max(1, Math.round((mineCount * MIN_BOMB_DEFICIT) / BOARD_SIZES.classic.mineCount));
 
 export const incrementPlayerScore = (
   state: MatchState,

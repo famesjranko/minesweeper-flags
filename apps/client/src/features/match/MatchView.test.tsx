@@ -1,4 +1,5 @@
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MatchView } from "./MatchView.js";
@@ -423,7 +424,9 @@ describe("MatchView bomb threshold on a larger board", () => {
 
     // Then the bomb is locked
     expect(html).toContain('class="inline-bomb is-locked"');
-    // And the hint names the giant board's deficit of 14
+    // And the turn hint names the giant board's deficit of 14
     expect(html).toContain("Bomb unlocks when you trail by 14.");
+    // And the bomb button's own hint names the same deficit
+    expect(html).toContain("It becomes available while trailing by 14 or more on your turn.");
   });
 });

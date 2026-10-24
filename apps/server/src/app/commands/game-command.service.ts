@@ -1,4 +1,4 @@
-import { type BoardSize, DEFAULT_BOARD_SIZE } from "@minesweeper-flags/game-engine";
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import {
   type actionSchema,
   type ChatMessageDto,
@@ -50,8 +50,8 @@ export class GameCommandService {
 
   async createRoom(
     displayName: string,
-    previousSession?: PlayerSession,
-    boardSize: BoardSize = DEFAULT_BOARD_SIZE
+    boardSize: BoardSize,
+    previousSession?: PlayerSession
   ): Promise<CommandExecution> {
     const { roomService, playerSessionService, maxConcurrentRooms, deleteRoomState } =
       this.dependencies;
@@ -60,8 +60,8 @@ export class GameCommandService {
     }
     const { room, player } = await roomService.createRoom(
       displayName,
-      maxConcurrentRooms,
-      boardSize
+      boardSize,
+      maxConcurrentRooms
     );
 
     if (!room.inviteToken) {

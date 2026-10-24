@@ -1,5 +1,5 @@
 // biome-ignore lint/style/noExcessiveLinesPerFile: The controller owns one transport lifecycle.
-import type { BoardSize } from "@minesweeper-flags/game-engine";
+import { type BoardSize, DEFAULT_BOARD_SIZE } from "@minesweeper-flags/game-engine";
 import {
   CLIENT_EVENT_NAMES,
   type ClientEvent,
@@ -114,12 +114,12 @@ export class GameClientController {
     this.restartTransport();
   };
 
-  createRoom = (displayName: string, boardSize?: BoardSize): void => {
+  createRoom = (displayName: string, boardSize: BoardSize = DEFAULT_BOARD_SIZE): void => {
     if (this.pendingRoomCancellation) return;
     this.startLobbyTransition();
     this.sendEvent({
       type: CLIENT_EVENT_NAMES.roomCreate,
-      payload: { displayName, ...(boardSize ? { boardSize } : {}) }
+      payload: { displayName, boardSize }
     });
   };
 

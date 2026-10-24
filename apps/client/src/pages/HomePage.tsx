@@ -1,6 +1,6 @@
 import "../shared-ui/game-mode.css";
 
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/game-engine";
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
 import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
 import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";

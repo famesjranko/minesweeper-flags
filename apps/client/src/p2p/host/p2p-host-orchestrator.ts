@@ -1,7 +1,6 @@
 import {
   type BoardSize,
   createMatchState,
-  DEFAULT_BOARD_SIZE,
   type MatchAction,
   type MatchState,
   resignMatch,
@@ -121,7 +120,7 @@ export class P2PHostOrchestrator {
     this.state = restored;
   }
 
-  createRoom(displayName: string, boardSize: BoardSize = DEFAULT_BOARD_SIZE): P2PHostCommandResult {
+  createRoom(displayName: string, boardSize: BoardSize): P2PHostCommandResult {
     if (this.state.room) {
       throw new Error("A direct match room is already active.");
     }

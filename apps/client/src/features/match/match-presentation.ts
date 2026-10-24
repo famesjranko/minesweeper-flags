@@ -1,4 +1,4 @@
-import { getBombDeficit } from "@minesweeper-flags/shared";
+import { getBombDeficit } from "@minesweeper-flags/game-engine";
 import type { MatchViewProps } from "./match-view.types.js";
 import { getPlayerSlots } from "./PlayerPanel.js";
 

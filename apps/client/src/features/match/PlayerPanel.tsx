@@ -1,4 +1,5 @@
-import { getBombDeficit, type MatchStateDto } from "@minesweeper-flags/shared";
+import { getBombDeficit } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { CrownIcon } from "../../shared-ui/CrownIcon.js";
 import { PlayerBombButton } from "./PlayerBombButton.js";
 
