@@ -771,6 +771,41 @@ describe("createP2PGameClientRuntime", () => {
     hostRuntime.controller.dispose();
   });
 
+  it("starts the direct match for both players on the board size the host chose", async () => {
+    // Given a host and a guest runtime over paired peers
+    const hostPeer = new PairedFakePeer();
+    const guestPeer = new PairedFakePeer();
+    const rendezvousClient = new FakeRendezvousClient();
+    hostPeer.setPartner(guestPeer);
+    guestPeer.setPartner(hostPeer);
+    const hostRuntime = createP2PGameClientRuntime({
+      createPeer: () => hostPeer,
+      rendezvousClient
+    });
+    const guestRuntime = createP2PGameClientRuntime({
+      createPeer: () => guestPeer,
+      rendezvousClient
+    });
+    hostRuntime.controller.start();
+    guestRuntime.controller.start();
+
+    // When the host creates a huge-board room and the guest answers its invite
+    hostRuntime.controller.createRoom("Host Player", "huge");
+    await flushPromises();
+    guestRuntime.p2p?.controller.openGuestSetupSession("session-1");
+    await flushPromises();
+    guestRuntime.p2p?.controller.createGuestAnswer("Guest Player");
+    await flushPromises();
+    await flushPromises();
+
+    // Then the guest's match is on a 24×24 board with 115 mines
+    const board = guestRuntime.store.getSnapshot().match?.board;
+    expect(board && [board.rows, board.columns, board.mineCount]).toEqual([24, 24, 115]);
+
+    guestRuntime.controller.dispose();
+    hostRuntime.controller.dispose();
+  });
+
   it("shows the guest offline on the host when the guest's connection drops", async () => {
     // Given a host and guest in a live direct match
     const hostPeer = new PairedFakePeer();

@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import { DEPLOYMENT_MODE, type DeploymentMode, resolveServerUrl } from "../../lib/config/env.js";
 import { createBrowserSessionPersistence } from "../../lib/socket/session-storage.js";
 import type { P2PRuntimeSupport } from "../../p2p/runtime/p2p-runtime.types.js";
@@ -13,7 +14,7 @@ export interface GameClientRuntimeController {
   dispose: () => void;
   hasStoredSession: (roomCode: string) => boolean;
   openLobby: () => void;
-  createRoom: (displayName: string) => void;
+  createRoom: (displayName: string, boardSize?: BoardSize) => void;
   joinRoom: (displayName: string, inviteToken: string) => void;
   reconnect: (roomCode: string) => void;
   submitCellAction: (row: number, column: number) => void;

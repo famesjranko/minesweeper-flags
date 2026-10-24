@@ -1,10 +1,11 @@
-import { WINNING_SCORE } from "@minesweeper-flags/game-engine";
+import { getWinningScore } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import { diffMatchSounds } from "./match-sound-events.js";
 
 type Action = NonNullable<MatchStateDto["lastAction"]>;
 
+const WINNING_SCORE = getWinningScore(51);
 const ME = "me";
 const THEM = "them";
 
@@ -22,7 +23,7 @@ const action = (overrides: Partial<Action> = {}): Action => ({
 const match = (overrides: Partial<MatchStateDto> = {}): MatchStateDto => ({
   roomId: "room",
   phase: "live",
-  board: { rows: 1, columns: 1, mineCount: 1, cells: [] },
+  board: { rows: 1, columns: 1, mineCount: 51, cells: [] },
   players: [
     {
       playerId: ME,
@@ -195,6 +196,28 @@ describe("diffMatchSounds", () => {
 
     // Then only win plays
     expect(sounds).toEqual(["win"]);
+  });
+
+  it("plays resign when a player leads a bigger board without reaching its win score", () => {
+    // Given the opponent has 26 points on a board that needs 90, and the match ends without a new move
+    const last = action({ playerId: THEM, outcome: "mine_claimed" });
+    const previous = match({ turnNumber: 3, lastAction: last });
+    const next = match({
+      board: { rows: 1, columns: 1, mineCount: 179, cells: [] },
+      players: withScores([10, 26]),
+      phase: "finished",
+      turnPhase: "ended",
+      turnNumber: 3,
+      lastAction: { ...last },
+      winnerPlayerId: THEM,
+      currentTurnPlayerId: null
+    });
+
+    // When the snapshots are compared
+    const sounds = diffMatchSounds(previous, next, ME);
+
+    // Then the viewer hears that the match ended by resignation
+    expect(sounds).toEqual(["resign"]);
   });
 
   it("plays lose when the opponent reaches the win score", () => {

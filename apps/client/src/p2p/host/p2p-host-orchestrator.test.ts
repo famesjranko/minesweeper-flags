@@ -57,6 +57,40 @@ describe("P2PHostOrchestrator", () => {
     expect(snapshot.match?.phase).toBe("live");
   });
 
+  it("starts the direct match on the board size the host chose", () => {
+    // Given a host who creates a room with a giant board
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host", "giant");
+
+    // When a guest is accepted
+    orchestrator.acceptGuest({ displayName: "Guest" });
+
+    // Then the match is on a 30×30 board with 179 mines
+    const board = orchestrator.getState().match?.board;
+    expect(
+      board && { rows: board.rows, columns: board.columns, mineCount: board.mineCount }
+    ).toEqual({ rows: 30, columns: 30, mineCount: 179 });
+  });
+
+  it("starts the direct rematch on the room's board size", () => {
+    // Given a finished match on a large board
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host", "large");
+    orchestrator.acceptGuest({ displayName: "Guest" });
+    orchestrator.resignHost();
+
+    // When both players request a rematch
+    orchestrator.requestHostRematch();
+    orchestrator.requestGuestRematch();
+
+    // Then the new match is live on a 20×20 board with 79 mines
+    const match = orchestrator.getState().match;
+    expect(match?.phase).toBe("live");
+    expect(match && [match.board.rows, match.board.columns, match.board.mineCount]).toEqual([
+      20, 20, 79
+    ]);
+  });
+
   it("broadcasts chat, match state, rematch updates, and match restart", () => {
     const orchestrator = createOrchestrator();
 
@@ -392,6 +426,23 @@ describe("P2PHostOrchestrator", () => {
     expect(orchestrator.getState().match?.lastAction).toBeNull();
   });
 
+  it("hydrates a host snapshot saved before board sizes as a classic room", () => {
+    // Given a host snapshot whose room has no board size
+    const source = createOrchestrator();
+    source.createRoom("Host", "giant");
+    source.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
+    const snapshot = source.getState();
+    if (!snapshot.room) throw new Error("Expected a room.");
+    const { boardSize: _omitted, ...legacyRoom } = snapshot.room;
+    const restored = createOrchestrator();
+
+    // When a new orchestrator hydrates that snapshot
+    restored.hydrate({ ...snapshot, room: legacyRoom as typeof snapshot.room });
+
+    // Then the restored room uses the classic board
+    expect(restored.getState().room?.boardSize).toBe("classic");
+  });
+
   it("hydrates host authority state and continues serving commands", () => {
     const source = createOrchestrator();
 
@@ -453,6 +504,7 @@ describe("P2PHostOrchestrator", () => {
             { playerId: "player-2", displayName: "Guest" }
           ],
           nextStarterIndex: 0,
+          boardSize: "classic",
           createdAt: 1,
           updatedAt: 2
         },

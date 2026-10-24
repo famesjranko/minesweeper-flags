@@ -1,4 +1,4 @@
-import { WINNING_SCORE } from "@minesweeper-flags/game-engine";
+import { getWinningScore } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { isSameAction } from "../../entities/board/last-move.js";
 import type { SoundName } from "./sound-player.js";
@@ -23,12 +23,13 @@ const moveSound = (previous: MatchStateDto, next: MatchStateDto): SoundName | nu
   return isNewAction ? MOVE_SOUNDS[lastAction.outcome] : null;
 };
 
-// The engine ends a match without a WINNING_SCORE only through resign, so the snapshot alone tells who gave up.
+// The engine ends a match without a winning score only through resign, so the snapshot alone tells who gave up.
 const finishSound = (next: MatchStateDto, viewerPlayerId: string): SoundName => {
   if (next.winnerPlayerId === viewerPlayerId) {
     return "win";
   }
-  const someoneWon = next.players.some((player) => player.score >= WINNING_SCORE);
+  const winningScore = getWinningScore(next.board.mineCount);
+  const someoneWon = next.players.some((player) => player.score >= winningScore);
   return someoneWon ? "lose" : "resign";
 };
 

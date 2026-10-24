@@ -227,7 +227,11 @@ export class RealtimeMessageRouter {
 
     await dispatchExecution(
       socket,
-      await commandService.createRoom(event.payload.displayName, previousSession)
+      await commandService.createRoom(
+        event.payload.displayName,
+        previousSession,
+        event.payload.boardSize
+      )
     );
   }
 

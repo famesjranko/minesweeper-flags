@@ -24,6 +24,7 @@ const createRoom = (updatedAt: number): RoomRecord => ({
     }
   ],
   nextStarterIndex: 0,
+  boardSize: "classic",
   createdAt: 0,
   updatedAt
 });

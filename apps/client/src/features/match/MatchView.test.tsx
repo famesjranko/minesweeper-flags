@@ -33,7 +33,8 @@ const createMatch = ({
   board: {
     rows: 2,
     columns: 2,
-    mineCount: 1,
+    // The bomb threshold scales with the mine count; the classic count keeps it at 4.
+    mineCount: 51,
     cells: [
       [
         { row: 0, column: 0, status: "hidden", adjacentMines: null, claimedByPlayerId: null },
@@ -527,5 +528,45 @@ describe("MatchView sound wiring", () => {
     act(() => root.unmount());
     vi.unstubAllGlobals();
     Reflect.deleteProperty(HTMLElement.prototype, "close");
+  });
+});
+
+describe("MatchView bomb threshold on a larger board", () => {
+  it("keeps the bomb locked on a giant board at the classic deficit", () => {
+    // Given a giant-board match where the viewer trails by the classic deficit of 4
+    const match = {
+      ...createMatch({ currentTurnPlayerId: "player-1", scores: [2, 2 + MIN_BOMB_DEFICIT] }),
+      board: {
+        ...createMatch({ currentTurnPlayerId: "player-1", scores: [0, 0] }).board,
+        mineCount: 179
+      }
+    };
+
+    // When the match view renders
+    const html = renderToStaticMarkup(
+      <MatchView
+        roomCode="ABCDE"
+        currentPlayerId="player-1"
+        match={match}
+        bombArmed={false}
+        connectionStatus="connected"
+        chatMessages={[]}
+        chatError={null}
+        chatDraft=""
+        chatPending={false}
+        onToggleBomb={() => {}}
+        onCellSelect={() => {}}
+        onChatDraftChange={() => {}}
+        onSendChatMessage={() => {}}
+        onResign={() => {}}
+        onRequestRematch={() => {}}
+        onCancelRematch={() => {}}
+      />
+    );
+
+    // Then the bomb is locked
+    expect(html).toContain('class="inline-bomb is-locked"');
+    // And its tooltip names the giant board's deficit of 14
+    expect(html).toContain("trailing by 14 or more");
   });
 });

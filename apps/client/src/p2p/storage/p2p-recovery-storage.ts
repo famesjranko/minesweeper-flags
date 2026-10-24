@@ -1,4 +1,4 @@
-import type { MatchState } from "@minesweeper-flags/game-engine";
+import { DEFAULT_BOARD_SIZE, type MatchState } from "@minesweeper-flags/game-engine";
 import type { ChatMessageDto } from "@minesweeper-flags/shared";
 import type { ClientSession, PlayerIdentity } from "../../app/providers/game-client.state.js";
 import type { P2PGuestSessionRecord, P2PHostSessionRecord } from "../host/p2p-host-session.js";
@@ -73,6 +73,11 @@ const cloneHostReconnectMetadata = (
   ...(reconnect.lastInstanceId ? { lastInstanceId: reconnect.lastInstanceId } : {})
 });
 
+// Rooms saved before board sizes have none; every room was classic then.
+const fillLegacyBoardSize = (room: P2PHostRoomRecord): void => {
+  room.boardSize ??= DEFAULT_BOARD_SIZE;
+};
+
 export const validateHostAuthoritySnapshot = (value: unknown): P2PHostAuthoritySnapshot | null => {
   const result = hostAuthoritySnapshotSchema.safeParse(value);
 
@@ -85,7 +90,13 @@ export const validateHostAuthoritySnapshot = (value: unknown): P2PHostAuthorityS
   // the object in the schema's declared field order, which breaks the
   // serializeRecoveryRecord contract that JSON.stringify(record) is byte-equal
   // to what the host runtime produced (e.g. createMatchState's key ordering).
-  return cloneP2PHostRuntimeState(value as P2PHostAuthoritySnapshot);
+  const snapshot = cloneP2PHostRuntimeState(value as P2PHostAuthoritySnapshot);
+
+  if (snapshot.room) {
+    fillLegacyBoardSize(snapshot.room);
+  }
+
+  return snapshot;
 };
 
 export const createHostRecoveryRecord = ({
@@ -202,6 +213,10 @@ export const createBrowserP2PRecoveryPersistence = (): P2PRecoveryPersistence =>
     // preserved as it appeared in storage. This matches the byte-for-byte
     // round-trip that callers depend on when comparing serialized records.
     const record = parsed as P2PRecoveryRecord;
+
+    if (record.role === "host") {
+      fillLegacyBoardSize(record.room);
+    }
 
     // roomCode cross-check is a caller-intent check, not structural. It stays
     // outside the schema so the schema can be reused for snapshots that aren't

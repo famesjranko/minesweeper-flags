@@ -183,6 +183,22 @@ describe("game client controller", () => {
     });
   });
 
+  it("sends the chosen board size with the room create command", () => {
+    // Given a started controller on a connected transport
+    const { controller, transport } = createHarness();
+    controller.start();
+    transport.emitStatus({ status: "connected" });
+
+    // When the player creates a room with a large board
+    controller.createRoom("Host", "large");
+
+    // Then the room create command carries the large board size
+    expect(transport.sentEvents).toContainEqual({
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host", boardSize: "large" }
+    });
+  });
+
   it("queues offline room bootstrap commands until the transport reconnects", () => {
     const { controller, store, transport } = createHarness();
 
