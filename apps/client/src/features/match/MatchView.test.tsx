@@ -1,4 +1,5 @@
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MatchView } from "./MatchView.js";
@@ -15,7 +16,8 @@ const createMatch = ({
   board: {
     rows: 2,
     columns: 2,
-    mineCount: 1,
+    // The bomb threshold scales with the mine count; the classic count keeps it at 4.
+    mineCount: 51,
     cells: [
       [
         { row: 0, column: 0, status: "hidden", adjacentMines: null, claimedByPlayerId: null },
@@ -385,4 +387,46 @@ it("keeps multiplayer header, presence, and chat UI by default", () => {
   expect(html).toContain('aria-label="Connected"');
   expect(html).toContain("Full chat ↗");
   expect(html).toContain("No messages yet.");
+});
+
+describe("MatchView bomb threshold on a larger board", () => {
+  it("keeps the bomb locked on a giant board at the classic deficit", () => {
+    // Given a giant-board match where the viewer trails by the classic deficit of 4
+    const match = {
+      ...createMatch({ currentTurnPlayerId: "player-1", scores: [2, 2 + MIN_BOMB_DEFICIT] }),
+      board: {
+        ...createMatch({ currentTurnPlayerId: "player-1", scores: [0, 0] }).board,
+        mineCount: 179
+      }
+    };
+
+    // When the match view renders
+    const html = renderToStaticMarkup(
+      <MatchView
+        roomCode="ABCDE"
+        currentPlayerId="player-1"
+        match={match}
+        bombArmed={false}
+        connectionStatus="connected"
+        chatMessages={[]}
+        chatError={null}
+        chatDraft=""
+        chatPending={false}
+        onToggleBomb={() => {}}
+        onCellSelect={() => {}}
+        onChatDraftChange={() => {}}
+        onSendChatMessage={() => {}}
+        onResign={() => {}}
+        onRequestRematch={() => {}}
+        onCancelRematch={() => {}}
+      />
+    );
+
+    // Then the bomb is locked
+    expect(html).toContain('class="inline-bomb is-locked"');
+    // And the turn hint names the giant board's deficit of 14
+    expect(html).toContain("Bomb unlocks when you trail by 14.");
+    // And the bomb button's own hint names the same deficit
+    expect(html).toContain("It becomes available while trailing by 14 or more on your turn.");
+  });
 });

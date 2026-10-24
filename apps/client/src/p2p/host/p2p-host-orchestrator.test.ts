@@ -31,7 +31,7 @@ describe("P2PHostOrchestrator", () => {
   it("mirrors the server bootstrap ordering for create and guest acceptance", () => {
     const orchestrator = createOrchestrator();
 
-    const created = orchestrator.createRoom("Host");
+    const created = orchestrator.createRoom("Host", "classic");
 
     expect(created.steps.map((step) => `${step.target}:${step.event.type}`)).toEqual([
       "host-local:room:created",
@@ -57,10 +57,44 @@ describe("P2PHostOrchestrator", () => {
     expect(snapshot.match?.phase).toBe("live");
   });
 
+  it("starts the direct match on the board size the host chose", () => {
+    // Given a host who creates a room with a giant board
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host", "giant");
+
+    // When a guest is accepted
+    orchestrator.acceptGuest({ displayName: "Guest" });
+
+    // Then the match is on a 30×30 board with 179 mines
+    const board = orchestrator.getState().match?.board;
+    expect(
+      board && { rows: board.rows, columns: board.columns, mineCount: board.mineCount }
+    ).toEqual({ rows: 30, columns: 30, mineCount: 179 });
+  });
+
+  it("starts the direct rematch on the room's board size", () => {
+    // Given a finished match on a large board
+    const orchestrator = createOrchestrator();
+    orchestrator.createRoom("Host", "large");
+    orchestrator.acceptGuest({ displayName: "Guest" });
+    orchestrator.resignHost();
+
+    // When both players request a rematch
+    orchestrator.requestHostRematch();
+    orchestrator.requestGuestRematch();
+
+    // Then the new match is live on a 20×20 board with 79 mines
+    const match = orchestrator.getState().match;
+    expect(match?.phase).toBe("live");
+    expect(match && [match.board.rows, match.board.columns, match.board.mineCount]).toEqual([
+      20, 20, 79
+    ]);
+  });
+
   it("broadcasts chat, match state, rematch updates, and match restart", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest" });
 
     const hostChat = orchestrator.sendHostChat("Hello from host");
@@ -124,7 +158,7 @@ describe("P2PHostOrchestrator", () => {
   it("fans out actor-specific rejection events to the correct consumer", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest" });
 
     const rejected = orchestrator.sendGuestChat("   ");
@@ -147,9 +181,9 @@ describe("P2PHostOrchestrator", () => {
   it("rejects invalid display names during room creation and guest acceptance", () => {
     const orchestrator = createOrchestrator();
 
-    expect(() => orchestrator.createRoom("   ")).toThrow();
+    expect(() => orchestrator.createRoom("   ", "classic")).toThrow();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
 
     expect(() => orchestrator.acceptGuest({ displayName: "x".repeat(21) })).toThrow();
   });
@@ -157,7 +191,7 @@ describe("P2PHostOrchestrator", () => {
   it("interprets bound remote guest commands as the canonical guest identity", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
 
     const guestSession = orchestrator.getState().guestSession;
@@ -198,7 +232,7 @@ describe("P2PHostOrchestrator", () => {
   it("ignores remote privileged commands from the wrong binding", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
 
     const guestSession = orchestrator.getState().guestSession;
@@ -226,7 +260,7 @@ describe("P2PHostOrchestrator", () => {
   it("rejects bound guest commands with a spoofed host session token", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
 
     const snapshot = orchestrator.getState();
@@ -265,7 +299,7 @@ describe("P2PHostOrchestrator", () => {
   it("ignores remote attempts to use host-only commands over the guest channel", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
 
     const result = orchestrator.applyRemoteGuestCommand({
@@ -273,7 +307,8 @@ describe("P2PHostOrchestrator", () => {
       event: {
         type: CLIENT_EVENT_NAMES.roomCreate,
         payload: {
-          displayName: "Spoofed Host"
+          displayName: "Spoofed Host",
+          boardSize: "classic"
         }
       }
     });
@@ -285,7 +320,7 @@ describe("P2PHostOrchestrator", () => {
   it("rebinds the guest and replays bootstrap on player reconnect", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
     orchestrator.sendHostChat("ready to resume");
     orchestrator.applyHostAction({ type: "select", row: 0, column: 0 });
@@ -321,7 +356,7 @@ describe("P2PHostOrchestrator", () => {
   it("marks the guest disconnected once when its connection drops", () => {
     // Given a live match with a connected guest
     const orchestrator = createOrchestrator();
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
     const guestId = orchestrator.getState().guestSession?.playerId;
 
@@ -346,7 +381,7 @@ describe("P2PHostOrchestrator", () => {
   it("marks the guest connected again when it reconnects", () => {
     // Given a guest whose connection dropped
     const orchestrator = createOrchestrator();
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
     orchestrator.disconnectGuest();
     const guestSession = orchestrator.getState().guestSession;
@@ -379,7 +414,7 @@ describe("P2PHostOrchestrator", () => {
   it("rejects a move outside the board instead of throwing", () => {
     // Given a live match on the host's turn
     const orchestrator = createOrchestrator();
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
 
     // When a move targets a row past the board's edge
@@ -392,10 +427,27 @@ describe("P2PHostOrchestrator", () => {
     expect(orchestrator.getState().match?.lastAction).toBeNull();
   });
 
+  it("hydrates a host snapshot saved before board sizes as a classic room", () => {
+    // Given a host snapshot whose room has no board size
+    const source = createOrchestrator();
+    source.createRoom("Host", "giant");
+    source.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
+    const snapshot = source.getState();
+    if (!snapshot.room) throw new Error("Expected a room.");
+    const { boardSize: _omitted, ...legacyRoom } = snapshot.room;
+    const restored = createOrchestrator();
+
+    // When a new orchestrator hydrates that snapshot
+    restored.hydrate({ ...snapshot, room: legacyRoom as typeof snapshot.room });
+
+    // Then the restored room uses the classic board
+    expect(restored.getState().room?.boardSize).toBe("classic");
+  });
+
   it("hydrates host authority state and continues serving commands", () => {
     const source = createOrchestrator();
 
-    source.createRoom("Host");
+    source.createRoom("Host", "classic");
     source.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
     source.sendHostChat("before refresh");
     source.applyHostAction({ type: "select", row: 0, column: 0 });
@@ -453,6 +505,7 @@ describe("P2PHostOrchestrator", () => {
             { playerId: "player-2", displayName: "Guest" }
           ],
           nextStarterIndex: 0,
+          boardSize: "classic",
           createdAt: 1,
           updatedAt: 2
         },
@@ -494,7 +547,7 @@ describe("P2PHostOrchestrator", () => {
   it("rejects bound guest commands for the wrong room", () => {
     const orchestrator = createOrchestrator();
 
-    orchestrator.createRoom("Host");
+    orchestrator.createRoom("Host", "classic");
     orchestrator.acceptGuest({ displayName: "Guest", bindingId: "peer-1" });
 
     const guestSession = orchestrator.getState().guestSession;

@@ -1,4 +1,5 @@
 import type { BoardState } from "@minesweeper-flags/game-engine";
+import { boardSizeSchema } from "@minesweeper-flags/shared";
 import { z } from "zod";
 
 export const P2P_RECOVERY_STORAGE_VERSION = 1;
@@ -168,6 +169,8 @@ const hostRoomRecordSchema = z.object({
   inviteToken: nullableNonEmptyString,
   players: z.array(playerIdentitySchema),
   nextStarterIndex: z.union([z.literal(0), z.literal(1)]),
+  // Optional so a record saved before board sizes still restores; reading it fills in classic.
+  boardSize: boardSizeSchema.optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
 });

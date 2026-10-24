@@ -1,6 +1,15 @@
+import { BOARD_SIZES } from "../board/board.constants.js";
 import type { MatchState } from "./match.types.js";
 
+/** The bomb deficit on the classic board. */
 export const MIN_BOMB_DEFICIT = 4;
+
+/**
+ * The deficit scales with the board's mines, so the bomb unlocks at the same share of the board
+ * on every size: 4, 6, 9 and 14 for the presets.
+ */
+export const getBombDeficit = (mineCount: number): number =>
+  Math.max(1, Math.round((mineCount * MIN_BOMB_DEFICIT) / BOARD_SIZES.classic.mineCount));
 
 export const incrementPlayerScore = (
   state: MatchState,
@@ -95,5 +104,5 @@ export const getPlayerScoreDeficit = (state: MatchState, playerId: string): numb
 export const isPlayerTrailingByAtLeast = (
   state: MatchState,
   playerId: string,
-  minimumDeficit = MIN_BOMB_DEFICIT
+  minimumDeficit = getBombDeficit(state.board.mineCount)
 ): boolean => getPlayerScoreDeficit(state, playerId) >= minimumDeficit;

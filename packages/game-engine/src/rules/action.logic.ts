@@ -1,3 +1,4 @@
+import { BOARD_SIZES, type BoardSize, DEFAULT_BOARD_SIZE } from "../board/board.constants.js";
 import {
   createBoard,
   getCell,
@@ -8,9 +9,9 @@ import {
 import type { MatchState, PlayerMatchState } from "../match/match.types.js";
 import {
   clearRematchVotes,
+  getBombDeficit,
   incrementPlayerScore,
   isPlayerTrailingByAtLeast,
-  MIN_BOMB_DEFICIT,
   useBomb
 } from "../match/scoring.logic.js";
 import { keepTurn, switchTurn } from "../match/turn.logic.js";
@@ -26,6 +27,7 @@ interface CreateMatchOptions {
   seed: number;
   createdAt: number;
   startingPlayerId: string;
+  boardSize?: BoardSize;
 }
 
 const finalizeState = (state: MatchState, updatedAt: number): MatchState => {
@@ -61,11 +63,12 @@ export const createMatchState = ({
   players,
   seed,
   createdAt,
-  startingPlayerId
+  startingPlayerId,
+  boardSize = DEFAULT_BOARD_SIZE
 }: CreateMatchOptions): MatchState => ({
   roomId,
   phase: "live",
-  board: createBoard(seed),
+  board: createBoard(seed, BOARD_SIZES[boardSize]),
   players: players.map((player) => ({
     playerId: player.playerId,
     displayName: player.displayName,
@@ -171,7 +174,9 @@ const resolveBomb = (
   }
 
   if (!isPlayerTrailingByAtLeast(state, action.playerId)) {
-    return reject(`Bombs can only be used while trailing by ${MIN_BOMB_DEFICIT} or more.`);
+    return reject(
+      `Bombs can only be used while trailing by ${getBombDeficit(state.board.mineCount)} or more.`
+    );
   }
 
   const bombResult = revealBombArea(state.board, action.row, action.column);

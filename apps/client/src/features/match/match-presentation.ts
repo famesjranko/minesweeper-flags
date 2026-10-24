@@ -1,4 +1,4 @@
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { getBombDeficit } from "@minesweeper-flags/game-engine";
 import type { MatchViewProps } from "./match-view.types.js";
 import { getPlayerSlots } from "./PlayerPanel.js";
 
@@ -12,6 +12,7 @@ interface TurnHintInput {
   bombArmed: boolean;
   canBomb: boolean;
   scoreDeficit: number;
+  bombDeficit: number;
   opponentName: string;
 }
 
@@ -21,14 +22,15 @@ const getTurnHint = ({
   bombArmed,
   canBomb,
   scoreDeficit,
+  bombDeficit,
   opponentName
 }: TurnHintInput) => {
   if (finished) return "Match finished";
   if (!canAct) return `${opponentName} is moving.`;
   if (bombArmed) return "Bomb armed · tap a square";
   if (canBomb) return "Your turn · Bomb ready.";
-  if (scoreDeficit > 0 && scoreDeficit < MIN_BOMB_DEFICIT) {
-    return `Your turn · Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`;
+  if (scoreDeficit > 0 && scoreDeficit < bombDeficit) {
+    return `Your turn · Bomb unlocks when you trail by ${bombDeficit}.`;
   }
   return "Your turn · First to 26";
 };
@@ -47,8 +49,9 @@ export const getMatchPresentation = ({
     match.currentTurnPlayerId === currentPlayerId &&
     (connectionStatus === undefined || connectionStatus === "connected");
   const scoreDeficit = selfSlot && opponent ? opponent.score - selfSlot.player.score : 0;
+  const bombDeficit = getBombDeficit(match.board.mineCount);
   const canBomb = Boolean(
-    selfSlot && opponent && selfSlot.player.bombsRemaining === 1 && scoreDeficit >= MIN_BOMB_DEFICIT
+    selfSlot && opponent && selfSlot.player.bombsRemaining === 1 && scoreDeficit >= bombDeficit
   );
   const [bluePlayer, redPlayer] = match.players;
   const playerTones: Record<string, "blue" | "red"> = {
@@ -63,6 +66,7 @@ export const getMatchPresentation = ({
     bombArmed,
     canBomb,
     scoreDeficit,
+    bombDeficit,
     opponentName: opponent?.displayName ?? "Opponent"
   });
   return { playerSlots, selfSlot, opponent, canAct, canBomb, playerTones, activeTone, turnHint };

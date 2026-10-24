@@ -1,4 +1,4 @@
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/game-engine";
 import { Link } from "react-router-dom";
 import type { P2PHostSetupState } from "../../p2p/setup/p2p-setup.types.js";
 import { LobbyPreviewPanel } from "./LobbyPreviewPanel.js";

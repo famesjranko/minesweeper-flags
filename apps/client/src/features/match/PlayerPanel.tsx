@@ -1,4 +1,5 @@
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { getBombDeficit } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { CrownIcon } from "../../shared-ui/CrownIcon.js";
 import { PlayerBombButton } from "./PlayerBombButton.js";
 
@@ -64,7 +65,8 @@ export const PlayerPanel = ({
   ...bomb
 }: PlayerPanelProps) => {
   const opponent = match.players.find((player) => player.playerId !== slot.player.playerId);
-  const canBomb = Boolean(opponent && opponent.score - slot.player.score >= MIN_BOMB_DEFICIT);
+  const bombDeficit = getBombDeficit(match.board.mineCount);
+  const canBomb = Boolean(opponent && opponent.score - slot.player.score >= bombDeficit);
   const isWinner = match.phase === "finished" && match.winnerPlayerId === slot.player.playerId;
   const labels = describeSlot(slot, note);
 
@@ -105,6 +107,7 @@ export const PlayerPanel = ({
           {...bomb}
           slot={slot}
           canBomb={canBomb}
+          bombDeficit={bombDeficit}
           finished={match.phase === "finished"}
         />
       </div>

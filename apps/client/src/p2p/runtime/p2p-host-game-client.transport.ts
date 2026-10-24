@@ -69,7 +69,9 @@ export class P2PHostGameClientTransport implements GameClientTransport {
   send = (event: ClientEvent): void => {
     switch (event.type) {
       case CLIENT_EVENT_NAMES.roomCreate:
-        this.emitSteps(this.orchestrator.createRoom(event.payload.displayName).steps);
+        this.emitSteps(
+          this.orchestrator.createRoom(event.payload.displayName, event.payload.boardSize).steps
+        );
         return;
       case CLIENT_EVENT_NAMES.chatSend:
         this.emitSteps(this.orchestrator.sendHostChat(event.payload.text).steps);

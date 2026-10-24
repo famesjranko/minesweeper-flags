@@ -229,6 +229,7 @@ describe("state stores", () => {
         }
       ],
       nextStarterIndex: 0 as const,
+      boardSize: "classic" as const,
       createdAt: 100,
       updatedAt: 100
     };
@@ -288,6 +289,7 @@ describe("state stores", () => {
         }
       ],
       nextStarterIndex: 0 as const,
+      boardSize: "classic" as const,
       createdAt: 100,
       updatedAt: 100
     };

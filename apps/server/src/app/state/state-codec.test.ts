@@ -20,11 +20,31 @@ describe("state codec", () => {
         { playerId: "player-2", displayName: "Guest" }
       ],
       nextStarterIndex: 1 as const,
+      boardSize: "large" as const,
       createdAt: 100,
       updatedAt: 200
     };
 
     expect(deserializeRoomRecord(serializeRoomRecord(room))).toEqual(room);
+  });
+
+  it("reads a room stored before board sizes as a classic room", () => {
+    // Given a stored room record without a board size
+    const stored = JSON.stringify({
+      roomId: "room-1",
+      roomCode: "ABCDE",
+      inviteToken: null,
+      players: [{ playerId: "player-1", displayName: "Host" }],
+      nextStarterIndex: 0,
+      createdAt: 100,
+      updatedAt: 200
+    });
+
+    // When the record is deserialized
+    const room = deserializeRoomRecord(stored);
+
+    // Then the room uses the classic board
+    expect(room.boardSize).toBe("classic");
   });
 
   it("round-trips reconnect sessions", () => {
