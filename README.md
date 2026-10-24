@@ -29,6 +29,7 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 - Find a mine and you claim it. The first player to 26 mines wins.
 - Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 4 or more.
 - Chat stays with the room through reconnects and rematches.
+- Sound effects play for reveals, flags, bombs, your turn, chat messages, resigning and the result, and the speaker button in the header mutes them (the browser remembers the choice). On your turn, the tile under the cursor lights up.
 
 A static frontend still needs its first download.
 

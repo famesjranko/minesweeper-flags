@@ -7,11 +7,15 @@ import {
   getLastMoveMarks,
   type LastMoveTrail
 } from "../../entities/board/last-move.js";
+import { useChatSounds } from "../sound/useChatSounds.js";
+import { useMatchSounds } from "../sound/useMatchSounds.js";
 import { MatchChat } from "./MatchChat.js";
 import { MatchHeader } from "./MatchHeader.js";
 import { MatchPlayArea } from "./MatchPlayArea.js";
 import { getMatchPresentation } from "./match-presentation.js";
 import type { MatchViewProps } from "./match-view.types.js";
+
+const NO_CHAT: readonly never[] = [];
 
 export const MatchView = (props: MatchViewProps) => {
   const { match, currentPlayerId } = props;
@@ -20,6 +24,12 @@ export const MatchView = (props: MatchViewProps) => {
   const [storedTrail, setStoredTrail] = useState<LastMoveTrail>([]);
   const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
+  useMatchSounds(match, currentPlayerId);
+  useChatSounds(
+    props.presentation === "solo" ? NO_CHAT : props.chatMessages,
+    currentPlayerId,
+    match.phase === "live"
+  );
   const view = getMatchPresentation(props);
   const isSolo = props.presentation === "solo";
   const helperText = view.opponent

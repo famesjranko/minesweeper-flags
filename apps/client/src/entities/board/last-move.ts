@@ -36,7 +36,7 @@ export const NO_LAST_MOVE_MARKS: LastMoveMarks = { cells: [], areas: [] };
 
 const EMPTY_TRAIL: LastMoveTrail = [];
 
-const isSameAction = (a: ResolvedAction, b: ResolvedAction): boolean =>
+export const isSameAction = (a: ResolvedAction, b: ResolvedAction): boolean =>
   a.type === b.type && a.playerId === b.playerId && a.row === b.row && a.column === b.column;
 
 /**

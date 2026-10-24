@@ -2,6 +2,7 @@ import "./arcade.css";
 
 import type { ReactNode } from "react";
 import { FlagIcon } from "./FlagIcon.js";
+import { SoundToggle } from "./SoundToggle.js";
 
 interface ArcadeHeaderProps {
   connectionStatus?: string | undefined;
@@ -43,6 +44,7 @@ export const ArcadeHeader = ({
         </span>
       ) : null}
       {children}
+      <SoundToggle />
     </div>
   </header>
 );
