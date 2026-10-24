@@ -1,6 +1,6 @@
 import "./game-help.css";
 
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/game-engine";
 
 export const GameHelp = () => (
   <details className="game-help">

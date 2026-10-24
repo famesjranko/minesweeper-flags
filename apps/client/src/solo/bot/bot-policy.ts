@@ -1,5 +1,5 @@
-import { BOMB_RADIUS } from "@minesweeper-flags/game-engine";
-import { getBombDeficit, type MatchStateDto } from "@minesweeper-flags/shared";
+import { BOMB_RADIUS, getBombDeficit } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import type { BotAnalysis } from "./bot-analysis.js";
 import { type BoardShape, columnOf, distance, hasRevealedNeighbor, rowOf } from "./bot-board.js";
 import type { BotProfile } from "./bot-profiles.js";

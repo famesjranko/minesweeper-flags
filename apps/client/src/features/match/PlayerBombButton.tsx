@@ -11,9 +11,13 @@ interface PlayerBombButtonProps {
   onToggleBomb: () => void;
 }
 
+// The locked hint names the board's bomb deficit, so it is the one state built per render.
+const lockedHint = (isSelf: boolean, deficit: number) =>
+  isSelf
+    ? `Bomb unused. It becomes available while trailing by ${deficit} or more on your turn.`
+    : `Opponent bomb unused. Unlocks while trailing by ${deficit} or more.`;
+
 const STATES = {
-  locked: (deficit: number) =>
-    `Bomb unused. It becomes available while trailing by ${deficit} or more on your turn.`,
   waiting: "Your bomb is ready. Wait for your turn and connection to arm it.",
   ready: "Bomb ready: click to arm a 5x5 blast.",
   armed: "Bomb armed. Pick the center of a 5x5 blast, or cancel targeting.",
@@ -22,8 +26,6 @@ const STATES = {
 };
 
 const OPPONENT_STATES = {
-  locked: (deficit: number) =>
-    `Opponent bomb unused. Unlocks while trailing by ${deficit} or more.`,
   waiting: "Opponent bomb ready on their turn.",
   ready: "Opponent bomb available.",
   armed: "Opponent bomb available.",
@@ -41,8 +43,10 @@ const getStatus = ({ slot, bombArmed, canAct, canBomb, finished }: PlayerBombBut
 
 export const PlayerBombButton = (props: PlayerBombButtonProps) => {
   const status = getStatus(props);
-  const copy = props.slot.isSelf ? STATES[status] : OPPONENT_STATES[status];
-  const hint = typeof copy === "function" ? copy(props.bombDeficit) : copy;
+  const hint =
+    status === "locked"
+      ? lockedHint(props.slot.isSelf, props.bombDeficit)
+      : (props.slot.isSelf ? STATES : OPPONENT_STATES)[status];
   const icon = <BombIcon className="sidebar-bomb-icon" spent={status === "used"} size={22} />;
   if (!props.slot.isSelf) {
     return (

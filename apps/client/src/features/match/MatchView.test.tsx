@@ -1,10 +1,7 @@
 // @vitest-environment jsdom
 
-import {
-  type ChatMessageDto,
-  type MatchStateDto,
-  MIN_BOMB_DEFICIT
-} from "@minesweeper-flags/shared";
+import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/game-engine";
+import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";

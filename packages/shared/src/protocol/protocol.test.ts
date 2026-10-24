@@ -175,15 +175,17 @@ describe("room create board size", () => {
     expect(parsed.type === CLIENT_EVENT_NAMES.roomCreate && parsed.payload.boardSize).toBe("giant");
   });
 
-  it("accepts a room create event without a board size from an older client", () => {
-    // Given a room create event with only a display name
+  it("reads a room create event without a board size as a classic room", () => {
+    // Given a room create event from an older client, with only a display name
     const event = { type: CLIENT_EVENT_NAMES.roomCreate, payload: { displayName: "Host" } };
 
     // When the event is parsed
-    const result = clientEventSchema.safeParse(event);
+    const parsed = clientEventSchema.parse(event);
 
-    // Then it is valid
-    expect(result.success).toBe(true);
+    // Then the room asks for the classic board
+    expect(parsed.type === CLIENT_EVENT_NAMES.roomCreate && parsed.payload.boardSize).toBe(
+      "classic"
+    );
   });
 
   it("rejects a room create event with an unknown board size", () => {

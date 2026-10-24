@@ -1,4 +1,5 @@
-import { getBombDeficit, type MatchStateDto } from "@minesweeper-flags/shared";
+import { getBombDeficit } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import type { MatchViewProps } from "./match-view.types.js";
 import { getPlayerSlots } from "./PlayerPanel.js";
 
