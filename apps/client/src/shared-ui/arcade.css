@@ -444,3 +444,17 @@
     gap: 12px;
   }
 }
+.arcade-sound-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #dbeeff;
+}
+.arcade-sound-button:hover {
+  background: #ffffff0b;
+}
