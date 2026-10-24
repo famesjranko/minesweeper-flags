@@ -1,3 +1,4 @@
+import { WINNING_SCORE } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import { diffMatchSounds } from "./match-sound-events.js";
@@ -47,6 +48,14 @@ const match = (overrides: Partial<MatchStateDto> = {}): MatchStateDto => ({
   lastAction: null,
   ...overrides
 });
+
+const withScores = ([mine, theirs]: [number, number]): MatchStateDto["players"] => {
+  const [me, them] = match().players;
+  return [
+    { ...me, score: mine },
+    { ...them, score: theirs }
+  ];
+};
 
 describe("diffMatchSounds", () => {
   it("stays silent for the first snapshot", () => {
@@ -127,9 +136,10 @@ describe("diffMatchSounds", () => {
   ] as const)(
     "plays the result sound for winner %s as %s without your-turn",
     (winnerPlayerId, expected) => {
-      // Given a final move that ends the match with the turn on me
+      // Given a final move that ends the match at the win score with the turn on me
       const previous = match({ turnNumber: 1 });
       const next = match({
+        players: withScores(winnerPlayerId === ME ? [WINNING_SCORE, 0] : [0, WINNING_SCORE]),
         phase: "finished",
         turnPhase: "ended",
         winnerPlayerId,
@@ -146,11 +156,54 @@ describe("diffMatchSounds", () => {
     }
   );
 
-  it("plays only lose when a resign ends the match with the last action unchanged", () => {
-    // Given a resign that finishes the match while lastAction stays the same
+  it("plays resign instead of lose when I resign and nobody reached the win score", () => {
+    // Given I resigned: the match finished, the opponent won, nobody reached the win score
     const last = action({ playerId: THEM });
     const previous = match({ turnNumber: 3, lastAction: last, currentTurnPlayerId: ME });
     const next = match({
+      players: withScores([3, 5]),
+      phase: "finished",
+      turnPhase: "ended",
+      turnNumber: 3,
+      lastAction: { ...last },
+      winnerPlayerId: THEM,
+      currentTurnPlayerId: null
+    });
+
+    // When the snapshots are diffed
+    const sounds = diffMatchSounds(previous, next, ME);
+
+    // Then only resign plays, without lose
+    expect(sounds).toEqual(["resign"]);
+  });
+
+  it("plays win when the opponent resigns", () => {
+    // Given the opponent resigned and I am the winner below the win score
+    const last = action({ playerId: ME });
+    const previous = match({ turnNumber: 3, lastAction: last });
+    const next = match({
+      players: withScores([5, 3]),
+      phase: "finished",
+      turnPhase: "ended",
+      turnNumber: 3,
+      lastAction: { ...last },
+      winnerPlayerId: ME,
+      currentTurnPlayerId: null
+    });
+
+    // When the snapshots are diffed
+    const sounds = diffMatchSounds(previous, next, ME);
+
+    // Then only win plays
+    expect(sounds).toEqual(["win"]);
+  });
+
+  it("plays lose when the opponent reaches the win score", () => {
+    // Given the opponent reached the win score with a move that is not new to the board
+    const last = action({ playerId: THEM, outcome: "mine_claimed" });
+    const previous = match({ turnNumber: 3, lastAction: last });
+    const next = match({
+      players: withScores([10, WINNING_SCORE]),
       phase: "finished",
       turnPhase: "ended",
       turnNumber: 3,

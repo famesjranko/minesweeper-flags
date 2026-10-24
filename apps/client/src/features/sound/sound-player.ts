@@ -1,6 +1,15 @@
 import { SOUND_RECIPES } from "./sound-recipes.js";
 
-export type SoundName = "reveal" | "flag" | "bomb" | "your-turn" | "win" | "lose";
+export type SoundName =
+  | "reveal"
+  | "flag"
+  | "bomb"
+  | "your-turn"
+  | "win"
+  | "lose"
+  | "chat-sent"
+  | "chat-received"
+  | "resign";
 
 interface SegmentBase {
   durationMs: number;

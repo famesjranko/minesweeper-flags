@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import {
+  type ChatMessageDto,
+  type MatchStateDto,
+  MIN_BOMB_DEFICIT
+} from "@minesweeper-flags/shared";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -456,6 +460,60 @@ describe("MatchView sound wiring", () => {
 
     // Then the flag sound plays
     expect(playerSpy.play).toHaveBeenCalledWith("flag");
+    act(() => root.unmount());
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(HTMLElement.prototype, "close");
+  });
+
+  it("plays chat-received when an opponent message arrives in a live match", () => {
+    // Given a mounted live multiplayer match view with no messages
+    Object.defineProperty(HTMLElement.prototype, "close", { configurable: true, value: () => {} });
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    }));
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+    playerSpy.play.mockClear();
+    const match = createMatch({ currentTurnPlayerId: "player-1", scores: [0, 0] });
+    const root = createRoot(document.createElement("div"));
+    const render = (chatMessages: ChatMessageDto[]) =>
+      act(() =>
+        root.render(
+          <MatchView
+            roomCode="ABCDE"
+            currentPlayerId="player-1"
+            match={match}
+            bombArmed={false}
+            connectionStatus="connected"
+            chatMessages={chatMessages}
+            chatError={null}
+            chatDraft=""
+            chatPending={false}
+            onToggleBomb={() => {}}
+            onCellSelect={() => {}}
+            onChatDraftChange={() => {}}
+            onSendChatMessage={() => {}}
+            onResign={() => {}}
+            onRequestRematch={() => {}}
+            onCancelRematch={() => {}}
+          />
+        )
+      );
+    render([]);
+    expect(playerSpy.play).not.toHaveBeenCalled();
+
+    // When the opponent's chat message arrives
+    render([{ messageId: "m1", playerId: "player-2", displayName: "Two", text: "hi", sentAt: 1 }]);
+
+    // Then the chat-received sound plays
+    expect(playerSpy.play).toHaveBeenCalledWith("chat-received");
     act(() => root.unmount());
     vi.unstubAllGlobals();
     Reflect.deleteProperty(HTMLElement.prototype, "close");

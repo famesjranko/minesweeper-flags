@@ -18,7 +18,10 @@ const RECIPES: Record<SoundName, SoundRecipe> = {
   bomb: { segments: [] },
   "your-turn": { segments: [] },
   win: { segments: [] },
-  lose: { segments: [] }
+  lose: { segments: [] },
+  "chat-sent": { segments: [] },
+  "chat-received": { segments: [] },
+  resign: { segments: [] }
 };
 
 interface FakeParam {

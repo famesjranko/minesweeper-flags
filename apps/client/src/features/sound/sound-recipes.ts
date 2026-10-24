@@ -242,5 +242,96 @@ export const SOUND_RECIPES: Record<SoundName, SoundRecipe> = {
         decay: "linear"
       }
     ]
+  },
+  // Snappy chat send: a 6 ms noise tick, then a short triangle chirp that rises, as if the message leaves.
+  "chat-sent": {
+    segments: [
+      {
+        kind: "noise",
+        durationMs: 6,
+        gain: 0.19,
+        offsetMs: 0,
+        attackMs: 0,
+        filter: { type: "bandpass", startHz: 4500, endHz: 4500, q: 2 }
+      },
+      {
+        kind: "tone",
+        wave: "triangle",
+        startHz: 880,
+        endHz: 1046.5,
+        durationMs: 45,
+        gain: 0.13,
+        offsetMs: 0,
+        attackMs: 1
+      }
+    ]
+  },
+  // Snappy chat arrival: two ticked notes, G5 then a ringing G6 an octave up, avoiding the fifth and fourth of your-turn and flag.
+  "chat-received": {
+    segments: [
+      {
+        kind: "noise",
+        durationMs: 6,
+        gain: 0.14,
+        offsetMs: 0,
+        attackMs: 0,
+        filter: { type: "bandpass", startHz: 3500, endHz: 3500, q: 2 }
+      },
+      {
+        kind: "tone",
+        wave: "triangle",
+        startHz: 783.99,
+        endHz: 783.99,
+        durationMs: 45,
+        gain: 0.107,
+        offsetMs: 0,
+        attackMs: 1,
+        decay: "linear"
+      },
+      {
+        kind: "noise",
+        durationMs: 6,
+        gain: 0.14,
+        offsetMs: 55,
+        attackMs: 0,
+        filter: { type: "bandpass", startHz: 5000, endHz: 5000, q: 2 }
+      },
+      {
+        kind: "tone",
+        wave: "triangle",
+        startHz: 1567.98,
+        endHz: 1567.98,
+        durationMs: 95,
+        gain: 0.107,
+        offsetMs: 55,
+        attackMs: 1
+      }
+    ]
+  },
+  // Plain resign: a square G4 falls to C4, a short sigh quieter than lose, so giving up sounds like giving up.
+  resign: {
+    segments: [
+      {
+        kind: "tone",
+        wave: "square",
+        startHz: 392,
+        endHz: 392,
+        durationMs: 130,
+        gain: 0.06,
+        offsetMs: 0,
+        attackMs: 3,
+        decay: "linear"
+      },
+      {
+        kind: "tone",
+        wave: "square",
+        startHz: 261.63,
+        endHz: 261.63,
+        durationMs: 270,
+        gain: 0.06,
+        attackMs: 3,
+        decay: "linear"
+      }
+    ]
   }
 };
