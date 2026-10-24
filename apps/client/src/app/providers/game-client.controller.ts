@@ -560,8 +560,8 @@ export class GameClientController {
   }
 
   private connectTransport(): void {
-    // The lobby's openLobby effect can run before the provider's start effect, so every
-    // connect subscribes first. Otherwise the "connecting" status is emitted to no listener.
+    // A child page's effect (lobby open, room recovery) can connect before the provider's
+    // start effect, so every connect subscribes first. Otherwise "connecting" reaches no one.
     if (!this.unsubscribeTransport) {
       this.unsubscribeTransport = this.transport.subscribe({
         onServerEvent: this.handleServerEvent,
