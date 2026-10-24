@@ -1660,15 +1660,47 @@ button {
   cursor: default;
 }
 
-.board-cell.status-hidden:hover:enabled {
-  filter: brightness(1.07);
-}
-
-.board-grid.is-bomb-preview-active .board-cell.status-hidden:hover:enabled {
-  filter: none;
-}
-
 .board-cell.status-hidden {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(315deg, rgba(255, 255, 255, 0.12) 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(180deg, #79d3fb 0%, #2894e6 55%, #1f6db8 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.42),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.22);
+}
+
+/* Highlight only tiles the local player can pick (:enabled), and only where a
+   pointer really hovers; on touch, :hover sticks after a tap. Keyboard focus
+   gets the same look. These rules follow the base rule so they win the cascade. */
+@media (hover: hover) {
+  .board-cell.status-hidden:hover:enabled {
+    z-index: 2;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.18) 20%, transparent 20%) 0 0 / 10px 10px,
+      linear-gradient(315deg, rgba(255, 255, 255, 0.12) 20%, transparent 20%) 0 0 / 10px 10px,
+      linear-gradient(180deg, #b4eaff 0%, #5cb8f5 55%, #3a8fd8 100%);
+    box-shadow:
+      inset 0 0 0 2px #fff,
+      inset 1px 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
+.board-cell.status-hidden:focus-visible:enabled {
+  z-index: 2;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(315deg, rgba(255, 255, 255, 0.12) 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(180deg, #b4eaff 0%, #5cb8f5 55%, #3a8fd8 100%);
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    inset 1px 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* A bomb footprint is shown instead of the single-tile hover, so restore the plain hidden look. */
+.board-grid.is-bomb-preview-active .board-cell.status-hidden:hover:enabled,
+.board-grid.is-bomb-preview-active .board-cell.status-hidden:focus-visible:enabled {
+  z-index: auto;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.18) 20%, transparent 20%) 0 0 / 10px 10px,
     linear-gradient(315deg, rgba(255, 255, 255, 0.12) 20%, transparent 20%) 0 0 / 10px 10px,
