@@ -1,7 +1,7 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { describe, expect, it } from "vitest";
 import { analyse } from "./bot-analysis.js";
-import { claim, createMatch, createSizedMatch, reveal } from "./bot-test-support.js";
+import { claim, createMatch, createSizedMatch, lastActionAt, reveal } from "./bot-test-support.js";
 
 const at = (row: number, column: number): number => row * 16 + column;
 
@@ -108,6 +108,21 @@ describe("analyse", () => {
 
     // Then the dependent cell is a certain mine
     expect(probabilityAt(analysis, 4, 6)).toBe(1);
+  });
+
+  it("reads only the clues that border the cells its attention reaches", () => {
+    // Given a one-row board where the clue at column 0 proves column 1 a mine
+    // And a last action at column 6 whose blank clue makes columns 5 and 7 plausible
+    const match = createSizedMatch(1, 12, 3);
+    reveal(match, 0, 0, 1);
+    reveal(match, 0, 6, 0);
+    lastActionAt(match, 0, 6);
+
+    // When the single-clue analysis runs with an attention radius of 1
+    const analysis = analyse(match, "single", { attentionRadius: 1 });
+
+    // Then column 1 is not proven a mine
+    expect(analysis?.facts[1]).toBe("unknown");
   });
 
   it("does not chain facts at the direct level", () => {

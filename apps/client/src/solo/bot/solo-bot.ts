@@ -63,7 +63,9 @@ export const decideSoloAction = (
     return null;
   }
   const profile = BOT_PROFILES[options.difficulty ?? DEFAULT_SOLO_DIFFICULTY];
-  const analysis = analyse(publicMatch, profile.deduction);
+  const analysis = analyse(publicMatch, profile.deduction, {
+    attentionRadius: profile.attentionRadius
+  });
   if (!analysis) {
     return null;
   }

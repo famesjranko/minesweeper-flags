@@ -1,9 +1,11 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
+import { type AttentionWindow, attentionWindow, focusOf } from "./bot-attention.js";
 import {
   type BoardView,
   type ClueState,
   cellDistance,
   clueStates,
+  distance,
   type Fact,
   isUnknown,
   readBoard,
@@ -18,11 +20,15 @@ export interface BotAnalysis {
   facts: Fact[];
   /** Mine probability of each hidden cell; 0 for cells that are not hidden. */
   probabilities: number[];
+  /** The cells the bot notices this turn; null means the whole board. */
+  attention: AttentionWindow | null;
 }
 
 export interface AnalysisOptions {
   /** Backtracking steps allowed per decision before exact analysis falls back. */
   nodeBudget?: number;
+  /** Starting radius of the attention window; infinite notices the whole board. */
+  attentionRadius?: number;
 }
 
 type Step = "unchanged" | "changed" | "contradiction";
@@ -198,6 +204,18 @@ export const analyse = (
   options: AnalysisOptions = {}
 ): BotAnalysis | null => {
   const board = readBoard(match);
+  const attention = attentionWindow(
+    board,
+    focusOf(match),
+    options.attentionRadius ?? Number.POSITIVE_INFINITY
+  );
+  if (attention) {
+    // The bot reads the clues that border the cells it notices and ignores the rest,
+    // so what it deduces matches what it looks at.
+    board.clueCells = board.clueCells.filter(
+      (cell) => distance(board, cell, attention.focus) <= attention.radius + 1
+    );
+  }
   const claimedOnly = board.claimed.map((claimed): Fact => (claimed ? "mine" : "unknown"));
   const facts = [...claimedOnly];
   if (!settledCluesHold(board) || !settleFacts(board, facts, deduction)) {
@@ -212,12 +230,12 @@ export const analyse = (
   const clueFacts = deduction === "direct" ? claimedOnly : facts;
   const probabilities = estimateLocally(board, facts, clueFacts, fallback);
   if (deduction !== "exact") {
-    return { board, facts, probabilities };
+    return { board, facts, probabilities, attention };
   }
   const refined = refineExactly(
     { board, facts, estimates: probabilities },
     unresolved.mines,
     options.nodeBudget ?? DEFAULT_NODE_BUDGET
   );
-  return refined ? { board, facts, probabilities: refined } : null;
+  return refined ? { board, facts, probabilities: refined, attention } : null;
 };
