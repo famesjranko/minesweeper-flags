@@ -91,9 +91,7 @@ const BoardCell = ({
         isBombTarget ? "bomb-targetable" : "",
         isPreviewed ? "bomb-preview-cell" : "",
         isPreviewed && isHovered ? "bomb-preview-center" : "",
-        lastMoveCell
-          ? `is-last-move last-move-${lastMoveCell.tone} last-move-age-${lastMoveCell.age}`
-          : ""
+        lastMoveCell ? `is-last-move last-move-${lastMoveCell.tone}` : ""
       ]
         .filter(Boolean)
         .join(" ")}
@@ -166,8 +164,8 @@ export const BoardGrid = ({
 
       {lastMove.areas.map((area) => (
         <div
-          key={`last-move-area-${area.bounds.minRow}-${area.bounds.minColumn}-${area.age}`}
-          className={`board-last-move-area last-move-${area.tone} last-move-age-${area.age}`}
+          key={`last-move-area-${area.bounds.minRow}-${area.bounds.minColumn}`}
+          className={`board-last-move-area last-move-${area.tone}`}
           style={getOverlayStyle(area.bounds)}
         />
       ))}

@@ -1718,25 +1718,13 @@ button {
     inset 0 0 22px rgba(255, 255, 255, 0.32);
 }
 
-/* Opponent's recent moves: inset double ring in the opponent's tone, fainter when older. */
+/* Opponent's moves since the viewer's last move: a ring in the opponent's tone. */
 .last-move-blue {
   --last-move-tone: #1d6fe0;
 }
 
 .last-move-red {
   --last-move-tone: #e0283c;
-}
-
-.last-move-age-0 {
-  --last-move-strength: 1;
-}
-
-.last-move-age-1 {
-  --last-move-strength: 0.65;
-}
-
-.last-move-age-2 {
-  --last-move-strength: 0.35;
 }
 
 /* The ring sits outside the tile, in the 2px grid gap, so it never covers the tile's number or flag. */
@@ -1751,7 +1739,6 @@ button {
   inset: 0;
   border-radius: 2px;
   pointer-events: none;
-  opacity: var(--last-move-strength, 1);
   box-shadow:
     0 0 0 1px #fff,
     0 0 0 2px #12121c,
@@ -1764,7 +1751,6 @@ button {
   pointer-events: none;
   z-index: 2;
   border-radius: 3px;
-  opacity: var(--last-move-strength, 1);
   box-shadow:
     0 0 0 1px #12121c,
     0 0 0 3px var(--last-move-tone),
