@@ -48,4 +48,35 @@ describe("rematch service", () => {
     expect(restartedMatch.state.players.every((player) => !player.rematchRequested)).toBe(true);
     expect(restartedMatch.state.turnNumber).toBe(1);
   });
+
+  it("starts the rematch on the room's board size", async () => {
+    // Given a finished match in a room created with a large board
+    const roomService = new RoomService(new InMemoryRoomRepository());
+    const matchRepository = new InMemoryMatchRepository();
+    const matchService = new MatchService(roomService, matchRepository);
+    const rematchService = new RematchService(roomService, matchService);
+    const { room: lobbyRoom } = await roomService.createRoom("Host", undefined, "large");
+    const { room } = await roomService.joinRoomByInviteToken(lobbyRoom.inviteToken ?? "", "Guest");
+    const [host, guest] = room.players;
+    if (!host || !guest) throw new Error("Expected the fixture room to include both players.");
+    const firstMatch = await matchService.startMatchForRoom(room, 100);
+    await matchRepository.save({
+      ...firstMatch.state,
+      phase: "finished",
+      turnPhase: "ended",
+      currentTurnPlayerId: null,
+      winnerPlayerId: host.playerId
+    });
+
+    // When both players request a rematch
+    await rematchService.requestRematch(room.roomCode, host.playerId, 300);
+    await rematchService.requestRematch(room.roomCode, guest.playerId, 301);
+
+    // Then the new match is on a 20×20 board with 79 mines
+    const { rows, columns, mineCount } = (await matchService.getMatchByRoomCode(room.roomCode))
+      .state.board;
+    expect({ rows, columns, mineCount }).toEqual({ rows: 20, columns: 20, mineCount: 79 });
+    // And it is a fresh match, not the finished one
+    expect((await matchService.getMatchByRoomCode(room.roomCode)).state.phase).toBe("live");
+  });
 });

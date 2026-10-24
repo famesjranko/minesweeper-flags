@@ -159,3 +159,44 @@ describe("protocol schemas", () => {
     expect(parsed.type).toBe(SERVER_EVENT_NAMES.roomCreated);
   });
 });
+
+describe("room create board size", () => {
+  it("accepts a room create event with a board size preset", () => {
+    // Given a room create event that asks for a giant board
+    const event = {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host", boardSize: "giant" }
+    };
+
+    // When the event is parsed
+    const parsed = clientEventSchema.parse(event);
+
+    // Then the board size is kept
+    expect(parsed.type === CLIENT_EVENT_NAMES.roomCreate && parsed.payload.boardSize).toBe("giant");
+  });
+
+  it("accepts a room create event without a board size from an older client", () => {
+    // Given a room create event with only a display name
+    const event = { type: CLIENT_EVENT_NAMES.roomCreate, payload: { displayName: "Host" } };
+
+    // When the event is parsed
+    const result = clientEventSchema.safeParse(event);
+
+    // Then it is valid
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a room create event with an unknown board size", () => {
+    // Given a room create event with a board size that is not a preset
+    const event = {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host", boardSize: "100x100" }
+    };
+
+    // When the event is parsed
+    const result = clientEventSchema.safeParse(event);
+
+    // Then it is rejected
+    expect(result.success).toBe(false);
+  });
+});

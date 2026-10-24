@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  boardSizeSchema,
   coordinateSchema,
   displayNameSchema,
   inviteTokenSchema,
@@ -24,7 +25,9 @@ export const actionSchema = z.discriminatedUnion("type", [
 export const roomCreateEventSchema = z.object({
   type: z.literal(CLIENT_EVENT_NAMES.roomCreate),
   payload: z.object({
-    displayName: displayNameSchema
+    displayName: displayNameSchema,
+    // Optional so a client built before board sizes still creates a classic room.
+    boardSize: boardSizeSchema.optional()
   })
 });
 

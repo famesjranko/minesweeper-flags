@@ -1,9 +1,10 @@
-import { WINNING_SCORE } from "../board/board.constants.js";
+import { getWinningScore } from "../board/board.constants.js";
 import { countClaimedMines } from "../board/board.logic.js";
 import type { MatchState } from "./match.types.js";
 
 export const findWinnerPlayerId = (state: MatchState): string | null => {
-  const instantWinner = state.players.find((player) => player.score >= WINNING_SCORE);
+  const winningScore = getWinningScore(state.board.mineCount);
+  const instantWinner = state.players.find((player) => player.score >= winningScore);
 
   if (instantWinner) {
     return instantWinner.playerId;
@@ -23,7 +24,5 @@ export const findWinnerPlayerId = (state: MatchState): string | null => {
 };
 
 export const isFinished = (state: MatchState): boolean =>
-  state.players.some((player) => player.score >= WINNING_SCORE) ||
+  state.players.some((player) => player.score >= getWinningScore(state.board.mineCount)) ||
   countClaimedMines(state.board) === state.board.mineCount;
-
-export { WINNING_SCORE };

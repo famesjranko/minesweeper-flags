@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import {
   createContext,
@@ -36,7 +37,7 @@ interface GameClientContextValue {
   refreshSlotCount: () => void;
   hasStoredSession: (roomCode: string) => boolean;
   openLobby: () => void;
-  createRoom: (displayName: string) => void;
+  createRoom: (displayName: string, boardSize?: BoardSize) => void;
   joinRoom: (displayName: string, inviteToken: string) => void;
   reconnect: (roomCode: string) => void;
   submitCellAction: (row: number, column: number) => void;

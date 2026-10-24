@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import {
   createBrowserGameClientScheduler,
   type GameClientScheduler
@@ -84,7 +85,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
     this.store.setConnectionStatus("disconnected");
   };
 
-  createRoom = (displayName: string): void => {
+  createRoom = (displayName: string, boardSize?: BoardSize): void => {
     const trimmedDisplayName = displayName.trim();
 
     if (!trimmedDisplayName) {
@@ -97,7 +98,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
     this.setup.controller.resetGuest();
     this.context.clearRecoveryForActiveRuntime();
     this.context.teardownActiveRuntime();
-    this.host.startSetup(trimmedDisplayName);
+    this.host.startSetup(trimmedDisplayName, boardSize);
   };
 
   joinRoom = (): void => {

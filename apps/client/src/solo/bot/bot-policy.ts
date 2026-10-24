@@ -1,5 +1,5 @@
 import { BOMB_RADIUS } from "@minesweeper-flags/game-engine";
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { getBombDeficit, type MatchStateDto } from "@minesweeper-flags/shared";
 import type { BotAnalysis } from "./bot-analysis.js";
 import { type BoardShape, columnOf, distance, hasRevealedNeighbor, rowOf } from "./bot-board.js";
 import type { BotProfile } from "./bot-profiles.js";
@@ -92,7 +92,7 @@ const canBomb = (match: MatchStateDto, botPlayerId: string): boolean => {
     !!bot &&
     !!opponent &&
     bot.bombsRemaining === 1 &&
-    opponent.score - bot.score >= MIN_BOMB_DEFICIT
+    opponent.score - bot.score >= getBombDeficit(match.board.mineCount)
   );
 };
 
