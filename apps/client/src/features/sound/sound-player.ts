@@ -168,7 +168,6 @@ export const createSoundPlayer = (
   // While the context is not running, currentTime is frozen, so scheduling would queue
   // every sound at the same instant. Keep only the latest request and play it on resume.
   let pending: SoundName | null = null;
-  let resuming = false;
 
   const schedule = (ctx: AudioContext, name: SoundName): void => {
     const origin = ctx.currentTime;
@@ -180,11 +179,11 @@ export const createSoundPlayer = (
     }
   };
 
-  const resumeOnce = (ctx: AudioContext): void => {
-    if (resuming) {
-      return;
-    }
-    resuming = true;
+  // Called on every request while not running. A resume() made outside a user gesture can
+  // stay pending forever under the autoplay policy, so a later call inside a gesture must
+  // be allowed to retry; that call also settles the older pending promises. All handlers
+  // then run, but the first one takes `pending` and the rest find nothing to play.
+  const resumeAndPlayPending = (ctx: AudioContext): void => {
     void ctx
       .resume()
       .then(() => {
@@ -196,9 +195,6 @@ export const createSoundPlayer = (
       })
       .catch(() => {
         pending = null;
-      })
-      .finally(() => {
-        resuming = false;
       });
   };
 
@@ -207,7 +203,7 @@ export const createSoundPlayer = (
       context ??= new AudioContextClass();
       if (context.state !== "running") {
         pending = name;
-        resumeOnce(context);
+        resumeAndPlayPending(context);
         return;
       }
       schedule(context, name);
