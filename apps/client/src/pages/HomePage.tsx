@@ -64,13 +64,15 @@ interface HomePageProps {
   friendContent: ReactNode;
   connectionStatus: string;
   onFriendSelected: () => void;
+  onModeSelected?: (mode: Mode) => void;
 }
 
 export const HomePage = ({
   initialMode = "solo",
   friendContent,
   connectionStatus,
-  onFriendSelected
+  onFriendSelected,
+  onModeSelected
 }: HomePageProps) => {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [friendVisited, setFriendVisited] = useState(initialMode === "friend");
@@ -84,6 +86,7 @@ export const HomePage = ({
   const tabs = useRef<Record<Mode, HTMLButtonElement | null>>({ solo: null, friend: null });
   const selectMode = (nextMode: Mode, focus = false) => {
     setMode(nextMode);
+    onModeSelected?.(nextMode);
     if (nextMode === "friend") {
       setFriendVisited(true);
       onFriendSelected();

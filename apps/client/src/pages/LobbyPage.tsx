@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useOutletContext } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { RoomLobby } from "../features/room/RoomLobby.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
@@ -64,6 +64,7 @@ const FriendLobby = () => {
 
 export const LobbyPage = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const requestFriend = useOutletContext<(() => void) | undefined>();
   const { connectionStatus } = useGameClient();
   return (
@@ -71,6 +72,12 @@ export const LobbyPage = () => {
       initialMode={pathname === "/lobby" ? "friend" : "solo"}
       connectionStatus={connectionStatus}
       onFriendSelected={() => requestFriend?.()}
+      // The URL records the chosen tab so a reload reopens it. Replace keeps tab switches
+      // out of browser history.
+      onModeSelected={(mode) => {
+        const modePath = mode === "friend" ? "/lobby" : "/";
+        if (modePath !== pathname) navigate(modePath, { replace: true });
+      }}
       friendContent={<FriendLobby />}
     />
   );

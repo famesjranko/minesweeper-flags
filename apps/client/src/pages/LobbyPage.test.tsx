@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import { LobbyPage } from "./LobbyPage.js";
 
@@ -51,5 +51,65 @@ it("keeps a live match connected when browser Back reaches the friend lobby", ()
     expect(container.querySelector(".lobby-create-button[type='submit']")).toBeNull();
   } finally {
     act(() => root.unmount());
+  }
+});
+
+const RouteProbe = ({ onRoute }: { onRoute: (route: string) => void }) => {
+  const { pathname } = useLocation();
+  onRoute(`${useNavigationType()} ${pathname}`);
+  return null;
+};
+
+const renderLobbyAt = (path: string) => {
+  const routes: string[] = [];
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() =>
+    root.render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/" element={<LobbyPage />} />
+          <Route path="/lobby" element={<LobbyPage />} />
+        </Routes>
+        <RouteProbe onRoute={(route) => routes.push(route)} />
+      </MemoryRouter>
+    )
+  );
+  const clickTab = (name: string) => {
+    const tab = [...container.querySelectorAll<HTMLButtonElement>("[role='tab']")].find(
+      (button) => button.textContent === name
+    );
+    act(() => tab?.click());
+  };
+  return { routes, clickTab, unmount: () => act(() => root.unmount()) };
+};
+
+it("records the friend tab in the URL so a reload reopens it", () => {
+  // Given the home page on the Solo tab
+  const page = renderLobbyAt("/");
+
+  // When the player chooses With a friend
+  page.clickTab("With a friend");
+
+  try {
+    // Then the URL becomes the friend lobby without a new history entry
+    expect(page.routes.at(-1)).toBe("REPLACE /lobby");
+  } finally {
+    page.unmount();
+  }
+});
+
+it("records the solo tab in the URL so a reload reopens it", () => {
+  // Given the friend lobby on the With a friend tab
+  const page = renderLobbyAt("/lobby");
+
+  // When the player chooses Solo
+  page.clickTab("Solo");
+
+  try {
+    // Then the URL becomes the home page without a new history entry
+    expect(page.routes.at(-1)).toBe("REPLACE /");
+  } finally {
+    page.unmount();
   }
 });
