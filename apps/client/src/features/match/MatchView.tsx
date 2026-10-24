@@ -7,6 +7,7 @@ import {
   getLastMoveMarks,
   type LastMoveTrail
 } from "../../entities/board/last-move.js";
+import { useMatchSounds } from "../sound/useMatchSounds.js";
 import { MatchChat } from "./MatchChat.js";
 import { MatchHeader } from "./MatchHeader.js";
 import { MatchPlayArea } from "./MatchPlayArea.js";
@@ -20,6 +21,7 @@ export const MatchView = (props: MatchViewProps) => {
   const [storedTrail, setStoredTrail] = useState<LastMoveTrail>([]);
   const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
+  useMatchSounds(match, currentPlayerId);
   const view = getMatchPresentation(props);
   const isSolo = props.presentation === "solo";
   const helperText = view.opponent

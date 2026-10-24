@@ -1,7 +1,21 @@
+// @vitest-environment jsdom
+
 import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { SoundPlayer } from "../sound/sound-player.js";
 import { MatchView } from "./MatchView.js";
+
+const playerSpy = vi.hoisted(() => ({ play: vi.fn() }));
+
+vi.mock("../sound/sound-player.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../sound/sound-player.js")>()),
+  getSoundPlayer: (): SoundPlayer => playerSpy
+}));
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const createMatch = ({
   currentTurnPlayerId,
@@ -385,4 +399,65 @@ it("keeps multiplayer header, presence, and chat UI by default", () => {
   expect(html).toContain('aria-label="Connected"');
   expect(html).toContain("Full chat ↗");
   expect(html).toContain("No messages yet.");
+});
+
+describe("MatchView sound wiring", () => {
+  it("plays the move sound when a later snapshot carries a new action", () => {
+    // Given a browser with matchMedia and dialog support, and a mounted match view on a quiet snapshot
+    Object.defineProperty(HTMLElement.prototype, "close", { configurable: true, value: () => {} });
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    }));
+    const quiet = createMatch({ currentTurnPlayerId: "player-1", scores: [0, 0] });
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    const render = (match: MatchStateDto) =>
+      act(() =>
+        root.render(
+          <MatchView
+            roomCode="ABCDE"
+            currentPlayerId="player-1"
+            match={match}
+            bombArmed={false}
+            connectionStatus="connected"
+            chatMessages={[]}
+            chatError={null}
+            chatDraft=""
+            chatPending={false}
+            onToggleBomb={() => {}}
+            onCellSelect={() => {}}
+            onChatDraftChange={() => {}}
+            onSendChatMessage={() => {}}
+            onResign={() => {}}
+            onRequestRematch={() => {}}
+            onCancelRematch={() => {}}
+          />
+        )
+      );
+    render(quiet);
+    expect(playerSpy.play).not.toHaveBeenCalled();
+
+    // When the opponent's flag claim arrives
+    render({
+      ...quiet,
+      turnNumber: 9,
+      lastAction: {
+        type: "select",
+        playerId: "player-2",
+        row: 0,
+        column: 0,
+        outcome: "mine_claimed",
+        revealedCount: 1,
+        claimedMineCount: 1
+      }
+    });
+
+    // Then the flag sound plays
+    expect(playerSpy.play).toHaveBeenCalledWith("flag");
+    act(() => root.unmount());
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(HTMLElement.prototype, "close");
+  });
 });
