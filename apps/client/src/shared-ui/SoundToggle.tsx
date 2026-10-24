@@ -4,7 +4,7 @@ import { SoundIcon } from "./SoundIcon.js";
 
 export const SoundToggle = () => {
   const enabled = useSoundEnabled();
-  const label = enabled ? "Mute sound effects" : "Unmute sound effects";
+  const hint = enabled ? "Mute sound effects" : "Unmute sound effects";
 
   const toggle = () => {
     setSoundEnabled(!enabled);
@@ -18,8 +18,8 @@ export const SoundToggle = () => {
     <button
       type="button"
       className="arcade-sound-button"
-      aria-label={label}
-      title={label}
+      aria-label="Sound effects"
+      title={hint}
       aria-pressed={enabled}
       onClick={toggle}
     >

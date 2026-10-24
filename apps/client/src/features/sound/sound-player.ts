@@ -1,4 +1,5 @@
 import { SOUND_RECIPES } from "./sound-recipes.js";
+import { isSoundEnabled } from "./sound-settings.js";
 
 export type SoundName =
   | "reveal"
@@ -189,7 +190,8 @@ export const createSoundPlayer = (
       .then(() => {
         const name = pending;
         pending = null;
-        if (name) {
+        // Muting while the resume was pending must cancel the deferred sound.
+        if (name && isSoundEnabled()) {
           schedule(ctx, name);
         }
       })

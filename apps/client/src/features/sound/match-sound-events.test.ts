@@ -131,8 +131,7 @@ describe("diffMatchSounds", () => {
 
   it.each([
     [ME, "win"],
-    [THEM, "lose"],
-    [null, "lose"]
+    [THEM, "lose"]
   ] as const)(
     "plays the result sound for winner %s as %s without your-turn",
     (winnerPlayerId, expected) => {

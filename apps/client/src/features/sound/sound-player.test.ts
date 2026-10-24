@@ -2,9 +2,11 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSoundPlayer, type SoundName, type SoundRecipe } from "./sound-player.js";
+import { setSoundEnabled } from "./sound-settings.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  setSoundEnabled(true);
 });
 
 const RECIPES: Record<SoundName, SoundRecipe> = {
@@ -329,6 +331,36 @@ describe("createSoundPlayer", () => {
     // Then only the bomb segment is scheduled, once, and no reveal tone
     expect(audio.bufferSources[0]?.start).toHaveBeenCalledTimes(1);
     expect(audio.oscillators).toHaveLength(0);
+  });
+
+  it("schedules nothing when sound is muted before the resume finishes", async () => {
+    // Given a suspended context with a reveal waiting for the resume
+    const audio = stubAudioContext("suspended", true);
+    const player = createSoundPlayer(RECIPES);
+    player.play("reveal");
+
+    // When the player mutes sound and then the resume finishes
+    setSoundEnabled(false);
+    audio.finishAllResumes();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Then the deferred reveal is not scheduled
+    expect(audio.oscillators).toHaveLength(0);
+  });
+
+  it("schedules the deferred sound once when sound is still on after the resume finishes", async () => {
+    // Given a suspended context with a reveal waiting for the resume
+    const audio = stubAudioContext("suspended", true);
+    const player = createSoundPlayer(RECIPES);
+    player.play("reveal");
+
+    // When the resume finishes with sound still on
+    audio.finishAllResumes();
+    await vi.waitFor(() => expect(audio.oscillators).toHaveLength(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Then the reveal is scheduled exactly once
+    expect(audio.oscillators).toHaveLength(2);
   });
 
   it("schedules the latest sound once when several resume promises resolve together", async () => {
