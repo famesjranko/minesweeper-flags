@@ -75,15 +75,7 @@ describe("protocol schemas", () => {
             rows: 16,
             columns: 16,
             mineCount: 51,
-            cells: Array.from({ length: 16 }, (_, row) =>
-              Array.from({ length: 16 }, (_, column) => ({
-                row,
-                column,
-                status: "hidden",
-                adjacentMines: null,
-                claimedByPlayerId: null
-              }))
-            )
+            cells: "-".repeat(256)
           },
           players: [
             {

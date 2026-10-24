@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  serverEventSchema,
   WEBSOCKET_CLOSE_CODES,
   WEBSOCKET_CLOSE_REASONS
 } from "@minesweeper-flags/shared";
@@ -115,7 +116,7 @@ const emitRawMessage = async (socket: FakeSocket, message: Buffer) => {
 };
 
 const readSentEvents = (socket: FakeSocket): SentEvent[] =>
-  socket.sentMessages.map((message) => JSON.parse(message) as SentEvent);
+  socket.sentMessages.map((message) => serverEventSchema.parse(JSON.parse(message)));
 
 describe("realtime server", () => {
   let activeServer: TestRealtimeServer | undefined;
