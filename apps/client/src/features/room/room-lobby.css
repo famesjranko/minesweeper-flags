@@ -25,7 +25,7 @@
 .arcade-eyebrow {
   margin: 0 0 10px;
   color: #9cb9df;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -64,7 +64,7 @@
   justify-content: space-between;
   gap: 12px;
   color: #adbed7;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .arcade-lobby .lobby-preview-card,
@@ -243,7 +243,7 @@
   padding: 0;
   background: none;
   color: #afc0d9;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
@@ -276,8 +276,7 @@
   display: block;
 }
 
-.arcade-lobby .lobby-card-heading h2,
-.arcade-lobby .lobby-card-heading h3 {
+.arcade-lobby .lobby-card-heading h2 {
   margin: 0;
   color: #f3f7ff;
   font-size: 16px;
@@ -312,7 +311,7 @@
   margin-top: 28px;
   padding: 20px 0 4px;
   color: #afc0d9;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .arcade-footer p {
@@ -339,6 +338,12 @@
   background: #422d35;
 }
 
+.arcade-lobby .lobby-invite-problem {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .arcade-stage {
     grid-template-columns: minmax(0, 1fr);
@@ -350,7 +355,7 @@
 
   .arcade-eyebrow {
     margin-bottom: 12px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .arcade-introduction h1 {
@@ -394,7 +399,7 @@
   .arcade-footer {
     align-items: start;
     margin-top: 24px;
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 

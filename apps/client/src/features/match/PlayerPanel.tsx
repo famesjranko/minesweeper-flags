@@ -1,4 +1,5 @@
 import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { useState } from "react";
 import { CrownIcon } from "../../shared-ui/CrownIcon.js";
 import { PlayerBombButton } from "./PlayerBombButton.js";
 
@@ -44,14 +45,26 @@ interface PlayerPanelProps {
   bombArmed: boolean;
   canAct: boolean;
   onToggleBomb: () => void;
+  onExplainBomb: (reason: string) => void;
 }
+
+// The key restarts the bump for each point. The first score shown is history, so it stays still.
+const ScoreValue = ({ score }: { score: number }) => {
+  const [firstScore] = useState(score);
+  return (
+    <strong key={score} className={score === firstScore ? undefined : "is-bump"}>
+      {score}
+    </strong>
+  );
+};
 
 const describeSlot = (slot: PlayerSlot, note: string | undefined) => {
   const tag = slot.isSelf ? "You" : note;
   return {
     header: tag ? `${slot.title} · ${tag}` : slot.title,
-    region: [slot.title, slot.isSelf ? "You" : "Opponent", slot.player.displayName, note]
-      .filter(Boolean)
+    // A solo human is already named "You", so the name would only repeat the role.
+    region: [...new Set([slot.title, slot.isSelf ? "You" : "Opponent", slot.player.displayName])]
+      .concat(note ?? [])
       .join(" · ")
   };
 };
@@ -99,7 +112,7 @@ export const PlayerPanel = ({
       </header>
       <div className="card-inline-actions">
         <div className={`sidebar-score-pill${isWinner ? " is-winner" : ""}`}>
-          <strong>{slot.player.score}</strong>
+          <ScoreValue score={slot.player.score} />
         </div>
         <PlayerBombButton
           {...bomb}

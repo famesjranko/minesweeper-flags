@@ -75,7 +75,7 @@ vi.mock("./game-client.controller.js", () => ({
 }));
 
 import { createP2PGameClientRuntime } from "../../p2p/runtime/create-p2p-game-client-runtime.js";
-import { createGameClientRuntimeForMode } from "./game-client.runtime.js";
+import { createGameClientRuntimeForMode, loadP2PRuntime } from "./game-client.runtime.js";
 import { WebSocketGameClientTransport } from "./game-client.transport.js";
 
 describe("createGameClientRuntimeForMode", () => {
@@ -86,7 +86,19 @@ describe("createGameClientRuntimeForMode", () => {
     expect(createP2PGameClientRuntime).not.toHaveBeenCalled();
   });
 
-  it("creates the p2p runtime for p2p mode", () => {
+  it("refuses to create the p2p runtime before it has loaded", () => {
+    // Given a p2p build whose runtime chunk has not loaded yet
+    // When the app asks for the runtime
+    const create = () => createGameClientRuntimeForMode("p2p");
+
+    // Then it fails explicitly and no half-built runtime exists
+    expect(create).toThrow("has not loaded");
+    expect(createP2PGameClientRuntime).not.toHaveBeenCalled();
+  });
+
+  it("creates the p2p runtime for p2p mode", async () => {
+    await loadP2PRuntime();
+
     createGameClientRuntimeForMode("p2p");
 
     expect(createP2PGameClientRuntime).toHaveBeenCalledTimes(1);

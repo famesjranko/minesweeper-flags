@@ -24,7 +24,7 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 - Pick the bot's level before you start: Easy reads each clue on its own, Normal reads every clue it can see, and Hard works out the odds across the whole board. The browser remembers your last pick.
 - Solo matches run in the browser. They need no API, model download, or game backend. Progress is kept in `sessionStorage`, so it can survive a reload in the same tab. A saved record that cannot be restored starts a fresh match. If the browser cannot save progress, the current match continues without reload recovery. Closing the tab ends that session.
 - One player creates a friend room or hosts a direct match.
-- The other player joins with an invite link, an invite token, or a direct-match join URL.
+- The other player joins with an invite link, an invite code, or a direct-match join URL.
 - Both players share a 16×16 board with 51 mines and take turns.
 - Find a mine and you claim it. The first player to 26 mines wins.
 - Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 4 or more.
@@ -43,7 +43,7 @@ One codebase builds two product shapes. `VITE_DEPLOYMENT_MODE` selects the shape
 
 | Shape | Mode | Who owns the game |
 | --- | --- | --- |
-| **Hosted server** | `server` | A Node WebSocket server in `apps/server` runs rooms, matches, and chat. Players share room codes and invite links. |
+| **Hosted server** | `server` | A Node WebSocket server in `apps/server` runs rooms, matches, and chat. Players share invite links or codes. |
 | **Direct match** | `p2p` | The host's browser runs the match over a WebRTC data channel. A small HTTP signaling service in `apps/signaling` only brokers the connection and short reconnects. |
 
 "Direct match" is the product name. `p2p` is the technical mode name. They are the same thing.

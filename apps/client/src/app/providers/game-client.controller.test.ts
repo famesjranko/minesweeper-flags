@@ -329,6 +329,212 @@ describe("game client controller", () => {
     expect(store.getSnapshot().session?.roomCode).toBe("ABCDE");
   });
 
+  const startLiveMatch = () => {
+    const harness = createHarness();
+    harness.controller.start();
+    harness.transport.emitStatus({ status: "connected" });
+    harness.transport.emitServerEvent({
+      type: SERVER_EVENT_NAMES.roomCreated,
+      payload: {
+        roomId: "room-1",
+        roomCode: "ABCDE",
+        inviteToken: "AbCdEfGhIjKlMnOpQrStUw",
+        self: { playerId: "player-1", displayName: "Host", sessionToken: "session-1" },
+        players: [{ playerId: "player-1", displayName: "Host" }]
+      }
+    });
+    const emitMatch = (overrides: Record<string, unknown>) =>
+      harness.transport.emitServerEvent({
+        type: SERVER_EVENT_NAMES.matchState,
+        payload: {
+          roomCode: "ABCDE",
+          match: {
+            roomId: "room-1",
+            phase: "live",
+            board: { rows: 1, columns: 1, mineCount: 1, cells: [] },
+            players: [
+              {
+                playerId: "player-1",
+                displayName: "Host",
+                score: 0,
+                bombsRemaining: 1,
+                connected: true,
+                rematchRequested: false
+              },
+              {
+                playerId: "player-2",
+                displayName: "Guest",
+                score: 4,
+                bombsRemaining: 1,
+                connected: true,
+                rematchRequested: false
+              }
+            ],
+            currentTurnPlayerId: "player-1",
+            turnPhase: "awaiting_action",
+            turnNumber: 3,
+            winnerPlayerId: null,
+            lastAction: null,
+            ...overrides
+          }
+        }
+      } as ServerEvent);
+    emitMatch({});
+    return { ...harness, emitMatch };
+  };
+
+  describe("keeping the armed bomb across match snapshots", () => {
+    const startArmedMatch = () => {
+      const match = startLiveMatch();
+      match.controller.toggleBombMode();
+      expect(match.store.getSnapshot().bombArmed).toBe(true);
+      return match;
+    };
+
+    it("keeps it when the snapshot only reports that the opponent went offline", () => {
+      // Given the player has armed the bomb on their turn
+      const { store, emitMatch } = startArmedMatch();
+
+      // When the same turn is re-sent because of a presence change
+      emitMatch({});
+
+      // Then the bomb stays armed
+      expect(store.getSnapshot().bombArmed).toBe(true);
+    });
+
+    it.each([
+      ["a new turn number", { turnNumber: 4 }],
+      ["the turn passing", { currentTurnPlayerId: "player-2" }],
+      ["the match ending", { phase: "finished", currentTurnPlayerId: "player-1" }]
+    ])("disarms it on %s", (_name, overrides) => {
+      // Given the player has armed the bomb on their turn
+      const { store, emitMatch } = startArmedMatch();
+
+      // When the match really moves on
+      emitMatch(overrides);
+
+      // Then the bomb is no longer armed
+      expect(store.getSnapshot().bombArmed).toBe(false);
+    });
+  });
+
+  describe("a move already on its way", () => {
+    const startMatch = () => {
+      const match = startLiveMatch();
+      const moves = () =>
+        match.transport.sentEvents.filter((event) => event.type === CLIENT_EVENT_NAMES.matchAction);
+      return { ...match, moves };
+    };
+
+    it("sends a second tap only after the first has had its reply", () => {
+      // Given a move on its way over a slow connection
+      const { controller, moves } = startMatch();
+      controller.submitCellAction(1, 1);
+
+      // When the player taps again before the reply
+      controller.submitCellAction(1, 1);
+
+      // Then the second tap is not sent, so it cannot come back as an error
+      expect(moves()).toHaveLength(1);
+    });
+
+    it.each([
+      [
+        "a rejection",
+        {
+          type: SERVER_EVENT_NAMES.matchActionRejected,
+          payload: { roomCode: "ABCDE", message: "No" }
+        }
+      ],
+      ["a server error", { type: SERVER_EVENT_NAMES.serverError, payload: { message: "No" } }]
+    ])("frees the next tap after %s", (_name, reply) => {
+      // Given a move on its way
+      const { controller, transport, moves } = startMatch();
+      controller.submitCellAction(1, 1);
+
+      // When the reply arrives
+      transport.emitServerEvent(reply as ServerEvent);
+      controller.submitCellAction(2, 2);
+
+      // Then the next tap is sent
+      expect(moves()).toHaveLength(2);
+    });
+
+    it("frees the next tap once the match has moved on", () => {
+      // Given a move on its way
+      const { controller, emitMatch, moves } = startMatch();
+      controller.submitCellAction(1, 1);
+
+      // When the match update for that move arrives
+      emitMatch({ turnNumber: 4 });
+      controller.submitCellAction(2, 2);
+
+      // Then the next tap is sent
+      expect(moves()).toHaveLength(2);
+    });
+
+    it("frees the next tap when the reply arrives during the send, as on a direct-match host", () => {
+      // Given a transport that replies before its send returns
+      const { controller, transport, emitMatch, moves } = startMatch();
+      const send = transport.send;
+      transport.send = (event) => {
+        send(event);
+        emitMatch({ turnNumber: 4 });
+      };
+
+      // When the player makes two moves
+      controller.submitCellAction(1, 1);
+      controller.submitCellAction(2, 2);
+
+      // Then both are sent, so the host is not frozen after its first move
+      expect(moves()).toHaveLength(2);
+    });
+
+    it("clears a refused move's message once the match has moved on", () => {
+      // Given a refused move with its message on screen
+      const { store, transport, emitMatch } = startMatch();
+      transport.emitServerEvent({
+        type: SERVER_EVENT_NAMES.matchActionRejected,
+        payload: { roomCode: "ABCDE", message: "It is not your turn." }
+      });
+      expect(store.getSnapshot().error).toBe("It is not your turn.");
+
+      // When the next match update arrives
+      emitMatch({ turnNumber: 4 });
+
+      // Then the message is gone rather than sitting over the new position
+      expect(store.getSnapshot().error).toBeNull();
+    });
+
+    it("frees the next tap when the connection drops, because no reply can come", () => {
+      // Given a move on its way
+      const { controller, transport, moves } = startMatch();
+      controller.submitCellAction(1, 1);
+
+      // When the connection drops and returns
+      transport.emitStatus({ status: "disconnected", closeCode: 1006 });
+      transport.emitStatus({ status: "connected" });
+      controller.submitCellAction(2, 2);
+
+      // Then the next tap is sent
+      expect(moves()).toHaveLength(2);
+    });
+
+    it("does not stay blocked when a send fails on an open connection", () => {
+      // Given an open connection on which one send fails, with no status change to free the tap
+      const { controller, transport, moves } = startMatch();
+      transport.throwOnSend = true;
+      controller.submitCellAction(1, 1);
+
+      // When sending works again and the player taps again
+      transport.throwOnSend = false;
+      controller.submitCellAction(1, 1);
+
+      // Then the tap is sent
+      expect(moves()).toHaveLength(1);
+    });
+  });
+
   it("stops reconnecting when the session is replaced in another tab", () => {
     const { controller, scheduler, store, transport } = createHarness();
 

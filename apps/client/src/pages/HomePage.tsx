@@ -62,7 +62,7 @@ const SoloEntry = () => {
 interface HomePageProps {
   initialMode?: Mode;
   friendContent: ReactNode;
-  connectionStatus: string;
+  connectionStatus: string | undefined;
   onFriendSelected: () => void;
   onModeSelected?: (mode: Mode) => void;
 }

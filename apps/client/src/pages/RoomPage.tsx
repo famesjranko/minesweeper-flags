@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
+import { MatchMessage } from "../features/match/MatchMessage.js";
 import { MatchView } from "../features/match/MatchView.js";
 import { HostDirectMatchPanel } from "../features/room/HostDirectMatchPanel.js";
 import { RoomRestoringPanel } from "../features/room/RoomRestoringPanel.js";
 import { RoomUnavailablePanel } from "../features/room/RoomUnavailablePanel.js";
 import { type InviteNotice, RoomWaitingPanel } from "../features/room/RoomWaitingPanel.js";
 import { useRoomRecovery } from "../features/room/useRoomRecovery.js";
+import { copyText } from "../lib/browser/copy-text.js";
+import { canShareLinks, shareLink } from "../lib/browser/share-link.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: Route recovery and waiting state share one page.
@@ -57,13 +60,22 @@ export const RoomPage = () => {
   }
 
   const copyInviteValue = async (value: string, successMessage: string) => {
-    try {
-      await window.navigator.clipboard.writeText(value);
-      setInviteNotice({ message: successMessage, failed: false });
-    } catch {
-      setInviteNotice({ message: "Copy failed. Copy it manually from the screen.", failed: true });
-    }
+    const copied = await copyText(value);
+    setInviteNotice(
+      copied
+        ? { message: successMessage, failed: false }
+        : { message: "Copy failed. Copy it manually from the screen.", failed: true }
+    );
   };
+
+  const shareInvite = canShareLinks()
+    ? async (value: string) => {
+        const result = await shareLink("Minesweeper Flags", value);
+        if (result === "failed") {
+          setInviteNotice({ message: "Sharing failed. Copy the link instead.", failed: true });
+        }
+      }
+    : undefined;
 
   if (recovery.isRestoring) return <RoomRestoringPanel />;
 
@@ -74,6 +86,9 @@ export const RoomPage = () => {
         error={error}
         isP2PDeployment={isP2PDeployment}
         canReconnect={hasStoredSession(roomCode)}
+        waitingForHost={
+          isP2PDeployment && !error && hostSetup?.stage === "idle" && hasStoredSession(roomCode)
+        }
         onReconnect={recovery.reconnect}
       />
     );
@@ -82,11 +97,11 @@ export const RoomPage = () => {
   if (match) {
     return (
       <main className="page-shell arcade-page-shell arcade-match-page">
-        {error ? (
-          <section className="panel error-banner">
-            <p>{error}</p>
-          </section>
-        ) : null}
+        <MatchMessage
+          error={error}
+          connectionStatus={connectionStatus}
+          onExpire={gameClient.clearError}
+        />
 
         <MatchView
           roomCode={roomCode}
@@ -105,6 +120,7 @@ export const RoomPage = () => {
           onResign={gameClient.resignMatch}
           onRequestRematch={gameClient.requestRematch}
           onCancelRematch={gameClient.cancelRematch}
+          onBackToLobby={() => navigate("/lobby")}
         />
       </main>
     );
@@ -114,11 +130,11 @@ export const RoomPage = () => {
     return (
       <HostDirectMatchPanel
         roomCode={roomCode}
-        connectionStatus={connectionStatus}
         hostSetup={hostSetup}
         inviteNotice={inviteNotice}
         error={error}
         onCopy={copyInviteValue}
+        onShare={shareInvite}
       />
     );
   }
@@ -131,6 +147,7 @@ export const RoomPage = () => {
       inviteNotice={inviteNotice}
       error={error}
       onCopy={copyInviteValue}
+      onShare={shareInvite}
       onCancelRoom={() => {
         if (roomCancelPending) return;
         exitDestination.current = "/lobby";

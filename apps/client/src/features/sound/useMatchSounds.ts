@@ -1,5 +1,6 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { useEffect, useRef } from "react";
+import { vibrateForClaim } from "./haptics.js";
 import { diffMatchSounds } from "./match-sound-events.js";
 import { getSoundPlayer, type SoundPlayer } from "./sound-player.js";
 import { isSoundEnabled } from "./sound-settings.js";
@@ -21,5 +22,7 @@ export const useMatchSounds = (
     for (const name of names) {
       player.play(name);
     }
+    const claimedMines = names.includes("flag") || names.includes("bomb");
+    if (claimedMines && match.lastAction?.playerId === viewerPlayerId) vibrateForClaim();
   }, [match]);
 };

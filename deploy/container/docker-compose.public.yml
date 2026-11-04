@@ -114,6 +114,7 @@ services:
         VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-server}
         VITE_P2P_STUN_URLS: ${VITE_P2P_STUN_URLS:-}
         VITE_P2P_SIGNALING_URL: ${VITE_P2P_SIGNALING_URL:-http://localhost:3002}
+        VITE_PUBLIC_ORIGIN: ${VITE_PUBLIC_ORIGIN:-}
     depends_on:
       server:
         condition: service_healthy

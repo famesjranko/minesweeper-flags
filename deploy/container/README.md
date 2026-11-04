@@ -77,3 +77,4 @@ This exercises the production-like behavior locally:
 - `CSP_CONNECT_SRC=https://api.example.com wss://api.example.com`
 - `WEBSOCKET_ALLOWED_ORIGINS=https://app.example.com`
 - `TRUST_PROXY=true`
+- `VITE_PUBLIC_ORIGIN=https://app.example.com` (optional; most chat apps need it to show the link-preview image)

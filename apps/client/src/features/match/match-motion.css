@@ -1,0 +1,73 @@
+/* Motion is opt-in, so a browser that asks for reduced motion gets the final state at once. */
+.win-burst {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar-score-pill .is-bump {
+    display: inline-block;
+    animation: match-score-bump 0.3s ease-out;
+  }
+
+  /* Presses are ignored until this settles, so a new Confirm shows that it is not ready yet. */
+  .match-resign-action.is-danger {
+    animation: match-action-arm 0.8s ease-in;
+  }
+
+  .match-result-summary {
+    display: inline-block;
+    animation: match-result-slide 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+
+  .arcade-board-viewport.is-celebrating {
+    border-color: #ffd45a;
+    box-shadow: 0 0 18px #ffd45a8c;
+  }
+
+  .win-burst {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .win-burst-flag {
+    position: absolute;
+    left: var(--burst-x);
+    bottom: -32px;
+    animation: match-flag-fly 1.4s ease-out var(--burst-delay) both;
+  }
+}
+
+@keyframes match-action-arm {
+  from {
+    opacity: 0.35;
+  }
+}
+
+@keyframes match-score-bump {
+  40% {
+    transform: scale(1.7);
+    color: #ffd45a;
+  }
+}
+
+@keyframes match-result-slide {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+@keyframes match-flag-fly {
+  from {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-80vh) rotate(var(--burst-spin));
+    opacity: 0;
+  }
+}

@@ -21,12 +21,26 @@
 }
 .arcade-turn-hint {
   padding: 6px 0;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
   overflow-wrap: anywhere;
 }
-.arcade-match-status.is-red {
-  color: #ffb894;
+.arcade-match-status:not(.is-result) .arcade-turn-hint {
+  font-size: 16px;
+  font-weight: 700;
+}
+/* The strip fills with the colour of the player whose turn it is. */
+.arcade-match-status:not(.is-result).is-blue {
+  background: linear-gradient(#2a7bb6, #22689c);
+  color: #fff;
+}
+.arcade-match-status:not(.is-result).is-red {
+  background: linear-gradient(#8c4a3f, #6d382f);
+  color: #ffe4dc;
+}
+.arcade-match-status:not(.is-result) .arcade-zoom-button {
+  color: inherit;
 }
 .arcade-match-status.is-result {
   color: #dcedff;
@@ -48,14 +62,14 @@
   color: #dbeeff;
 }
 .arcade-bomb-cancel {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid #526888;
   border-radius: 8px;
   background: #243c59;
   color: #dfedff;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
 }
 .arcade-bomb-cancel:hover {
@@ -90,15 +104,14 @@
   background: #302a36;
   border-color: #55434b;
 }
+/* The outer ring doubles the border without moving the card's fixed-height contents. */
 .arcade-match .sidebar-player-panel.is-turn {
-  border-color: #587e9e;
+  border-color: var(--team);
   box-shadow:
     inset 3px 0 var(--team),
     inset 0 1px #ffffff09,
+    0 0 0 1px var(--team),
     0 2px 3px #040c1729;
-}
-.arcade-match .sidebar-player-panel-red.is-turn {
-  border-color: #986b62;
 }
 .arcade-match .sidebar-player-panel.is-card-winner {
   border-color: #c3a258;
@@ -156,7 +169,7 @@
   justify-content: start;
   gap: 3px;
   padding: 0 0 0 4px;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 14px;
   letter-spacing: 0;
@@ -226,14 +239,13 @@
   height: 22px;
   pointer-events: none;
 }
-.arcade-match .inline-bomb:disabled {
-  opacity: 1;
-  cursor: default;
+.arcade-match .inline-bomb[aria-disabled="true"] {
+  cursor: help;
 }
 .arcade-match .inline-bomb:is(.is-ready, .is-waiting, .is-used, .is-armed) {
   color: #ffd45a;
 }
-button.inline-bomb:not(:disabled)::after {
+button.inline-bomb:not([aria-disabled="true"])::after {
   content: "";
   position: absolute;
   width: 28px;
@@ -243,7 +255,7 @@ button.inline-bomb:not(:disabled)::after {
   opacity: 0.65;
   background: #ffd45a06;
 }
-button.inline-bomb:not(:disabled):hover::after {
+button.inline-bomb:not([aria-disabled="true"]):hover::after {
   background: #ffd45a18;
   opacity: 1;
 }
@@ -262,6 +274,9 @@ button.inline-bomb.is-armed::after {
   outline: 3px solid #b5e6ff;
   outline-offset: 2px;
 }
+.match-action-slot {
+  display: contents;
+}
 .match-primary-action,
 .match-resign-action {
   display: flex;
@@ -275,8 +290,13 @@ button.inline-bomb.is-armed::after {
   background: #243c59;
   color: #dfedff;
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
+}
+.match-primary-action[aria-disabled="true"],
+.match-resign-action:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 .match-primary-action {
   border-color: #77d0ff;
@@ -291,6 +311,12 @@ button.inline-bomb.is-armed::after {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
+}
+.match-resign-action.is-fire {
+  border-color: #ffe28a;
+  background: linear-gradient(#ffd45a, #e9a913);
+  color: #231a02;
+  font-weight: 750;
 }
 .match-resign-action.is-danger {
   border-color: #b8695d;
@@ -329,8 +355,15 @@ button.inline-bomb.is-armed::after {
   opacity: 1;
 }
 @media (max-width: 350px) {
+  /* The label shares its row with the score and bomb, so on the narrowest phones it wraps. */
   .arcade-match .sidebar-player-header {
-    font-size: 8px;
     gap: 2px;
+    white-space: normal;
+  }
+  /* A longer message, such as a locked bomb's reason, must not push Resign off the screen. */
+  .arcade-match-status:not(.is-result) .arcade-turn-hint {
+    padding-block: 3px;
+    font-size: 14px;
+    line-height: 18px;
   }
 }

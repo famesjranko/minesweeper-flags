@@ -419,6 +419,40 @@ describe("P2PRendezvousClient", () => {
     );
   });
 
+  it("explains a network failure in plain words", async () => {
+    // Given a signaling service the browser cannot reach
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    const client = new P2PRendezvousClient({
+      baseUrl: "https://signal.example.com",
+      fetch: fetchMock as typeof fetch
+    });
+
+    // When a request fails
+    const request = client.getSession("session-1");
+
+    // Then the player sees a sentence rather than the browser's error text
+    await expect(request).rejects.toThrow("Can’t reach the direct match service.");
+  });
+
+  it("keeps an abort as an abort, so teardown stays silent", async () => {
+    // Given a request that teardown cancels
+    const fetchMock = vi.fn(async () => {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    });
+    const client = new P2PRendezvousClient({
+      baseUrl: "https://signal.example.com",
+      fetch: fetchMock as typeof fetch
+    });
+
+    // When the request stops
+    const request = client.getSession("session-1");
+
+    // Then callers can still recognise the abort
+    await expect(request).rejects.toMatchObject({ name: "AbortError" });
+  });
+
   it("uses a bound global fetch by default", async () => {
     const originalFetch = globalThis.fetch;
     const fetchSpy = vi.fn(async () =>

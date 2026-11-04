@@ -108,6 +108,12 @@ const defaultSleep = (durationMs: number, signal?: AbortSignal): Promise<void> =
   });
 };
 
+const UNREACHABLE_MESSAGE =
+  "Can’t reach the direct match service. Check your connection and try again.";
+
+const isAbort = (error: unknown): boolean =>
+  typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
+
 const getErrorMessage = (status: number): string => {
   switch (status) {
     case 404:
@@ -461,7 +467,13 @@ export class P2PRendezvousClient {
       init.body = JSON.stringify(body);
     }
 
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, init);
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, init).catch(
+      (error: unknown) => {
+        if (isAbort(error)) throw error;
+        // The browser's own text, such as "Failed to fetch", means nothing to a player.
+        throw new P2PRendezvousRequestError(UNREACHABLE_MESSAGE, 0);
+      }
+    );
 
     if (!response.ok) {
       let message = getErrorMessage(response.status);

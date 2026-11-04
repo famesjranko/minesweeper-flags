@@ -44,7 +44,6 @@ const SoloMatch = ({ session }: { session: SoloSession }) => {
           onCellSelect={session.submitCellAction}
           onResign={session.resign}
           presentation="solo"
-          botThinking={snapshot.botThinking}
           botLevel={SOLO_DIFFICULTY_COPY[snapshot.difficulty].label}
           onRematch={session.rematch}
         />

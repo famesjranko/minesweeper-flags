@@ -1,18 +1,25 @@
+import type { MatchStateDto } from "@minesweeper-flags/shared";
+import type { RefObject } from "react";
 import { ChatPanel } from "../chat/ChatPanel.js";
 import type { MultiplayerMatchViewProps } from "./match-view.types.js";
-import { useMatchChat } from "./useMatchChat.js";
 import "./match-chat-preview.css";
 
 export const MatchChat = ({
   props,
   playerTones,
-  helperText
+  opponent,
+  chatRef,
+  onChatSeen
 }: {
   props: MultiplayerMatchViewProps;
   playerTones: Record<string, "blue" | "red">;
-  helperText: string;
+  opponent: MatchStateDto["players"][number] | undefined;
+  chatRef: RefObject<HTMLDialogElement | null>;
+  onChatSeen: () => void;
 }) => {
-  const chatRef = useMatchChat();
+  const helperText = opponent
+    ? `${opponent.displayName} is ${opponent.connected ? "online" : "offline"}.`
+    : "Waiting for the second player to join chat.";
   const chat = {
     roomCode: props.roomCode,
     currentPlayerId: props.currentPlayerId,
@@ -23,7 +30,10 @@ export const MatchChat = ({
     pending: props.chatPending,
     error: props.chatError,
     onDraftChange: props.onChatDraftChange,
-    onSend: props.onSendChatMessage
+    onSend: () => {
+      onChatSeen();
+      props.onSendChatMessage();
+    }
   };
   return (
     <>
@@ -31,10 +41,29 @@ export const MatchChat = ({
         <ChatPanel
           {...chat}
           className="arcade-match-chat is-compact"
-          onExpand={() => chatRef.current?.showModal()}
+          onExpand={() => {
+            onChatSeen();
+            chatRef.current?.showModal();
+          }}
         />
       </div>
-      <dialog ref={chatRef} className="arcade-chat-region" aria-label="Match chat">
+      <dialog
+        ref={chatRef}
+        className="arcade-chat-region"
+        aria-label="Match chat"
+        onClose={(event) => {
+          onChatSeen();
+          // The chip that opened the chat has gone, so the browser has nowhere to return focus.
+          // It may not have left the closed dialog yet, and it would fall to the body next.
+          const focused = document.activeElement;
+          if (focused === document.body || event.currentTarget.contains(focused)) {
+            event.currentTarget
+              .closest(".arcade-match")
+              ?.querySelector<HTMLButtonElement>(".chat-expand")
+              ?.focus({ preventScroll: true });
+          }
+        }}
+      >
         <ChatPanel
           {...chat}
           helperText={helperText}

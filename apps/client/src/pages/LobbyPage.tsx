@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
 import { RoomLobby } from "../features/room/RoomLobby.js";
+import { useServerUnreachable } from "../features/room/useServerUnreachable.js";
 import { DEPLOYMENT_MODE } from "../lib/config/env.js";
 import { HomePage, useFriendPanelActive } from "./HomePage.js";
 
@@ -32,6 +33,11 @@ const FriendLobby = () => {
     openLobby();
     setIsReady(true);
   }, [friendActive, openLobby, roomCancelAttempted, liveMatchRoom]);
+  // A direct-match build has no game server, and its lobby stays usable without one.
+  const serverUnreachable = useServerUnreachable(
+    DEPLOYMENT_MODE === "server" && isReady,
+    connectionStatus
+  );
 
   if (liveMatchRoom) {
     return (
@@ -55,6 +61,7 @@ const FriendLobby = () => {
       deploymentMode={DEPLOYMENT_MODE}
       error={error}
       slotAvailability={slotAvailability}
+      serverUnreachable={serverUnreachable}
       onRefreshSlots={refreshSlotCount}
       onCreateRoom={createRoom}
       onJoinRoom={joinRoom}
@@ -70,7 +77,8 @@ export const LobbyPage = () => {
   return (
     <HomePage
       initialMode={pathname === "/lobby" ? "friend" : "solo"}
-      connectionStatus={connectionStatus}
+      // A direct-match lobby has no server link to report, so "Disconnected" would only mislead.
+      connectionStatus={DEPLOYMENT_MODE === "p2p" ? undefined : connectionStatus}
       onFriendSelected={() => requestFriend?.()}
       // The URL records the chosen tab so a reload reopens it. Replace keeps tab switches
       // out of browser history.

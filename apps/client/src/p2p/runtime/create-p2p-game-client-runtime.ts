@@ -23,14 +23,12 @@ import {
   type P2PRuntimeDependencies,
   type RendezvousClient
 } from "./p2p-runtime-context.js";
+import { DIRECT_MATCH_ACTION_BLOCKED_MESSAGE } from "./p2p-runtime-errors.js";
 
 const UNSUPPORTED_MATCH_ACTION_MESSAGE =
   "Direct Match setup is still loading. Start from the direct-match lobby flow.";
 const P2P_CHAT_DISCONNECTED_MESSAGE =
   "Chat is offline. If the direct link stays down, restart the direct match.";
-const P2P_ACTION_DISCONNECTED_MESSAGE =
-  "Direct connection interrupted. Restart the direct match if it does not recover.";
-
 export interface CreateP2PGameClientRuntimeOptions {
   createPeer?: () => WebRTCPeerController;
   scheduler?: GameClientScheduler;
@@ -129,7 +127,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
   submitCellAction = (row: number, column: number): void => {
     if (this.shouldBlockHostActionDuringReconnect()) {
-      this.store.setError(P2P_ACTION_DISCONNECTED_MESSAGE);
+      this.store.setError(DIRECT_MATCH_ACTION_BLOCKED_MESSAGE);
       return;
     }
 
@@ -171,7 +169,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
   resignMatch = (): void => {
     if (this.shouldBlockHostActionDuringReconnect()) {
-      this.store.setError(P2P_ACTION_DISCONNECTED_MESSAGE);
+      this.store.setError(DIRECT_MATCH_ACTION_BLOCKED_MESSAGE);
       return;
     }
 
@@ -185,7 +183,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
   requestRematch = (): void => {
     if (this.shouldBlockHostActionDuringReconnect()) {
-      this.store.setError(P2P_ACTION_DISCONNECTED_MESSAGE);
+      this.store.setError(DIRECT_MATCH_ACTION_BLOCKED_MESSAGE);
       return;
     }
 
@@ -199,7 +197,7 @@ class P2PBootstrapController implements GameClientRuntimeController {
 
   cancelRematch = (): void => {
     if (this.shouldBlockHostActionDuringReconnect()) {
-      this.store.setError(P2P_ACTION_DISCONNECTED_MESSAGE);
+      this.store.setError(DIRECT_MATCH_ACTION_BLOCKED_MESSAGE);
       return;
     }
 

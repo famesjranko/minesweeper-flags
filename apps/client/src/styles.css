@@ -29,6 +29,18 @@ input {
   font: inherit;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 button {
   cursor: pointer;
 }
@@ -276,11 +288,11 @@ button {
 }
 
 .lobby-preview-cell.is-number-2 {
-  color: #237019;
+  color: #1c5c14;
 }
 
 .lobby-preview-cell.is-number-3 {
-  color: #d14520;
+  color: #9f2a0a;
 }
 
 .lobby-preview-cell.is-flag-blue {
@@ -1616,11 +1628,13 @@ button {
 }
 
 .board-grid {
+  --board-pad: 8px;
+  --board-gap: 2px;
   display: grid;
   position: relative;
-  gap: 2px;
+  gap: var(--board-gap);
   background: #050607;
-  padding: 8px;
+  padding: var(--board-pad);
   border-radius: 12px;
   box-shadow:
     inset 0 0 0 3px #2f2f2f,
@@ -1653,10 +1667,20 @@ button {
   display: grid;
   place-items: center;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+  /* A quick second tap on the board is a move, never a browser zoom. */
+  touch-action: manipulation;
 }
 
-.board-cell:disabled {
-  opacity: 1;
+/* These stay real buttons so they keep focus, but a flash would promise a tap that does nothing. */
+.board-cell[aria-disabled="true"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.board-row {
+  display: contents;
+}
+
+.board-cell[aria-disabled="true"] {
   cursor: default;
 }
 
@@ -1670,11 +1694,23 @@ button {
     inset -1px -1px 0 rgba(0, 0, 0, 0.22);
 }
 
-/* Highlight only tiles the local player can pick (:enabled), and only where a
+/* While the player cannot move, hidden tiles go grey-blue, so the board itself shows whose turn it is. */
+.board-grid.is-waiting .board-cell.status-hidden {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07) 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(315deg, rgba(255, 255, 255, 0.05) 20%, transparent 20%) 0 0 / 10px 10px,
+    linear-gradient(180deg, #5b7f9c 0%, #47688a 55%, #3a5573 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.18),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Highlight only tiles the local player can pick, and only where a
    pointer really hovers; on touch, :hover sticks after a tap. Keyboard focus
    gets the same look. Neither applies during a bomb preview, which shows its own footprint. These rules follow the base rule so they win the cascade. */
 @media (hover: hover) {
-  .board-grid:not(.is-bomb-preview-active) .board-cell.status-hidden:hover:enabled {
+  .board-grid:not(.is-bomb-preview-active)
+    .board-cell.status-hidden:hover:not([aria-disabled="true"]) {
     z-index: 2;
     background:
       linear-gradient(135deg, rgba(255, 255, 255, 0.18) 20%, transparent 20%) 0 0 / 10px 10px,
@@ -1686,7 +1722,8 @@ button {
   }
 }
 
-.board-grid:not(.is-bomb-preview-active) .board-cell.status-hidden:focus-visible:enabled {
+.board-grid:not(.is-bomb-preview-active)
+  .board-cell.status-hidden:focus-visible:not([aria-disabled="true"]) {
   z-index: 2;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.18) 20%, transparent 20%) 0 0 / 10px 10px,
@@ -1786,11 +1823,11 @@ button {
 }
 
 .number-2 {
-  color: #237019;
+  color: #1c5c14;
 }
 
 .number-3 {
-  color: #d14520;
+  color: #9f2a0a;
 }
 
 .number-4 {
@@ -1798,11 +1835,11 @@ button {
 }
 
 .number-5 {
-  color: #7e2323;
+  color: #651414;
 }
 
 .number-6 {
-  color: #0f7580;
+  color: #0b5c66;
 }
 
 .number-7 {

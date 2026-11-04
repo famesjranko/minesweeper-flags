@@ -44,7 +44,7 @@ describe("BoardGrid last-move marks", () => {
     // Then exactly one cell carries the marker classes
     expect(html.match(/is-last-move/g)).toHaveLength(1);
     expect(html).toContain('class="board-cell status-hidden is-last-move last-move-red"');
-    expect(html).toContain('title="Row 2, Column 1"');
+    expect(html).toContain('aria-label="Row 2, column 1, hidden, opponent&#x27;s last move"');
   });
 
   it("renders no marker when nothing is marked", () => {
@@ -64,6 +64,6 @@ describe("BoardGrid last-move marks", () => {
 
     // Then the overlay spans two cells
     expect(html).toContain('class="board-last-move-area last-move-blue"');
-    expect(html).toContain("width:calc(2 * var(--board-cell-size) + 1 * 2px)");
+    expect(html).toContain("width:calc(2 * var(--board-cell-size) + 1 * var(--board-gap))");
   });
 });

@@ -160,6 +160,7 @@ Example templates:
 | `VITE_DEPLOYMENT_MODE` | `server` | no | Selects the frontend product shape. Use `server` for the hosted backend flow and `p2p` for direct match plus signaling. |
 | `VITE_P2P_STUN_URLS` | unset | no | Comma-separated STUN URLs used by WebRTC in `p2p` builds. |
 | `VITE_P2P_SIGNALING_URL` | unset | required when `VITE_DEPLOYMENT_MODE=p2p` | Base URL for the automated signaling service, such as `https://signal.example.com`. |
+| `VITE_PUBLIC_ORIGIN` | unset | no | Public site origin, such as `https://play.example.com`. It makes the link-preview image URL absolute, which most chat apps need before they show the image. |
 
 Solo has no environment variables. It runs as a browser-local human-versus-bot match, without an API, model download, or backend game service. The home page's Solo and With a friend choices are separate from the `server` and `p2p` operator build choices.
 
@@ -202,6 +203,7 @@ The client containers accept build-time deployment configuration in `apps/client
 | `VITE_DEPLOYMENT_MODE` | `server` | Selects the hosted or direct-match product path for the built client artifact. |
 | `VITE_P2P_STUN_URLS` | unset | Passed into the Vite build for WebRTC STUN configuration. |
 | `VITE_P2P_SIGNALING_URL` | unset | Passed into the Vite build for the automated signaling base URL used by `p2p` deployments. |
+| `VITE_PUBLIC_ORIGIN` | unset | Passed into the Vite build for the absolute link-preview image URL. |
 
 The public client container also accepts this runtime env var:
 

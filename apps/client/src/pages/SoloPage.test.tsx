@@ -102,12 +102,14 @@ it("disables local input while the bot thinks and disposes its session on unmoun
 
   try {
     // When the local board renders
-    const cell = container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']");
+    const cell = container.querySelector<HTMLButtonElement>(
+      "button[aria-label^='Row 1, column 1,']"
+    );
 
     // Then bot status is exposed and human controls cannot act
     expect(session.start).toHaveBeenCalledBefore(session.getSnapshot as ReturnType<typeof vi.fn>);
-    expect(container.textContent).toContain("Bot thinking");
-    expect(cell?.disabled).toBe(true);
+    expect(container.textContent).toContain("Bot is moving…");
+    expect(cell?.getAttribute("aria-disabled")).toBe("true");
     expect(container.querySelector(".arcade-chat-preview")).toBeNull();
     expect(container.querySelector(".arcade-player-presence")).toBeNull();
   } finally {
@@ -254,7 +256,9 @@ it("updates the persistent local status in place while bot input is disabled", (
 
   try {
     const status = container.querySelector(".arcade-turn-hint");
-    const cell = container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']");
+    const cell = container.querySelector<HTMLButtonElement>(
+      "button[aria-label^='Row 1, column 1,']"
+    );
 
     // When the deterministic local session moves to the bot turn
     act(() =>
@@ -271,9 +275,9 @@ it("updates the persistent local status in place while bot input is disabled", (
 
     // Then the same status row announces the bot state and disables human input
     expect(container.querySelector(".arcade-turn-hint")).toBe(status);
-    expect(status?.textContent).toContain("Bot thinking");
+    expect(status?.textContent).toContain("Bot is moving…");
     expect(container.querySelector(".solo-thinking")).toBeNull();
-    expect(cell?.disabled).toBe(true);
+    expect(cell?.getAttribute("aria-disabled")).toBe("true");
 
     // When the bot finishes and the match ends
     act(() =>
@@ -413,10 +417,12 @@ it.each(["easy", "hard"])(
       expect(JSON.parse(fresh)).toMatchObject({ starter: "human", difficulty, actions: [] });
       expect(window.location.search).toBe("");
       expect(window.sessionStorage.getItem(SOLO_STORAGE_KEY)).toBe(fresh);
-      expect(container.textContent).not.toContain("Bot thinking");
+      expect(container.textContent).not.toContain("Bot is moving…");
       expect(
-        container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']")?.disabled
-      ).toBe(false);
+        container
+          .querySelector<HTMLButtonElement>("button[aria-label^='Row 1, column 1,']")
+          ?.getAttribute("aria-disabled")
+      ).toBeNull();
     } finally {
       act(() => root.unmount());
       window.sessionStorage.clear();

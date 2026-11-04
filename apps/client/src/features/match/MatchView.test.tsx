@@ -130,7 +130,7 @@ describe("MatchView bomb availability", () => {
     );
 
     expect(html).toContain('class="inline-bomb is-locked"');
-    expect(html).toContain('disabled=""');
+    expect(html).toContain('aria-disabled="true"');
     expect(html).toContain(`Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`);
     expect(html).toContain(`trailing by ${MIN_BOMB_DEFICIT} or more`);
   });
@@ -161,7 +161,7 @@ describe("MatchView bomb availability", () => {
     );
 
     expect(html).toContain('class="inline-bomb is-locked"');
-    expect(html).toContain('disabled=""');
+    expect(html).toContain('aria-disabled="true"');
     expect(html).not.toContain("Bomb ready.");
   });
 });
@@ -209,7 +209,7 @@ describe("MatchView turn hint", () => {
 
     // Then the move pill carries the OPPONENT hint
     expect(html).toContain('data-turn-hint="OPPONENT"');
-    expect(html).toContain("Blue is moving.");
+    expect(html).toContain("Blue is moving…");
   });
 });
 
@@ -281,7 +281,7 @@ describe("MatchView last-move marks", () => {
     // When the match renders
     // Then only that cell carries is-last-move, in the opponent's tone
     expect(html.match(/is-last-move/g)).toHaveLength(1);
-    expect(html).toMatch(/is-last-move last-move-red"[^>]*title="Row 2, Column 3"/);
+    expect(html).toMatch(/is-last-move last-move-red"[^>]*aria-label="Row 2, column 3,/);
   });
 
   it("outlines a bomb on a 2x2 board as the whole board and rings the centre only", () => {
@@ -293,7 +293,7 @@ describe("MatchView last-move marks", () => {
     // When the match renders
     // Then the area spans the whole clamped 2x2 and only the centre cell is ringed
     expect(html).toContain('class="board-last-move-area last-move-red"');
-    expect(html).toContain("width:calc(2 * var(--board-cell-size) + 1 * 2px)");
+    expect(html).toContain("width:calc(2 * var(--board-cell-size) + 1 * var(--board-gap))");
     expect(html.match(/is-last-move/g)).toHaveLength(1);
   });
 
@@ -305,8 +305,10 @@ describe("MatchView last-move marks", () => {
 
     // When the match renders
     // Then the outline spans 5 cells from the top-left
-    expect(html).toContain("width:calc(5 * var(--board-cell-size) + 4 * 2px)");
-    expect(html).toContain("left:calc(8px + 0 * (var(--board-cell-size) + 2px))");
+    expect(html).toContain("width:calc(5 * var(--board-cell-size) + 4 * var(--board-gap))");
+    expect(html).toContain(
+      "left:calc(var(--board-pad) + 0 * (var(--board-cell-size) + var(--board-gap)))"
+    );
   });
 
   it("marks nothing when there is no last action", () => {

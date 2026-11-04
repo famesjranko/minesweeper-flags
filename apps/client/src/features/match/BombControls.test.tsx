@@ -146,7 +146,7 @@ describe("bomb controls", () => {
       // Then the accessible reason matches the restriction and no action is sent
       expect(bomb.getAttribute("aria-label")).toContain(detail);
       expect(bomb.textContent).toBe("");
-      expect(bomb.disabled).toBe(true);
+      expect(bomb.getAttribute("aria-disabled")).toBe("true");
       expect(bomb.getAttribute("aria-pressed")).toBe("false");
       expect(onToggle).not.toHaveBeenCalled();
     }
@@ -156,7 +156,7 @@ describe("bomb controls", () => {
     // Given an unused bomb on the trailing player's turn at exactly four behind
     const { bomb, onToggle } = render(createMatch());
     expect(bomb.getAttribute("aria-label")).toContain("click to arm");
-    expect(bomb.disabled).toBe(false);
+    expect(bomb.hasAttribute("aria-disabled")).toBe(false);
 
     // When the player arms the bomb and then cancels it
     act(() => bomb.click());
@@ -187,7 +187,7 @@ describe("bomb controls", () => {
     // Then the bomb is disarmed, stays available, and the Cancel button is gone
     expect(cancel?.textContent).toBe("Cancel");
     expect(bomb.getAttribute("aria-pressed")).toBe("false");
-    expect(bomb.disabled).toBe(false);
+    expect(bomb.hasAttribute("aria-disabled")).toBe(false);
     expect(onToggle).toHaveBeenCalledTimes(2);
     expect(container.querySelector(".arcade-bomb-cancel")).toBeNull();
     expect(container.querySelector("[role=status]")?.textContent).not.toContain("Bomb armed");

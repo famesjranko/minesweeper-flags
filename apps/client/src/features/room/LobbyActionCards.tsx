@@ -1,4 +1,4 @@
-import { INVITE_TOKEN_LENGTH } from "@minesweeper-flags/shared";
+import { useEffect, useRef, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 
 interface CreateActionProps {
@@ -49,41 +49,64 @@ export const DirectMatchActionCards = ({ canCreateRoom, onCreateRoom }: CreateAc
 interface SlotIndicatorProps {
   slotAvailability: SlotAvailability;
   slotsFull: boolean;
-  refreshing: boolean;
-  onRefreshSlots: () => void;
+  onRefreshSlots: (() => void) | undefined;
 }
 
 export const SlotIndicator = ({
   slotAvailability,
   slotsFull,
-  refreshing,
   onRefreshSlots
-}: SlotIndicatorProps) => (
-  <span className="lobby-slot-indicator">
-    <span
-      className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}
-      role="status"
-      aria-label="Rooms in use"
-      title={`${slotAvailability.activeRooms} of ${slotAvailability.maxRooms} rooms in use`}
-    >
-      {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
+}: SlotIndicatorProps) => {
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (refreshTimerRef.current !== null) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    },
+    []
+  );
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    onRefreshSlots?.();
+    if (refreshTimerRef.current !== null) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = setTimeout(() => setRefreshing(false), 600);
+  };
+
+  return (
+    <span className="lobby-slot-indicator">
+      <span
+        className={`lobby-slot-pill${slotsFull ? " is-full" : ""}`}
+        role="status"
+        aria-label="Rooms in use"
+        title={`${slotAvailability.activeRooms} of ${slotAvailability.maxRooms} rooms in use`}
+      >
+        {slotAvailability.activeRooms}/{slotAvailability.maxRooms} rooms
+      </span>
+      <button
+        type="button"
+        className={`lobby-slot-refresh${refreshing ? " is-refreshing" : ""}`}
+        onClick={handleRefresh}
+        aria-label="Refresh room availability"
+        title="Refresh slot count"
+      >
+        &#x21bb;
+      </button>
     </span>
-    <button
-      type="button"
-      className={`lobby-slot-refresh${refreshing ? " is-refreshing" : ""}`}
-      onClick={onRefreshSlots}
-      aria-label="Refresh room availability"
-      title="Refresh slot count"
-    >
-      &#x21bb;
-    </button>
-  </span>
-);
+  );
+};
 
 interface ServerMatchActionCardsProps extends CreateActionProps {
   slotsFull: boolean;
   inviteValue: string;
   onInviteValueChange: (value: string) => void;
+  inviteProblem: string | null;
+  onInviteChecked: () => void;
   canJoinRoom: boolean;
   onJoinRoom: () => void;
 }
@@ -94,6 +117,8 @@ export const ServerMatchActionCards = ({
   slotsFull,
   inviteValue,
   onInviteValueChange,
+  inviteProblem,
+  onInviteChecked,
   canJoinRoom,
   onJoinRoom
 }: ServerMatchActionCardsProps) => (
@@ -105,7 +130,7 @@ export const ServerMatchActionCards = ({
         onCreateRoom();
       }}
     >
-      <h3 className="arcade-create-heading">Create a Match</h3>
+      <h2 className="arcade-create-heading">Create a Match</h2>
 
       <button
         type="submit"
@@ -127,18 +152,23 @@ export const ServerMatchActionCards = ({
       }}
     >
       <div className="lobby-card-heading">
-        <h3>Have an invite?</h3>
+        <h2>Have an invite?</h2>
       </div>
 
       <div className="lobby-join-entry">
         <label className="field lobby-field">
-          <span>Invite token</span>
+          <span>Invite code</span>
           <input
             className="invite-token-input"
             value={inviteValue}
             onChange={(event) => onInviteValueChange(event.target.value)}
-            maxLength={INVITE_TOKEN_LENGTH}
-            placeholder="Invite token"
+            onBlur={onInviteChecked}
+            // A disabled Join stops Enter from submitting the form, so Enter is read here too.
+            onKeyDown={(event) => {
+              if (event.key === "Enter") onInviteChecked();
+            }}
+            aria-invalid={inviteProblem ? true : undefined}
+            placeholder="Invite code"
             spellCheck={false}
             autoCapitalize="none"
             autoCorrect="off"
@@ -155,6 +185,11 @@ export const ServerMatchActionCards = ({
           Join
         </button>
       </div>
+      {inviteProblem ? (
+        <p className="arcade-error lobby-invite-problem" role="alert">
+          {inviteProblem}
+        </p>
+      ) : null}
     </form>
   </>
 );

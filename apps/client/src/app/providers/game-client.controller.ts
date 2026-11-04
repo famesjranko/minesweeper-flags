@@ -2,6 +2,7 @@
 import {
   CLIENT_EVENT_NAMES,
   type ClientEvent,
+  type MatchStateDto,
   SERVER_EVENT_NAMES,
   type ServerEvent
 } from "@minesweeper-flags/shared";
@@ -66,6 +67,7 @@ export class GameClientController {
   private reconnectAttemptCount = 0;
   private reconnectTimeoutId: number | null = null;
   private shouldReconnect = false;
+  private moveInFlight = false;
   private unsubscribeTransport: (() => void) | null = null;
   private pendingRoomCancellation: {
     roomCode: string;
@@ -183,21 +185,28 @@ export class GameClientController {
       return;
     }
 
+    // On a slow connection a second tap lands before the reply, and could only be rejected.
+    if (this.moveInFlight) return;
+
     const action = this.store.getSnapshot().bombArmed
       ? { type: "bomb" as const, row, column }
       : { type: "select" as const, row, column };
 
-    if (
-      this.sendEvent({
-        type: CLIENT_EVENT_NAMES.matchAction,
-        payload: {
-          roomCode: activeSession.roomCode,
-          sessionToken: activeSession.sessionToken,
-          action
-        }
-      })
-    ) {
+    // Set first, because a direct-match host gets its reply during the send.
+    this.moveInFlight = true;
+    const sent = this.sendEvent({
+      type: CLIENT_EVENT_NAMES.matchAction,
+      payload: {
+        roomCode: activeSession.roomCode,
+        sessionToken: activeSession.sessionToken,
+        action
+      }
+    });
+
+    if (sent) {
       this.store.setBombArmed(false);
+    } else {
+      this.moveInFlight = false;
     }
   };
 
@@ -337,6 +346,9 @@ export class GameClientController {
     status,
     closeCode
   }: GameClientTransportStatusChange): void => {
+    // A reply cannot arrive over a dropped link, so the next tap must be free to send.
+    this.moveInFlight = false;
+
     if (status === "connected") {
       this.store.setConnectionStatus(status);
       this.reconnectAttemptCount = 0;
@@ -437,18 +449,22 @@ export class GameClientController {
       case SERVER_EVENT_NAMES.matchStarted:
       case SERVER_EVENT_NAMES.matchState:
       case SERVER_EVENT_NAMES.matchEnded:
-        this.store.setMatch(event.payload.match);
-        this.store.setBombArmed(false);
+        this.moveInFlight = false;
+        // The match has moved on, so a message about an earlier move is out of date.
+        this.store.clearError();
+        this.applyMatchSnapshot(event.payload.match);
         this.settleFailedRoomCancellation();
         break;
       case SERVER_EVENT_NAMES.matchRematchUpdated:
         this.store.applyRematchUpdate(event.payload.players);
         break;
       case SERVER_EVENT_NAMES.matchActionRejected:
+        this.moveInFlight = false;
         this.store.setError(event.payload.message);
         this.store.setBombArmed(false);
         break;
       case SERVER_EVENT_NAMES.serverError: {
+        this.moveInFlight = false;
         if (this.reconnectAttempt) {
           this.invalidateRoomSession(
             this.reconnectAttempt.roomCode,
@@ -472,6 +488,17 @@ export class GameClientController {
         break;
     }
   };
+
+  private applyMatchSnapshot(next: MatchStateDto): void {
+    const previous = this.store.getSnapshot().match;
+    this.store.setMatch(next);
+    // A presence change re-sends the same turn, which must not silently take the bomb away.
+    const isSameTurn =
+      previous?.turnNumber === next.turnNumber &&
+      previous.currentTurnPlayerId === next.currentTurnPlayerId &&
+      next.phase === "live";
+    if (!isSameTurn) this.store.setBombArmed(false);
+  }
 
   private applyRoomState(payload: ServerEventPayload<typeof SERVER_EVENT_NAMES.roomState>): void {
     const reconnectSession = this.reconnectAttempt;

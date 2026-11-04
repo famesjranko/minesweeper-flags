@@ -18,6 +18,7 @@ import {
   toReconnectCaller
 } from "./p2p-reconnect-claim.js";
 import {
+  DIRECT_MATCH_ACTION_BLOCKED_MESSAGE,
   DIRECT_MATCH_DISPLACED_MESSAGE,
   DIRECT_MATCH_RECOVERY_UNAVAILABLE_MESSAGE,
   isAbortError,
@@ -132,8 +133,7 @@ export class P2PRuntimeContext {
       copy: {
         chatDisconnectedMessage:
           "Chat is offline. If the direct link stays down, restart the direct match.",
-        actionDisconnectedMessage:
-          "Direct connection interrupted. Restart the direct match if it does not recover."
+        actionDisconnectedMessage: DIRECT_MATCH_ACTION_BLOCKED_MESSAGE
       }
     });
   }

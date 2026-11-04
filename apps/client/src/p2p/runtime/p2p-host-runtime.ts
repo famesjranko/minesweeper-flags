@@ -100,6 +100,7 @@ export class P2PHostRuntime {
     this.subscribeToPeer(hostPeer);
     controller.start();
     this.restoreHostStore(authoritySnapshot);
+    hostTransport.markGuestAway();
     context.setup.controller.setHostStage("connecting");
 
     context.hostReconnectAbortController = new AbortController();

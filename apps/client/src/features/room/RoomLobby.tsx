@@ -1,14 +1,16 @@
 import "./room-lobby.css";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import type { DeploymentMode } from "../../lib/config/env.js";
+import { DEFAULT_GUEST_NAME, DEFAULT_HOST_NAME } from "./default-names.js";
 import { extractInviteToken } from "./invite-link.js";
 import {
   DirectMatchActionCards,
   ServerMatchActionCards,
   SlotIndicator
 } from "./LobbyActionCards.js";
+import { ServerUnreachableNotice } from "./ServerUnreachableNotice.js";
 
 interface RoomLobbyProps {
   connectionStatus: string;
@@ -16,6 +18,7 @@ interface RoomLobbyProps {
   error: string | null;
   initialInviteValue?: string;
   slotAvailability?: SlotAvailability | null;
+  serverUnreachable?: boolean;
   onRefreshSlots?: () => void;
   onCreateRoom: (displayName: string) => void;
   onJoinRoom: (displayName: string, inviteToken: string) => void;
@@ -27,33 +30,30 @@ export const RoomLobby = ({
   error,
   initialInviteValue = "",
   slotAvailability = null,
+  serverUnreachable = false,
   onRefreshSlots,
   onCreateRoom,
   onJoinRoom
 }: RoomLobbyProps) => {
   const displayNameId = useId();
-  const [displayName, setDisplayName] = useState("Captain Sweeper");
+  const [editedName, setEditedName] = useState<string | null>(null);
   const [inviteValue, setInviteValue] = useState(initialInviteValue);
-  const trimmedDisplayName = displayName.trim();
+  const [inviteChecked, setInviteChecked] = useState(false);
   const inviteToken = extractInviteToken(inviteValue);
+  // The visible room code is not a credential: joining needs the token, which cannot be guessed.
+  const inviteProblem =
+    inviteChecked && inviteValue.trim() && !inviteToken
+      ? "That isn’t an invite code. Paste the link your friend sent."
+      : null;
+  // Until the player types a name, the field shows the default for the seat they are heading to.
+  const displayName = editedName ?? (inviteToken ? DEFAULT_GUEST_NAME : DEFAULT_HOST_NAME);
+  const trimmedDisplayName = displayName.trim();
   const slotsFull =
     slotAvailability !== null && slotAvailability.activeRooms >= slotAvailability.maxRooms;
   const isP2PDeployment = deploymentMode === "p2p";
   const isServerConnected = isP2PDeployment || connectionStatus === "connected";
   const canCreateRoom = trimmedDisplayName.length > 0 && !slotsFull && isServerConnected;
   const canJoinRoom = trimmedDisplayName.length > 0 && inviteToken !== null && isServerConnected;
-
-  const [refreshing, setRefreshing] = useState(false);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (refreshTimerRef.current !== null) {
-        clearTimeout(refreshTimerRef.current);
-      }
-    },
-    []
-  );
 
   const handleCreateRoom = () => {
     if (!canCreateRoom) {
@@ -64,16 +64,9 @@ export const RoomLobby = ({
     onRefreshSlots?.();
   };
 
-  const handleRefreshSlots = () => {
-    setRefreshing(true);
-    onRefreshSlots?.();
-    if (refreshTimerRef.current !== null) {
-      clearTimeout(refreshTimerRef.current);
-    }
-    refreshTimerRef.current = setTimeout(() => setRefreshing(false), 600);
-  };
-
   const handleJoinRoom = () => {
+    setInviteChecked(true);
+
     if (!canJoinRoom || !inviteToken) {
       return;
     }
@@ -96,8 +89,7 @@ export const RoomLobby = ({
             <SlotIndicator
               slotAvailability={slotAvailability}
               slotsFull={slotsFull}
-              refreshing={refreshing}
-              onRefreshSlots={handleRefreshSlots}
+              onRefreshSlots={onRefreshSlots}
             />
           )}
         </div>
@@ -106,12 +98,20 @@ export const RoomLobby = ({
           <input
             id={displayNameId}
             value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
+            onChange={(event) => setEditedName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              if (inviteValue.trim()) handleJoinRoom();
+              else handleCreateRoom();
+            }}
             maxLength={20}
             placeholder="Enter your display name"
           />
         </div>
       </div>
+
+      {serverUnreachable ? <ServerUnreachableNotice /> : null}
 
       <div className="lobby-action-cards">
         {isP2PDeployment ? (
@@ -122,7 +122,12 @@ export const RoomLobby = ({
             onCreateRoom={handleCreateRoom}
             slotsFull={slotsFull}
             inviteValue={inviteValue}
-            onInviteValueChange={setInviteValue}
+            onInviteValueChange={(value) => {
+              setInviteValue(value);
+              setInviteChecked(false);
+            }}
+            inviteProblem={inviteProblem}
+            onInviteChecked={() => setInviteChecked(true)}
             canJoinRoom={canJoinRoom}
             onJoinRoom={handleJoinRoom}
           />

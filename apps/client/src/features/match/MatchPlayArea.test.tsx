@@ -78,7 +78,7 @@ it("lets a player zoom, select the same square, and return to the fitted board",
     // When the player zooms and selects row two, column two
     act(() => container.querySelector<HTMLButtonElement>(".arcade-zoom-button")?.click());
     act(() =>
-      container.querySelector<HTMLButtonElement>("button[title='Row 2, Column 2']")?.click()
+      container.querySelector<HTMLButtonElement>("button[aria-label^='Row 2, column 2,']")?.click()
     );
 
     // Then zoom is active and the selected board coordinates are unchanged
