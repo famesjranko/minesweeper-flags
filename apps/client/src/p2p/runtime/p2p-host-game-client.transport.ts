@@ -92,6 +92,11 @@ export class P2PHostGameClientTransport implements GameClientTransport {
     }
   };
 
+  /** A refreshed host has no peer until the guest reconnects, the same state as a peer drop. */
+  markGuestAway = (): void => {
+    this.handlePeerDown();
+  };
+
   subscribe = (listener: GameClientTransportListener): (() => void) => {
     this.listeners.add(listener);
 
@@ -184,11 +189,15 @@ export class P2PHostGameClientTransport implements GameClientTransport {
         }
 
         if (status === "failed" || status === "closed") {
-          this.emitSteps(this.orchestrator.disconnectGuest().steps);
-          this.emitStatus({ status: "disconnected" });
+          this.handlePeerDown();
         }
       }
     });
+  }
+
+  private handlePeerDown(): void {
+    this.emitSteps(this.orchestrator.disconnectGuest().steps);
+    this.emitStatus({ status: "disconnected" });
   }
 
   private emitServerEvent = (event: ServerEvent): void => {

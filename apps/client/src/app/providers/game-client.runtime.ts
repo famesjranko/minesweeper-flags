@@ -1,6 +1,5 @@
 import { DEPLOYMENT_MODE, type DeploymentMode, resolveServerUrl } from "../../lib/config/env.js";
 import { createBrowserSessionPersistence } from "../../lib/socket/session-storage.js";
-import { createP2PGameClientRuntime } from "../../p2p/runtime/create-p2p-game-client-runtime.js";
 import type { P2PRuntimeSupport } from "../../p2p/runtime/p2p-runtime.types.js";
 import {
   createBrowserGameClientScheduler,
@@ -50,11 +49,22 @@ export const createServerGameClientRuntime = (): GameClientRuntime => {
   };
 };
 
+let createP2PRuntime: (() => GameClientRuntime) | null = null;
+
+/** Fetches the WebRTC runtime. Only a p2p build calls this, so server builds never download it. */
+export const loadP2PRuntime = async (): Promise<void> => {
+  const { createP2PGameClientRuntime } = await import(
+    "../../p2p/runtime/create-p2p-game-client-runtime.js"
+  );
+  createP2PRuntime = createP2PGameClientRuntime;
+};
+
 export const createGameClientRuntimeForMode = (
   deploymentMode: DeploymentMode
 ): GameClientRuntime => {
   if (deploymentMode === "p2p") {
-    return createP2PGameClientRuntime();
+    if (!createP2PRuntime) throw new Error("The direct match runtime has not loaded.");
+    return createP2PRuntime();
   }
 
   return createServerGameClientRuntime();

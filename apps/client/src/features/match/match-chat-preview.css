@@ -1,6 +1,33 @@
 .arcade-chat-preview {
   display: none;
 }
+.arcade-chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #77d0ff;
+  border-radius: 10px;
+  background: #1f4a6b;
+  color: #e9f6ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.arcade-chat-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffd45a;
+}
+/* The side panel shows every message on large screens, so there is nothing to announce. */
+@media (min-width: 1001px) and (min-height: 501px) {
+  .arcade-chat-chip {
+    display: none;
+  }
+}
 .arcade-match .is-compact .chat-message-list,
 .arcade-match .is-compact .chat-empty-state {
   height: 100px;
@@ -39,7 +66,7 @@
   background: transparent;
   color: #b9ddf4;
   box-shadow: none;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .arcade-match .is-compact .chat-inline-status {

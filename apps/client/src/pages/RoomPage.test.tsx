@@ -25,6 +25,7 @@ const mockState = vi.hoisted(() => ({
     chatDraft: "",
     chatPending: false,
     hasStoredSession: (() => false) as (roomCode: string) => boolean,
+    clearError: vi.fn() as () => void,
     reconnect: vi.fn(),
     submitCellAction: vi.fn(),
     setChatDraft: vi.fn(),
@@ -172,7 +173,7 @@ describe("RoomPage", () => {
 
     // Then recovery stays visible until the board arrives
     expect(container.textContent).toContain("Restoring your game…");
-    expect(container.textContent).not.toContain("Host Direct Match");
+    expect(container.textContent).not.toContain("Your room is ready.");
     mockState.current.match = {};
     rerender();
     expect(container.textContent).toContain("Recovered board");
@@ -200,7 +201,7 @@ describe("RoomPage", () => {
     );
 
     // Then the real waiting room is shown
-    expect(container.textContent).toContain("Host Direct Match");
+    expect(container.textContent).toContain("Your room is ready.");
     expect(container.textContent).not.toContain("Restoring your game…");
     act(() => root.unmount());
   });
@@ -235,14 +236,259 @@ describe("RoomPage", () => {
   it("shows the host direct-match waiting room in p2p mode", () => {
     const { container, root } = renderRoomPage();
 
-    expect(container.textContent).toContain("Host Direct Match");
-    expect(container.textContent).toContain("Share Direct Link");
-    expect(container.textContent).toContain("Waiting For Guest");
+    expect(container.textContent).toContain("Your room is ready.");
+    expect(container.textContent).toContain("Private invite link");
+    expect(container.textContent).toContain("Waiting for your friend…");
     expect(container.textContent).not.toContain("Paste Guest Answer");
 
     act(() => {
       root.unmount();
     });
+  });
+
+  describe("when a direct-match guest loses the host", () => {
+    const loseSeat = (hostStage: string) => {
+      // The seat disappears while the page is open, as it does when the host's tab closes.
+      const view = renderRoomPage();
+      const setup = mockState.current.p2pSetup as { host: { stage: string } };
+      const originalStage = setup.host.stage;
+      setup.host.stage = hostStage;
+      mockState.current.session = null;
+      mockState.current.hasStoredSession = () => true;
+      act(() => {
+        view.root.render(
+          <MemoryRouter initialEntries={["/room/DIRECT"]}>
+            <Routes>
+              <Route path="/room/:roomCode" element={<RoomPage />} />
+            </Routes>
+          </MemoryRouter>
+        );
+      });
+      setup.host.stage = originalStage;
+      return view;
+    };
+
+    it("says the guest is waiting for the host", () => {
+      // Given a guest tab, which never hosted, that has just lost its seat
+      // When the room page renders
+      const { container, root } = loseSeat("idle");
+
+      // Then it explains what happened and that rejoining is automatic
+      expect(container.textContent).toContain("Waiting for the host to return.");
+      expect(container.textContent).toContain(
+        "The host’s tab closed or lost its connection. You’ll rejoin when they come back."
+      );
+      expect(container.textContent).not.toContain("not currently attached");
+      act(() => root.unmount());
+    });
+
+    it("does not tell a host to wait for themselves", () => {
+      // Given the hosting tab has lost its seat
+      // When the room page renders
+      const { container, root } = loseSeat("waiting-for-guest");
+
+      // Then it keeps the plain reconnect wording
+      expect(container.textContent).toContain("Reconnect to your game.");
+      expect(container.textContent).not.toContain("Waiting for the host");
+      act(() => root.unmount());
+    });
+  });
+
+  describe("a message over a live match", () => {
+    const clearError = vi.fn();
+
+    const renderWithError = (
+      match: Record<string, unknown> | null,
+      connectionStatus = "connected",
+      roomCode = "DIRECT"
+    ) => {
+      vi.useFakeTimers();
+      clearError.mockClear();
+      mockState.current.clearError = clearError;
+      mockState.current.connectionStatus = connectionStatus;
+      mockState.current.error = "It is not your turn.";
+      mockState.current.match = match;
+      return renderRoomPage(roomCode);
+    };
+
+    it("stays on the unavailable page when the running match is for another room", () => {
+      // Given the page for one room, while a live match runs for a different room
+      const { root } = renderWithError({ phase: "live" }, "connected", "OTHER1");
+
+      // When time passes
+      act(() => vi.advanceTimersByTime(60_000));
+
+      // Then the explanation on that page stays
+      expect(clearError).not.toHaveBeenCalled();
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+
+    it("leaves by itself, so it cannot sit on the page for good", () => {
+      // Given a live match showing a rejected move
+      const { root } = renderWithError({ phase: "live" });
+      expect(clearError).not.toHaveBeenCalled();
+
+      // When a few seconds pass
+      act(() => vi.advanceTimersByTime(6_000));
+
+      // Then the message is cleared
+      expect(clearError).toHaveBeenCalledOnce();
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+
+    it("floats a passing message, so the board never moves under a tap", () => {
+      // Given a live connection and a refused move
+      // When the match renders
+      const { container, root } = renderWithError({ phase: "live" });
+
+      // Then the message is not given its own space on the page
+      const message = container.querySelector(".arcade-match-error");
+      expect(message?.classList.contains("is-lasting")).toBe(false);
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+
+    it("gives a lasting message its own space, so it never hides the header", () => {
+      // Given a tab displaced by another tab, with its board still on screen
+      // When the match renders
+      const { container, root } = renderWithError({ phase: "live" }, "disconnected");
+
+      // Then the message takes its own space above the match
+      const message = container.querySelector(".arcade-match-error");
+      expect(message?.classList.contains("is-lasting")).toBe(true);
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+
+    it("gives a new message its full time", () => {
+      // Given a message that has been on screen for most of its time
+      const { root } = renderWithError({ phase: "live" });
+      act(() => vi.advanceTimersByTime(5_000));
+
+      // When a different message replaces it
+      mockState.current.error = "That square is already open.";
+      act(() => {
+        root.render(
+          <MemoryRouter initialEntries={["/room/DIRECT"]}>
+            <Routes>
+              <Route path="/room/:roomCode" element={<RoomPage />} />
+            </Routes>
+          </MemoryRouter>
+        );
+      });
+      act(() => vi.advanceTimersByTime(5_000));
+
+      // Then it is still showing after the first message's time has passed
+      expect(clearError).not.toHaveBeenCalled();
+
+      // And it leaves when its own time is up
+      act(() => vi.advanceTimersByTime(1_000));
+      expect(clearError).toHaveBeenCalledOnce();
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+
+    it("stays while the connection is lost, where it explains a lasting state", () => {
+      // Given a tab displaced by another tab, with its board still on screen
+      const { root } = renderWithError({ phase: "live" }, "disconnected");
+
+      // When time passes
+      act(() => vi.advanceTimersByTime(60_000));
+
+      // Then the explanation stays
+      expect(clearError).not.toHaveBeenCalled();
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+
+    it("stays on a page with no match, where it explains why", () => {
+      // Given an error on the room page with no match running
+      const { root } = renderWithError(null);
+
+      // When time passes
+      act(() => vi.advanceTimersByTime(60_000));
+
+      // Then the explanation stays
+      expect(clearError).not.toHaveBeenCalled();
+      act(() => root.unmount());
+      vi.useRealTimers();
+    });
+  });
+
+  it("offers a manual reclaim action above a displaced live board", () => {
+    // Given a live board in a tab displaced by another tab
+    mockState.current.connectionStatus = "disconnected";
+    mockState.current.error =
+      "This room is active in another tab or window. Use that tab, or reconnect here.";
+    mockState.current.match = { phase: "live" };
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+    expect(container.textContent).toContain("Recovered board");
+    expect(mockState.current.reconnect).not.toHaveBeenCalled();
+
+    // When the player reclaims control here
+    const button = [...container.querySelectorAll("button")].find(
+      (item) => item.textContent === "Reconnect here"
+    );
+    expect(button).toBeDefined();
+    act(() => button!.click());
+
+    // Then the page invokes recovery for this room
+    expect(mockState.current.reconnect).toHaveBeenCalledExactlyOnceWith("DIRECT");
+    act(() => root.unmount());
+  });
+
+  it("adds recovery actions when restoring a saved seat takes too long", () => {
+    // Given a saved seat whose recovery is not completing
+    vi.useFakeTimers();
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+
+    // When fifteen seconds pass
+    act(() => vi.advanceTimersByTime(15_000));
+
+    // Then the restoring screen offers a restart and a route to the lobby
+    expect(container.textContent).toContain("Taking longer than usual");
+    expect(container.querySelector(".arcade-recovery-notice button")?.textContent).toBe(
+      "Reload and reconnect"
+    );
+    expect(container.querySelector('.arcade-recovery-notice a[href="/lobby"]')).not.toBeNull();
+    act(() => root.unmount());
+    vi.useRealTimers();
+  });
+
+  it("always offers a way out while a saved seat is restoring", () => {
+    // Given a saved seat being restored, which can take as long as the host stays away
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+
+    // When the page renders
+    const { container, root } = renderRoomPage();
+
+    // Then the player can leave, and knows why it might take a while
+    expect(container.textContent).toContain("Restoring your game…");
+    expect(container.textContent).toContain("you’ll rejoin when they come back");
+    expect(container.querySelector('.arcade-recovery a[href="/lobby"]')).not.toBeNull();
+    act(() => root.unmount());
+  });
+
+  it("does not promise a reconnect when a direct match has no saved seat", () => {
+    // Given a direct-match room this browser holds no seat for
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => false;
+
+    // When the page renders
+    const { container, root } = renderRoomPage();
+
+    // Then it says the match has closed
+    expect(container.textContent).toContain(
+      "This direct match closed. Start a new one from the lobby."
+    );
+    expect(container.textContent).not.toContain("reconnecting");
+    act(() => root.unmount());
   });
 
   it("shows conflict guidance when the tab is displaced by another tab", () => {

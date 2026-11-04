@@ -21,7 +21,7 @@
 
 .solo-stage-status .arcade-room-code {
   color: #f3f7ff;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .room-waiting-intro h2 {
@@ -66,10 +66,32 @@
   padding: 10px 12px;
 }
 
+.room-invite-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.room-invite-row .arcade-invite-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-invite-copy {
+  min-width: 64px;
+  min-height: 44px;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  background: #243c59;
+  color: #dfedff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
 .room-waiting-notice {
   margin: 0;
   color: #afe0c6;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -79,7 +101,7 @@
   align-items: center;
   gap: 10px;
   color: #afc0d9;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .room-waiting-meta > span {
@@ -133,7 +155,7 @@
 .room-waiting-card .arcade-flow-error {
   margin: 0;
   color: #ffb9a9;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 

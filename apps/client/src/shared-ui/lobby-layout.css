@@ -108,25 +108,35 @@
   box-shadow: none;
 }
 .solo-home .lobby-create-description {
-  font-size: 12px;
+  font-size: 13px;
 }
 .solo-home .lobby-action-card.is-join {
   padding-top: 12px;
   gap: 8px;
 }
-.solo-home .lobby-card-heading h3 {
+.solo-home .lobby-card-heading h2 {
   font-size: 13px;
 }
 .solo-home .lobby-join-entry {
   gap: 8px;
 }
 .solo-home .arcade-footer {
+  flex-wrap: wrap;
   align-items: baseline;
   min-height: 44px;
   margin-top: 14px;
   padding: 0;
   border: 0;
-  font-size: 12px;
+  font-size: 13px;
+}
+/* The open text needs the whole row; beside the note it would squeeze both into thin columns. */
+.solo-home .arcade-footer details[open] {
+  flex-basis: 100%;
+  max-width: none;
+}
+/* The summary stays on the side where the player just pressed it. */
+.solo-home .arcade-footer details[open] summary {
+  justify-content: flex-end;
 }
 .solo-home .arcade-footer summary {
   display: flex;
@@ -274,7 +284,7 @@
   }
   .solo-home-intro p {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: 13px;
   }
   .solo-entry-card {
     gap: 12px;

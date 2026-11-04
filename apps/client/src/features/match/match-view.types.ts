@@ -15,6 +15,7 @@ export interface MultiplayerMatchViewProps extends CommonMatchViewProps {
   presentation?: "multiplayer";
   roomCode: string;
   connectionStatus: ConnectionStatus;
+  movePending?: boolean;
   chatMessages: ChatMessageDto[];
   chatError: string | null;
   chatDraft: string;
@@ -23,12 +24,12 @@ export interface MultiplayerMatchViewProps extends CommonMatchViewProps {
   onSendChatMessage: () => void;
   onRequestRematch: () => void;
   onCancelRematch: () => void;
+  onBackToLobby?: () => void;
 }
 
 export interface SoloMatchViewProps extends CommonMatchViewProps {
   presentation: "solo";
   onRematch: () => void;
-  botThinking?: boolean;
   /** Shown on the bot's card, for example "Hard". */
   botLevel?: string;
 }

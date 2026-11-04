@@ -1,4 +1,5 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
+import { describeOfflineOpponent } from "./match-presentation.js";
 
 type Player = MatchStateDto["players"][number];
 
@@ -8,7 +9,7 @@ interface MatchResultRibbonProps {
   playerTones: Record<string, "blue" | "red">;
 }
 
-const getResultTitle = (match: MatchStateDto, currentPlayerId: string): string => {
+export const getResultTitle = (match: MatchStateDto, currentPlayerId: string): string => {
   const winner = match.players.find((player) => player.playerId === match.winnerPlayerId);
 
   if (!winner) {
@@ -68,6 +69,8 @@ export const MatchResultRibbon = ({
 };
 
 type RematchActionProps = Pick<MatchResultRibbonProps, "match" | "currentPlayerId"> & {
+  /** Why a rematch cannot be sent right now, such as an absent opponent. */
+  blockedReason?: string | null;
   onRequestRematch: () => void;
   onCancelRematch: () => void;
 };
@@ -75,6 +78,7 @@ type RematchActionProps = Pick<MatchResultRibbonProps, "match" | "currentPlayerI
 export const MatchRematchAction = ({
   match,
   currentPlayerId,
+  blockedReason = null,
   onRequestRematch,
   onCancelRematch
 }: RematchActionProps) => {
@@ -82,13 +86,21 @@ export const MatchRematchAction = ({
   const opponent = match.players.find((player) => player.playerId !== currentPlayerId) ?? null;
   if (!currentPlayer) return null;
   const rematch = getRematchState(currentPlayer, opponent);
+  const absentOpponent =
+    opponent?.connected === false ? describeOfflineOpponent(opponent.displayName) : null;
+  const status = blockedReason ?? absentOpponent ?? rematch.status;
   return (
     <div className="match-rematch-action">
-      {rematch.status ? <p role="status">{rematch.status}</p> : null}
+      {status ? <p role="status">{status}</p> : null}
       <button
         type="button"
         className="match-primary-action"
-        onClick={rematch.cancels ? onCancelRematch : onRequestRematch}
+        aria-disabled={blockedReason === null ? undefined : true}
+        onClick={() => {
+          if (blockedReason !== null) return;
+          if (rematch.cancels) onCancelRematch();
+          else onRequestRematch();
+        }}
       >
         {rematch.label}
       </button>

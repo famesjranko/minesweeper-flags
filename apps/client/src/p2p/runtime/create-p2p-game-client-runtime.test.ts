@@ -1034,6 +1034,15 @@ describe("createP2PGameClientRuntime", () => {
     refreshedHostRuntime.controller.start();
     refreshedHostRuntime.controller.reconnect(roomCode);
 
+    // A refreshed host has no peer yet, so it must not look ready to play.
+    const refreshedSnapshot = refreshedHostRuntime.store.getSnapshot();
+    expect(refreshedSnapshot.connectionStatus).toBe("disconnected");
+    expect(
+      refreshedSnapshot.match?.players.find(
+        (player) => player.playerId !== refreshedSnapshot.session?.playerId
+      )?.connected
+    ).toBe(false);
+
     expect(refreshedHostRuntime.store.getSnapshot().session?.roomCode).toBe(roomCode);
     expect(refreshedHostRuntime.store.getSnapshot().chatMessages.at(-1)?.text).toBe(
       "before host refresh"
@@ -1059,6 +1068,8 @@ describe("createP2PGameClientRuntime", () => {
     expect(guestRuntime.store.getSnapshot().match).toEqual(
       refreshedHostRuntime.store.getSnapshot().match
     );
+    // The warning about the refused move must not outlive the outage that caused it.
+    expect(refreshedHostRuntime.store.getSnapshot().error).toBeNull();
 
     guestRuntime.controller.setChatDraft("after host refresh");
     guestRuntime.controller.sendChatMessage();

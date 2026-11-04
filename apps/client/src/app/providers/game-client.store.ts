@@ -12,6 +12,7 @@ export interface GameClientSnapshot {
   session: ClientSession | null;
   match: MatchStateDto | null;
   bombArmed: boolean;
+  movePending: boolean;
   error: string | null;
   chatMessages: ChatMessageDto[];
   chatDraft: string;
@@ -118,6 +119,11 @@ export class GameClientStore {
     }));
   }
 
+  setMovePending(movePending: boolean): void {
+    if (this.snapshot.movePending === movePending) return;
+    this.update((current) => ({ ...current, movePending }));
+  }
+
   toggleBombMode(): void {
     this.update((current) => ({
       ...current,
@@ -196,6 +202,7 @@ export class GameClientStore {
         ...current,
         match: null,
         bombArmed: false,
+        movePending: false,
         chatMessages: [],
         chatDraft: nextChatDraft,
         chatError: null,

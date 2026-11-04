@@ -2,6 +2,9 @@ import { inviteTokenSchema } from "@minesweeper-flags/shared";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useGameClient } from "../features/connection/useGameClient.js";
+import { DEFAULT_GUEST_NAME } from "../features/room/default-names.js";
+import { ServerUnreachableNotice } from "../features/room/ServerUnreachableNotice.js";
+import { useServerUnreachable } from "../features/room/useServerUnreachable.js";
 import { getStoredRoomForInvite } from "../lib/socket/session-storage.js";
 import { ArcadePage } from "../shared-ui/ArcadePage.js";
 
@@ -67,7 +70,8 @@ export const InvitePage = () => {
   const parsedInviteToken = inviteTokenSchema.safeParse(inviteToken.trim());
   const activeInviteToken = parsedInviteToken.success ? parsedInviteToken.data : null;
   const { connectionStatus, error, session, joinRoom, clearError } = useGameClient();
-  const [displayName, setDisplayName] = useState("Captain Sweeper");
+  const [displayName, setDisplayName] = useState(DEFAULT_GUEST_NAME);
+  const serverUnreachable = useServerUnreachable(true, connectionStatus);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: clear a stale error only when the invite token changes.
   useEffect(() => {
@@ -123,6 +127,7 @@ export const InvitePage = () => {
               placeholder="Enter your display name"
             />
           </label>
+          {serverUnreachable ? <ServerUnreachableNotice /> : null}
           <button type="submit" className="arcade-primary" disabled={!canJoin}>
             Join game
           </button>

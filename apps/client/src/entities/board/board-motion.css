@@ -1,0 +1,42 @@
+/* Motion is opt-in, so a browser that asks for reduced motion gets the final state at once. */
+@media (prefers-reduced-motion: no-preference) {
+  .board-cell.is-new {
+    animation: board-cell-pop 0.2s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+
+  .board-cell.is-new svg {
+    animation: board-flag-drop 0.34s cubic-bezier(0.3, 1.9, 0.5, 1);
+  }
+
+  /* The press shows the tap landed before the move comes back. It must not shrink the square:
+     the browser finds the tap's target after the press applies, so a tap near the edge would miss. */
+  .board-cell.status-hidden:not([aria-disabled="true"]):active {
+    filter: brightness(0.82);
+  }
+
+  /* A wave runs across the winner's flags, one diagonal at a time. */
+  .board-grid.celebrate-blue .claimed-blue svg,
+  .board-grid.celebrate-red .claimed-red svg {
+    animation: board-flag-wave 0.5s ease-in-out both;
+    animation-delay: calc(var(--wave-step) * 45ms);
+  }
+}
+
+@keyframes board-cell-pop {
+  from {
+    transform: scale(0.6);
+  }
+}
+
+@keyframes board-flag-drop {
+  from {
+    transform: translateY(-110%) scale(0.4) rotate(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes board-flag-wave {
+  50% {
+    transform: translateY(-22%);
+  }
+}

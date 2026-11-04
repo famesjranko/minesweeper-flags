@@ -98,7 +98,7 @@ const Scene = ({
       onCancelRematch={onCancel}
       onResign={onResign}
       resignDisabled={!connected}
-      solo={solo ? { botThinking: false } : undefined}
+      solo={solo ? {} : undefined}
     />
   );
 };
@@ -131,7 +131,9 @@ it("keeps Red as You and routes only the local inline bomb through arm, cancel a
   act(() => bomb.click());
   expect(bomb.getAttribute("aria-pressed")).toBe("false");
   act(() => bomb.click());
-  act(() => container.querySelector<HTMLButtonElement>("button[title='Row 2, Column 1']")!.click());
+  act(() =>
+    container.querySelector<HTMLButtonElement>("button[aria-label^='Row 2, column 1,']")!.click()
+  );
 
   // Then only the local control toggles and the board receives the armed selection
   expect(onToggle).toHaveBeenCalledTimes(3);
@@ -143,7 +145,9 @@ it("disables local bomb and board input when the connection is lost", () => {
   // Given an otherwise eligible local bomb with a disconnected client
   render(createMatch(), false);
   const bomb = container.querySelector<HTMLButtonElement>("button.inline-bomb")!;
-  const cell = container.querySelector<HTMLButtonElement>("button[title='Row 1, Column 1']")!;
+  const cell = container.querySelector<HTMLButtonElement>(
+    "button[aria-label^='Row 1, column 1,']"
+  )!;
 
   // When the player tries both controls
   act(() => {
@@ -152,8 +156,8 @@ it("disables local bomb and board input when the connection is lost", () => {
   });
 
   // Then neither action is sent and the bomb exposes its waiting state
-  expect(bomb.disabled).toBe(true);
-  expect(cell.disabled).toBe(true);
+  expect(bomb.getAttribute("aria-disabled")).toBe("true");
+  expect(cell.getAttribute("aria-disabled")).toBe("true");
   expect(bomb.getAttribute("aria-label")).toContain("connection");
   expect(onToggle).not.toHaveBeenCalled();
   expect(onSelect).not.toHaveBeenCalled();
@@ -264,7 +268,7 @@ it("shows opponent availability without an action and preserves both spent bombs
   expect(opponent.getAttribute("aria-label")).toContain("already been used");
   const local = container.querySelector<HTMLButtonElement>("button.inline-bomb")!;
   act(() => local.click());
-  expect(local.disabled).toBe(true);
+  expect(local.getAttribute("aria-disabled")).toBe("true");
   expect(onToggle).not.toHaveBeenCalled();
 });
 

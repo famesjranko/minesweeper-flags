@@ -1,0 +1,31 @@
+.server-unreachable {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #b98a4d;
+  border-radius: 10px;
+  background: #3a2f22;
+  color: #ffe2bd;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.server-unreachable p {
+  margin: 0;
+}
+.server-unreachable strong {
+  display: block;
+  color: #fff1dc;
+  font-size: 15px;
+}
+.server-unreachable a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid #d9a860;
+  border-radius: 10px;
+  background: #5c4526;
+  color: #fff1dc;
+  font-weight: 650;
+  text-decoration: none;
+}

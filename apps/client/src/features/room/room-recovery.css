@@ -1,0 +1,23 @@
+.arcade-recovery-notice {
+  width: min(100%, 640px);
+  margin: 16px auto;
+  padding: 16px;
+  border: 1px solid #ffd07966;
+  border-radius: 12px;
+  background: #273247;
+  color: #dce8f8;
+  font-size: 14px;
+  text-align: left;
+}
+
+.arcade-recovery-notice strong {
+  color: #ffd079;
+}
+
+.arcade-recovery-notice p {
+  margin: 8px 0 0;
+}
+
+.arcade-recovery-notice .arcade-flow-actions {
+  margin-top: 12px;
+}

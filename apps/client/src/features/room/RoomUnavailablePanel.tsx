@@ -28,11 +28,18 @@ const ConflictGuidance = ({ error }: { error: string | null }) => (
   </div>
 );
 
+const getHeading = (waitingForHost: boolean, canReconnect: boolean): string => {
+  if (waitingForHost) return "Waiting for the host to return.";
+  return canReconnect ? "Reconnect to your game." : "Room unavailable";
+};
+
 interface RoomUnavailablePanelProps {
   roomCode: string;
   error: string | null;
   isP2PDeployment: boolean;
   canReconnect: boolean;
+  /** A direct-match guest keeps retrying on its own until the host's tab returns. */
+  waitingForHost: boolean;
   onReconnect: () => void;
 }
 
@@ -41,12 +48,16 @@ export const RoomUnavailablePanel = ({
   error,
   isP2PDeployment,
   canReconnect,
+  waitingForHost,
   onReconnect
 }: RoomUnavailablePanelProps) => {
   const showConflictGuidance = isDisplacedError(error) || isRecoveryUnavailableError(error);
   const showClaimVictory = isClaimVictoryError(error);
+  const offerReconnect = canReconnect && !showClaimVictory;
   const fallbackMessage = isP2PDeployment
-    ? "Direct Match is reconnecting. If recovery does not finish, start a new match from the lobby."
+    ? canReconnect
+      ? "Direct Match is reconnecting. If recovery does not finish, start a new match from the lobby."
+      : "This direct match closed. Start a new one from the lobby."
     : "Create or join the room from the home page first.";
 
   return (
@@ -54,29 +65,28 @@ export const RoomUnavailablePanel = ({
       <section className="arcade-flow is-error">
         <div className="arcade-flow-intro">
           <p className="arcade-flow-eyebrow">Room {roomCode}</p>
-          <h1>
-            {canReconnect && !showClaimVictory ? "Reconnect to your game." : "Room unavailable"}
-          </h1>
-          <p>
-            This browser is not currently attached to room <strong>{roomCode}</strong>.
-          </p>
+          <h1>{getHeading(waitingForHost, offerReconnect)}</h1>
+          {waitingForHost ? (
+            <p>The host’s tab closed or lost its connection. You’ll rejoin when they come back.</p>
+          ) : (
+            <p>
+              This browser is not currently attached to room <strong>{roomCode}</strong>.
+            </p>
+          )}
         </div>
         <div className="arcade-flow-card">
           {showConflictGuidance && <ConflictGuidance error={error} />}
           {showClaimVictory && <p className="arcade-notice">{error}</p>}
-          {!showConflictGuidance && !showClaimVictory && <p>{error ?? fallbackMessage}</p>}
-          <div
-            className={`arcade-flow-actions${canReconnect && !showClaimVictory ? "" : " is-single"}`}
-          >
-            {canReconnect && !showClaimVictory ? (
+          {!showConflictGuidance && !showClaimVictory && !waitingForHost && (
+            <p>{error ?? fallbackMessage}</p>
+          )}
+          <div className={`arcade-flow-actions${offerReconnect ? "" : " is-single"}`}>
+            {offerReconnect ? (
               <button type="button" className="arcade-primary" onClick={onReconnect}>
                 Reconnect
               </button>
             ) : null}
-            <Link
-              className={canReconnect && !showClaimVictory ? "arcade-secondary" : "arcade-primary"}
-              to="/lobby"
-            >
+            <Link className={offerReconnect ? "arcade-secondary" : "arcade-primary"} to="/lobby">
               Back to lobby
             </Link>
           </div>

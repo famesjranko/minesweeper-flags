@@ -138,7 +138,7 @@ it.each([false, true])(
     act(() =>
       container
         .querySelector<HTMLButtonElement>(
-          `button[title='Row ${mine.row + 1}, Column ${mine.column + 1}']`
+          `button[aria-label^='Row ${mine.row + 1}, column ${mine.column + 1},']`
         )!
         .click()
     );
@@ -149,7 +149,7 @@ it.each([false, true])(
       difficulty: "hard",
       actions: [{ playerId: "solo-human", type: "select", row: mine.row, column: mine.column }]
     });
-    expect(container.textContent).not.toContain("Bot thinking");
+    expect(container.textContent).not.toContain("Bot is moving…");
     expect(saved()).toBe(JSON.stringify(oldReplay));
 
     // When a real reload creates a separate page mount.

@@ -116,6 +116,9 @@ authentication.
    | Frontend `/api/health` rewrite destination | Your server's HTTPS URL ending in `/health` |
    | Frontend CSP `connect-src` | `'self'` and your server's HTTPS and `wss://` origins |
 
+   To show the link-preview image in chat apps, also add a frontend
+   `VITE_PUBLIC_ORIGIN` environment variable set to your frontend's HTTPS origin.
+
 4. Run `npm ci` and `node scripts/deploy/template.mjs`. Commit the configured
    template to your fork. If you rename services, update `fromService.name` too.
 5. Use **Manual sync**, review the proposed changes, and approve them. Deploy

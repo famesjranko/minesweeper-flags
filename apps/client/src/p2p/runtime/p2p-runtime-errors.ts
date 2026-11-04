@@ -5,6 +5,9 @@ export const DIRECT_MATCH_DISPLACED_MESSAGE =
 export const DIRECT_MATCH_RECOVERY_UNAVAILABLE_MESSAGE =
   "Direct-match recovery is no longer available for this session. Start a new direct match if the connection drops again.";
 
+export const DIRECT_MATCH_ACTION_BLOCKED_MESSAGE =
+  "Direct connection interrupted. Restart the direct match if it does not recover.";
+
 export const isAbortError = (error: unknown): boolean =>
   typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
 

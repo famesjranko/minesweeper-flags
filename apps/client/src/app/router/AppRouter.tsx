@@ -1,14 +1,25 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from "react";
 import { BrowserRouter, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useGameClient } from "../../features/connection/useGameClient.js";
 import { DEPLOYMENT_MODE } from "../../lib/config/env.js";
-import { P2PJoinPage } from "../../p2p/pages/P2PJoinPage.js";
 import { InvitePage } from "../../pages/InvitePage.js";
 import { LobbyPage } from "../../pages/LobbyPage.js";
 import { NotFoundPage } from "../../pages/NotFoundPage.js";
 import { RoomPage } from "../../pages/RoomPage.js";
 import { SoloPage } from "../../pages/SoloPage.js";
 import { GameClientProvider } from "../providers/GameClientProvider.js";
+import { loadP2PRuntime } from "../providers/game-client.runtime.js";
+
+// The direct-match code stays out of the main bundle. A p2p build waits for it before any
+// friend route mounts, and a failed fetch reaches the app error boundary.
+const P2PRuntimeReady = lazy(async () => {
+  await loadP2PRuntime();
+  return { default: Outlet };
+});
+const P2PJoinPage = lazy(async () => {
+  const { P2PJoinPage: page } = await import("../../p2p/pages/P2PJoinPage.js");
+  return { default: page };
+});
 
 const RoomExitCancellation = () => {
   const { pathname } = useLocation();
@@ -55,14 +66,26 @@ export const AppRouter = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/solo" element={<SoloPage />} />
-      <Route element={<FriendRoutes />}>
-        <Route path="/" element={<LobbyPage />} />
-        <Route path="/lobby" element={<LobbyPage />} />
-        {DEPLOYMENT_MODE === "p2p" ? (
-          <Route path="/p2p/join/:sessionId" element={<P2PJoinPage />} />
-        ) : null}
-        <Route path="/invite/:inviteToken" element={<InvitePage />} />
-        <Route path="/room/:roomCode" element={<RoomPage />} />
+      <Route
+        element={
+          DEPLOYMENT_MODE === "p2p" ? (
+            <Suspense fallback={null}>
+              <P2PRuntimeReady />
+            </Suspense>
+          ) : (
+            <Outlet />
+          )
+        }
+      >
+        <Route element={<FriendRoutes />}>
+          <Route path="/" element={<LobbyPage />} />
+          <Route path="/lobby" element={<LobbyPage />} />
+          {DEPLOYMENT_MODE === "p2p" ? (
+            <Route path="/p2p/join/:sessionId" element={<P2PJoinPage />} />
+          ) : null}
+          <Route path="/invite/:inviteToken" element={<InvitePage />} />
+          <Route path="/room/:roomCode" element={<RoomPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

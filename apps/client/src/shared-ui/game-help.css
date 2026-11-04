@@ -1,0 +1,29 @@
+.game-help > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #dce8f8;
+  cursor: pointer;
+}
+
+.game-help > summary::before {
+  content: "+";
+}
+
+.game-help[open] > summary::before {
+  content: "−";
+}
+
+.game-help-content {
+  display: grid;
+  gap: 12px;
+  color: #bdcde0;
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.game-help-content p {
+  margin: 0;
+}

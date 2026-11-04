@@ -1,5 +1,6 @@
 import "./match-view.css";
 import "./match-controls.css";
+import "./match-motion.css";
 
 import { useState } from "react";
 import {
@@ -7,6 +8,7 @@ import {
   getLastMoveMarks,
   type LastMoveTrail
 } from "../../entities/board/last-move.js";
+import { useTurnedOnSinceMount } from "../../entities/board/useTurnedOnSinceMount.js";
 import { useChatSounds } from "../sound/useChatSounds.js";
 import { useMatchSounds } from "../sound/useMatchSounds.js";
 import { MatchChat } from "./MatchChat.js";
@@ -14,6 +16,10 @@ import { MatchHeader } from "./MatchHeader.js";
 import { MatchPlayArea } from "./MatchPlayArea.js";
 import { getMatchPresentation } from "./match-presentation.js";
 import type { MatchViewProps } from "./match-view.types.js";
+import { useMatchChat } from "./useMatchChat.js";
+import { useMatchTitle } from "./useMatchTitle.js";
+import { useUnreadChat } from "./useUnreadChat.js";
+import { WinBurst } from "./WinBurst.js";
 
 const NO_CHAT: readonly never[] = [];
 
@@ -24,25 +30,35 @@ export const MatchView = (props: MatchViewProps) => {
   const [storedTrail, setStoredTrail] = useState<LastMoveTrail>([]);
   const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
+  const finishedWhileWatching = useTurnedOnSinceMount(match.phase === "finished");
+  const chatMessages = props.presentation === "solo" ? NO_CHAT : props.chatMessages;
   useMatchSounds(match, currentPlayerId);
-  useChatSounds(
-    props.presentation === "solo" ? NO_CHAT : props.chatMessages,
-    currentPlayerId,
-    match.phase === "live"
-  );
+  useChatSounds(chatMessages, currentPlayerId, match.phase === "live");
+  const chatRef = useMatchChat();
+  const chat = useUnreadChat(chatMessages, currentPlayerId);
   const view = getMatchPresentation(props);
+  useMatchTitle(match, currentPlayerId, view.canAct);
   const isSolo = props.presentation === "solo";
-  const helperText = view.opponent
-    ? `${view.opponent.displayName} is ${view.opponent.connected ? "online" : "offline"}.`
-    : "Waiting for the second player to join chat.";
+  const celebrateTone =
+    finishedWhileWatching && match.winnerPlayerId === currentPlayerId
+      ? view.playerTones[currentPlayerId]
+      : undefined;
 
   return (
     <div className={`arcade-match${isSolo ? " is-solo" : ""}`}>
+      <h1 className="visually-hidden">Minesweeper Flags match</h1>
       {!isSolo ? (
         <MatchHeader
           roomCode={props.roomCode}
           match={match}
+          opponentOffline={view.opponent?.connected === false}
           connectionStatus={props.connectionStatus}
+          unreadChat={chat.unread}
+          onOpenChat={() => {
+            chat.markRead();
+            chatRef.current?.showModal();
+          }}
+          onBackToLobby={props.onBackToLobby}
         />
       ) : null}
       <div className="arcade-match-main">
@@ -63,17 +79,21 @@ export const MatchView = (props: MatchViewProps) => {
           )}
           onResign={props.onResign}
           resignDisabled={!isSolo && props.connectionStatus !== "connected"}
-          solo={
-            props.presentation === "solo"
-              ? { botThinking: props.botThinking ?? false, botLevel: props.botLevel }
-              : undefined
-          }
+          solo={props.presentation === "solo" ? { botLevel: props.botLevel } : undefined}
           hidePresence={isSolo}
+          celebrateTone={celebrateTone}
         />
         {!isSolo ? (
-          <MatchChat props={props} playerTones={view.playerTones} helperText={helperText} />
+          <MatchChat
+            props={props}
+            playerTones={view.playerTones}
+            opponent={view.opponent}
+            chatRef={chatRef}
+            onChatSeen={chat.markRead}
+          />
         ) : null}
       </div>
+      {celebrateTone ? <WinBurst tone={celebrateTone} /> : null}
     </div>
   );
 };

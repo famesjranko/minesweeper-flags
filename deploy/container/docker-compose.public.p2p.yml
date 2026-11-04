@@ -61,6 +61,7 @@ services:
         VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-p2p}
         VITE_P2P_STUN_URLS: ${VITE_P2P_STUN_URLS:-}
         VITE_P2P_SIGNALING_URL: ${VITE_P2P_SIGNALING_URL:?Set VITE_P2P_SIGNALING_URL to the public signaling origin, such as https://signal.example.com}
+        VITE_PUBLIC_ORIGIN: ${VITE_PUBLIC_ORIGIN:-}
     depends_on:
       signaling:
         condition: service_healthy

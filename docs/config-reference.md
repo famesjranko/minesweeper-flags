@@ -160,6 +160,7 @@ Example templates:
 | `VITE_DEPLOYMENT_MODE` | `server` | no | Selects the frontend product shape. Use `server` for the hosted backend flow and `p2p` for direct match plus signaling. |
 | `VITE_P2P_STUN_URLS` | unset | no | Comma-separated STUN URLs used by WebRTC in `p2p` builds. |
 | `VITE_P2P_SIGNALING_URL` | unset | required when `VITE_DEPLOYMENT_MODE=p2p` | Base URL for the automated signaling service, such as `https://signal.example.com`. |
+| `VITE_PUBLIC_ORIGIN` | unset | no | Public site origin, such as `https://play.example.com`. It makes the link-preview image URL absolute, which most chat apps need before they show the image. |
 
 Solo has no environment variables. It runs as a browser-local human-versus-bot match, without an API, model download, or backend game service. The home page's Solo and With a friend choices are separate from the `server` and `p2p` operator build choices.
 
@@ -174,7 +175,8 @@ Solo has no environment variables. It runs as a browser-local human-versus-bot m
 - `p2p` builds do not require `VITE_SOCKET_URL`.
 - Direct matches still use STUN only in this version.
 - Live direct matches recover after host or guest refresh by using browser-local recovery data plus reconnect control sessions in signaling. The host browser stays the gameplay authority across the refresh.
-- Opening the same direct match in a second tab is detected: the new tab claims control and the displaced tab shows a conflict notice. The displaced tab keeps its recovery data so the user can click `Reconnect` to reclaim ownership.
+- Opening the same direct match in a second tab is detected: the new tab claims control and the displaced tab shows a conflict notice. The displaced tab keeps its recovery data and offers `Reconnect here` above a live board, or `Reconnect` on the unavailable-room page, to reclaim ownership.
+- After 15 seconds of restoring a saved seat or recovering a live connection, inline guidance offers `Reload and reconnect` and `Back to lobby`. Direct-match guidance also asks the friend to keep their game tab open.
 - If both peers lose their local browser state, signaling still does not preserve gameplay authority or match state for recovery.
 
 ### Client URL Resolution Rules
@@ -202,6 +204,7 @@ The client containers accept build-time deployment configuration in `apps/client
 | `VITE_DEPLOYMENT_MODE` | `server` | Selects the hosted or direct-match product path for the built client artifact. |
 | `VITE_P2P_STUN_URLS` | unset | Passed into the Vite build for WebRTC STUN configuration. |
 | `VITE_P2P_SIGNALING_URL` | unset | Passed into the Vite build for the automated signaling base URL used by `p2p` deployments. |
+| `VITE_PUBLIC_ORIGIN` | unset | Passed into the Vite build for the absolute link-preview image URL. |
 
 The public client container also accepts this runtime env var:
 
@@ -432,7 +435,7 @@ Flow summary:
 3. Guest opens `/p2p/join/:sessionId`, enters a display name, and joins.
 4. Offer, answer, and finalization stay inside the app.
 5. After both peers connect, live direct matches survive host or guest tab refresh through browser-local recovery plus a small reconnect control session in signaling. The host browser remains the gameplay authority; signaling never stores gameplay state.
-6. Opening the same direct match in a second tab claims control in the new tab. The displaced tab shows a conflict notice and can click `Reconnect` to reclaim. If the signaling session is gone for good (404/410), the displaced tab is told to start a new direct match.
+6. Opening the same direct match in a second tab claims control in the new tab. The displaced tab shows a conflict notice and can choose `Reconnect here` above the live board, or `Reconnect` on the unavailable-room page, to reclaim. If the signaling session is gone for good (404/410), the displaced tab is told to start a new direct match.
 
 ### Public Direct Match Stack
 

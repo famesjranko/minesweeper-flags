@@ -22,6 +22,7 @@ export interface LobbyRuntimeState {
   session: ClientSession | null;
   match: MatchStateDto | null;
   bombArmed: boolean;
+  movePending: boolean;
   error: string | null;
   chatMessages: ChatMessageDto[];
   chatDraft: string;
@@ -36,6 +37,7 @@ export const createLobbyRuntimeState = (): LobbyRuntimeState => ({
   session: null,
   match: null,
   bombArmed: false,
+  movePending: false,
   error: null,
   chatMessages: [],
   chatDraft: "",

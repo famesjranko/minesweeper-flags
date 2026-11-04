@@ -11,7 +11,7 @@ export interface InviteNotice {
   failed: boolean;
 }
 
-const InviteNoticeLine = ({ notice }: { notice: InviteNotice }) =>
+export const InviteNoticeLine = ({ notice }: { notice: InviteNotice }) =>
   notice.failed ? (
     <p className="arcade-flow-error" role="alert">
       {notice.message}
@@ -22,6 +22,52 @@ const InviteNoticeLine = ({ notice }: { notice: InviteNotice }) =>
     </p>
   );
 
+export const InviteLinkActions = ({
+  inviteLink,
+  pendingText = "Unavailable",
+  onCopy,
+  onShare
+}: {
+  inviteLink: string | null;
+  pendingText?: string;
+  onCopy: (value: string, successMessage: string) => void;
+  onShare: ((value: string) => void) | undefined;
+}) => {
+  const copy = () => (inviteLink ? onCopy(inviteLink, "Invite link copied.") : undefined);
+  const value = <div className="arcade-invite-value">{inviteLink ?? pendingText}</div>;
+  return (
+    <>
+      <div className="arcade-field">
+        <span>Private invite link</span>
+        {onShare ? (
+          <div className="room-invite-row">
+            {value}
+            <button
+              type="button"
+              className="room-invite-copy"
+              aria-label="Copy invite link"
+              disabled={!inviteLink}
+              onClick={copy}
+            >
+              Copy
+            </button>
+          </div>
+        ) : (
+          value
+        )}
+      </div>
+      <button
+        type="button"
+        className="arcade-primary"
+        disabled={!inviteLink}
+        onClick={onShare ? () => (inviteLink ? onShare(inviteLink) : undefined) : copy}
+      >
+        {onShare ? "Share invite link" : "Copy invite link"}
+      </button>
+    </>
+  );
+};
+
 interface RoomWaitingPanelProps {
   roomCode: string;
   connectionStatus: string;
@@ -29,6 +75,8 @@ interface RoomWaitingPanelProps {
   inviteNotice: InviteNotice | null;
   error: string | null;
   onCopy: (value: string, successMessage: string) => void;
+  /** Set where the browser has a share sheet. Sharing then leads, and Copy moves beside the link. */
+  onShare?: ((value: string) => void) | undefined;
   onCancelRoom: () => void;
   onHome: () => void;
   cancelPending: boolean;
@@ -41,6 +89,7 @@ export const RoomWaitingPanel = ({
   inviteNotice,
   error,
   onCopy,
+  onShare,
   onCancelRoom,
   onHome,
   cancelPending
@@ -81,26 +130,15 @@ export const RoomWaitingPanel = ({
             <span>{opponent ? "Guest · Connected" : "Waiting to join"}</span>
           </div>
         </div>
-        <div className="arcade-field">
-          <span>Private invite link</span>
-          <div className="arcade-invite-value">{inviteLink ?? "Unavailable"}</div>
-        </div>
-        <button
-          type="button"
-          className="arcade-primary"
-          disabled={!inviteLink}
-          onClick={() => (inviteLink ? onCopy(inviteLink, "Invite link copied.") : undefined)}
-        >
-          Copy invite link
-        </button>
+        <InviteLinkActions inviteLink={inviteLink} onCopy={onCopy} onShare={onShare} />
         {inviteNotice ? <InviteNoticeLine notice={inviteNotice} /> : null}
         <div className="room-waiting-meta">
           <span>Room {roomCode}</span>
           <details className="arcade-token-details">
-            <summary>Copy a token instead</summary>
+            <summary>Copy a code instead</summary>
             <div className="room-waiting-token-expanded">
               <div className="arcade-field">
-                <span>Invite token</span>
+                <span>Invite code</span>
                 <div className="arcade-invite-value invite-token-readonly">
                   {inviteToken ?? "Unavailable"}
                 </div>
@@ -110,10 +148,10 @@ export const RoomWaitingPanel = ({
                 className="arcade-secondary"
                 disabled={!inviteToken}
                 onClick={() =>
-                  inviteToken ? onCopy(inviteToken, "Invite token copied.") : undefined
+                  inviteToken ? onCopy(inviteToken, "Invite code copied.") : undefined
                 }
               >
-                Copy invite token
+                Copy invite code
               </button>
             </div>
           </details>
