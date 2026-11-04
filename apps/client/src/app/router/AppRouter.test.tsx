@@ -17,12 +17,14 @@ import { createBrowserSoloStorage } from "../../solo/storage/solo-storage.js";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const renderApp = () => {
+const renderApp = async () => {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
 
-  act(() => root.render(<App />));
+  await act(async () => root.render(<App />));
+  // Lazy routes can still be fetching their modules when React first flushes the render.
+  await act(async () => vi.dynamicImportSettled());
 
   return {
     container,
@@ -89,15 +91,15 @@ afterEach(() => {
 });
 
 describe("AppRouter", () => {
-  it("gives visitors a route back to the lobby from an unknown URL", () => {
+  it("gives visitors a route back to the lobby from an unknown URL", async () => {
     // Given a visitor opens an unknown URL
     const originalUrl = window.location.href;
     window.history.replaceState(null, "", "/not-a-page");
-    let app: ReturnType<typeof renderApp> | null = null;
+    let app: Awaited<ReturnType<typeof renderApp>> | null = null;
 
     try {
       // When the application displays that URL
-      app = renderApp();
+      app = await renderApp();
 
       // Then the visitor sees a not-found message and a link back to the lobby
       expect(app.container.querySelector("h1")?.textContent).toBe("We couldn’t find that page.");
@@ -110,7 +112,7 @@ describe("AppRouter", () => {
 
   it.each(["/", "/solo?restore=1#board"])(
     "does not start multiplayer transport on a cold %s entry with stale multiplayer state",
-    (path) => {
+    async (path) => {
       // Given a cold home or solo entry and stale records from a multiplayer session
       const originalUrl = window.location.href;
       const fetchMock = vi.fn((_input: RequestInfo | URL) => new Promise(() => {}));
@@ -135,13 +137,13 @@ describe("AppRouter", () => {
       vi.stubGlobal("RTCPeerConnection", rtcMock);
       const { p2pRecovery, session } = storeRecoverableMultiplayerState();
       window.history.replaceState(null, "", path);
-      let app: ReturnType<typeof renderApp> | null = null;
+      let app: Awaited<ReturnType<typeof renderApp>> | null = null;
 
       try {
         // When the application renders at that cold entry
         expect(createBrowserSessionPersistence().read("ABCDE")).toEqual(session);
         expect(getStoredP2PRecoveryRecord("ABCDE")).toEqual(p2pRecovery);
-        app = renderApp();
+        app = await renderApp();
         navigate(path);
 
         // Then the cold home already contains its inaccessible friend form
@@ -164,7 +166,7 @@ describe("AppRouter", () => {
     }
   );
 
-  it("restores a persisted solo replay on a true /solo refresh without multiplayer activation", () => {
+  it("restores a persisted solo replay on a true /solo refresh without multiplayer activation", async () => {
     // Given an accepted nonempty solo replay and valid stale multiplayer recovery records
     const originalUrl = window.location.href;
     const restoredCells = createPersistedSoloReplay();
@@ -178,16 +180,16 @@ describe("AppRouter", () => {
     vi.stubGlobal("RTCPeerConnection", rtcMock);
     storeRecoverableMultiplayerState();
     window.history.replaceState(null, "", "/solo?resume=1#board");
-    let firstApp: ReturnType<typeof renderApp> | null = null;
-    let refreshedApp: ReturnType<typeof renderApp> | null = null;
+    let firstApp: Awaited<ReturnType<typeof renderApp>> | null = null;
+    let refreshedApp: Awaited<ReturnType<typeof renderApp>> | null = null;
 
     try {
       // When the actual app is disposed and mounted again at the same URL
       expect(createBrowserSoloStorage().read().record?.actions).not.toHaveLength(0);
-      firstApp = renderApp();
+      firstApp = await renderApp();
       firstApp.dispose();
       firstApp = null;
-      refreshedApp = renderApp();
+      refreshedApp = await renderApp();
 
       // Then the local progress returns while every multiplayer boundary remains unused
       expect(
@@ -206,17 +208,17 @@ describe("AppRouter", () => {
 
   (DEPLOYMENT_MODE === "p2p" ? it : it.skip)(
     "activates signaling from the configured direct friend route",
-    () => {
+    async () => {
       // Given a direct-match invitation in the P2P operator configuration
       const originalUrl = window.location.href;
       const fetchMock = vi.fn((_input: RequestInfo | URL) => new Promise(() => {}));
       vi.stubGlobal("fetch", fetchMock);
       window.history.replaceState(null, "", "/p2p/join/session-1");
-      let app: ReturnType<typeof renderApp> | null = null;
+      let app: Awaited<ReturnType<typeof renderApp>> | null = null;
 
       try {
         // When the real friend route opens its guest setup session
-        app = renderApp();
+        app = await renderApp();
 
         // Then the configured rendezvous boundary is actually activated
         expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -260,11 +262,11 @@ describe("AppRouter", () => {
       vi.stubGlobal("fetch", fetchMock);
       vi.stubGlobal("WebSocket", TrackingWebSocket);
       window.history.replaceState(null, "", "/");
-      let app: ReturnType<typeof renderApp> | null = null;
+      let app: Awaited<ReturnType<typeof renderApp>> | null = null;
 
       try {
         // When the visitor changes friend routes and chooses solo while that refresh is pending
-        app = renderApp();
+        app = await renderApp();
         expect(sockets).toHaveLength(0);
         expect(fetchMock).not.toHaveBeenCalled();
         const header = app.container.querySelector("header");
@@ -343,10 +345,10 @@ describe("AppRouter", () => {
       vi.stubGlobal("fetch", fetchMock);
       vi.stubGlobal("RTCPeerConnection", TrackingPeerConnection);
       window.history.replaceState(null, "", "/lobby");
-      let app: ReturnType<typeof renderApp> | null = null;
+      let app: Awaited<ReturnType<typeof renderApp>> | null = null;
 
       try {
-        app = renderApp();
+        app = await renderApp();
 
         // When the visitor starts the existing direct-match action and then chooses solo.
         await act(async () => {
