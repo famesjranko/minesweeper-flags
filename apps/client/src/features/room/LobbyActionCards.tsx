@@ -157,7 +157,7 @@ export const ServerMatchActionCards = ({
 
       <div className="lobby-join-entry">
         <label className="field lobby-field">
-          <span>Invite code</span>
+          <span>Invite link or code</span>
           <input
             className="invite-token-input"
             value={inviteValue}
@@ -168,7 +168,7 @@ export const ServerMatchActionCards = ({
               if (event.key === "Enter") onInviteChecked();
             }}
             aria-invalid={inviteProblem ? true : undefined}
-            placeholder="Invite code"
+            placeholder="Paste an invite link or code"
             spellCheck={false}
             autoCapitalize="none"
             autoCorrect="off"

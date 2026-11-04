@@ -67,7 +67,6 @@ export class GameClientController {
   private reconnectAttemptCount = 0;
   private reconnectTimeoutId: number | null = null;
   private shouldReconnect = false;
-  private moveInFlight = false;
   private unsubscribeTransport: (() => void) | null = null;
   private pendingRoomCancellation: {
     roomCode: string;
@@ -95,6 +94,7 @@ export class GameClientController {
   };
 
   dispose = (): void => {
+    this.store.setMovePending(false);
     this.shouldReconnect = false;
     this.clearReconnectTimer();
     this.clearPendingRoomCancellation();
@@ -186,14 +186,14 @@ export class GameClientController {
     }
 
     // On a slow connection a second tap lands before the reply, and could only be rejected.
-    if (this.moveInFlight) return;
+    if (this.store.getSnapshot().movePending) return;
 
     const action = this.store.getSnapshot().bombArmed
       ? { type: "bomb" as const, row, column }
       : { type: "select" as const, row, column };
 
     // Set first, because a direct-match host gets its reply during the send.
-    this.moveInFlight = true;
+    this.store.setMovePending(true);
     const sent = this.sendEvent({
       type: CLIENT_EVENT_NAMES.matchAction,
       payload: {
@@ -206,7 +206,7 @@ export class GameClientController {
     if (sent) {
       this.store.setBombArmed(false);
     } else {
-      this.moveInFlight = false;
+      this.store.setMovePending(false);
     }
   };
 
@@ -347,7 +347,7 @@ export class GameClientController {
     closeCode
   }: GameClientTransportStatusChange): void => {
     // A reply cannot arrive over a dropped link, so the next tap must be free to send.
-    this.moveInFlight = false;
+    this.store.setMovePending(false);
 
     if (status === "connected") {
       this.store.setConnectionStatus(status);
@@ -449,7 +449,7 @@ export class GameClientController {
       case SERVER_EVENT_NAMES.matchStarted:
       case SERVER_EVENT_NAMES.matchState:
       case SERVER_EVENT_NAMES.matchEnded:
-        this.moveInFlight = false;
+        this.store.setMovePending(false);
         // The match has moved on, so a message about an earlier move is out of date.
         this.store.clearError();
         this.applyMatchSnapshot(event.payload.match);
@@ -459,12 +459,12 @@ export class GameClientController {
         this.store.applyRematchUpdate(event.payload.players);
         break;
       case SERVER_EVENT_NAMES.matchActionRejected:
-        this.moveInFlight = false;
+        this.store.setMovePending(false);
         this.store.setError(event.payload.message);
         this.store.setBombArmed(false);
         break;
       case SERVER_EVENT_NAMES.serverError: {
-        this.moveInFlight = false;
+        this.store.setMovePending(false);
         if (this.reconnectAttempt) {
           this.invalidateRoomSession(
             this.reconnectAttempt.roomCode,

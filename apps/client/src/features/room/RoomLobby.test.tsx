@@ -30,7 +30,7 @@ describe("RoomLobby", () => {
     expect(html).toContain("Create a Match");
     expect(html).toContain("Create room");
     expect(html).toContain("Have an invite?");
-    expect(html).toContain("Invite code");
+    expect(html).toContain("Invite link or code");
     expect(html).not.toContain("Host direct match");
     expect(html).not.toContain("Join direct match");
   });

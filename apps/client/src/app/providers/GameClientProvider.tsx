@@ -26,6 +26,7 @@ interface GameClientContextValue {
   session: ClientSession | null;
   match: MatchStateDto | null;
   bombArmed: boolean;
+  movePending: boolean;
   chatMessages: ChatMessageDto[];
   chatError: string | null;
   chatDraft: string;
@@ -179,6 +180,7 @@ export const GameClientProvider = ({
         session: snapshot.session,
         match: snapshot.match,
         bombArmed: snapshot.bombArmed,
+        movePending: snapshot.movePending,
         chatMessages: snapshot.chatMessages,
         chatError: snapshot.chatError,
         chatDraft: snapshot.chatDraft,

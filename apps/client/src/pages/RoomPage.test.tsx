@@ -417,6 +417,49 @@ describe("RoomPage", () => {
     });
   });
 
+  it("offers a manual reclaim action above a displaced live board", () => {
+    // Given a live board in a tab displaced by another tab
+    mockState.current.connectionStatus = "disconnected";
+    mockState.current.error =
+      "This room is active in another tab or window. Use that tab, or reconnect here.";
+    mockState.current.match = { phase: "live" };
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+    expect(container.textContent).toContain("Recovered board");
+    expect(mockState.current.reconnect).not.toHaveBeenCalled();
+
+    // When the player reclaims control here
+    const button = [...container.querySelectorAll("button")].find(
+      (item) => item.textContent === "Reconnect here"
+    );
+    expect(button).toBeDefined();
+    act(() => button!.click());
+
+    // Then the page invokes recovery for this room
+    expect(mockState.current.reconnect).toHaveBeenCalledExactlyOnceWith("DIRECT");
+    act(() => root.unmount());
+  });
+
+  it("adds recovery actions when restoring a saved seat takes too long", () => {
+    // Given a saved seat whose recovery is not completing
+    vi.useFakeTimers();
+    mockState.current.session = null;
+    mockState.current.hasStoredSession = () => true;
+    const { container, root } = renderRoomPage();
+
+    // When fifteen seconds pass
+    act(() => vi.advanceTimersByTime(15_000));
+
+    // Then the restoring screen offers a restart and a route to the lobby
+    expect(container.textContent).toContain("Taking longer than usual");
+    expect(container.querySelector(".arcade-recovery-notice button")?.textContent).toBe(
+      "Reload and reconnect"
+    );
+    expect(container.querySelector('.arcade-recovery-notice a[href="/lobby"]')).not.toBeNull();
+    act(() => root.unmount());
+    vi.useRealTimers();
+  });
+
   it("always offers a way out while a saved seat is restoring", () => {
     // Given a saved seat being restored, which can take as long as the host stays away
     mockState.current.session = null;

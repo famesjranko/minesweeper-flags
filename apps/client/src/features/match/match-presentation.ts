@@ -4,6 +4,7 @@ import { getPlayerSlots } from "./PlayerPanel.js";
 
 type PresentationInput = Pick<MatchViewProps, "match" | "currentPlayerId" | "bombArmed"> & {
   connectionStatus?: "disconnected" | "connecting" | "connected";
+  movePending?: boolean;
 };
 
 export const describeOfflineOpponent = (name: string): string =>
@@ -32,6 +33,7 @@ interface TurnHintInput {
   opponentName: string;
   opponentOffline: boolean;
   connectionNotice: string | null;
+  movePending: boolean;
 }
 
 const getTurnHint = ({
@@ -42,10 +44,12 @@ const getTurnHint = ({
   scoreDeficit,
   opponentName,
   opponentOffline,
-  connectionNotice
+  connectionNotice,
+  movePending
 }: TurnHintInput) => {
   if (finished) return "Match finished";
   if (connectionNotice) return connectionNotice;
+  if (movePending) return "Sending move…";
   if (!canAct) {
     return opponentOffline ? describeOfflineOpponent(opponentName) : `${opponentName} is moving…`;
   }
@@ -61,12 +65,18 @@ export const getMatchPresentation = ({
   match,
   currentPlayerId,
   bombArmed,
-  connectionStatus
+  connectionStatus,
+  movePending = false
 }: PresentationInput) => {
-  const playerSlots = getPlayerSlots(match, currentPlayerId);
+  const playerSlots = getPlayerSlots(match, currentPlayerId).map((slot) =>
+    slot.isSelf && connectionStatus !== undefined && connectionStatus !== "connected"
+      ? { ...slot, player: { ...slot.player, connected: false } }
+      : slot
+  );
   const selfSlot = playerSlots.find((slot) => slot.isSelf);
   const opponent = playerSlots.find((slot) => !slot.isSelf)?.player;
   const canAct =
+    !movePending &&
     match.phase === "live" &&
     match.currentTurnPlayerId === currentPlayerId &&
     (connectionStatus === undefined || connectionStatus === "connected");
@@ -90,7 +100,8 @@ export const getMatchPresentation = ({
     scoreDeficit,
     opponentName: opponent?.displayName ?? "Opponent",
     opponentOffline: opponent?.connected === false,
-    connectionNotice
+    connectionNotice,
+    movePending
   });
   return {
     playerSlots,

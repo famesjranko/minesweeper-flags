@@ -428,7 +428,7 @@ describe("game client controller", () => {
 
     it("sends a second tap only after the first has had its reply", () => {
       // Given a move on its way over a slow connection
-      const { controller, moves } = startMatch();
+      const { controller, moves, store } = startMatch();
       controller.submitCellAction(1, 1);
 
       // When the player taps again before the reply
@@ -436,6 +436,7 @@ describe("game client controller", () => {
 
       // Then the second tap is not sent, so it cannot come back as an error
       expect(moves()).toHaveLength(1);
+      expect(store.getSnapshot().movePending).toBe(true);
     });
 
     it.each([
@@ -449,33 +450,37 @@ describe("game client controller", () => {
       ["a server error", { type: SERVER_EVENT_NAMES.serverError, payload: { message: "No" } }]
     ])("frees the next tap after %s", (_name, reply) => {
       // Given a move on its way
-      const { controller, transport, moves } = startMatch();
+      const { controller, transport, moves, store } = startMatch();
       controller.submitCellAction(1, 1);
 
       // When the reply arrives
       transport.emitServerEvent(reply as ServerEvent);
+      const pendingAfterReply = store.getSnapshot().movePending;
       controller.submitCellAction(2, 2);
 
-      // Then the next tap is sent
+      // Then the pending state clears and the next tap is sent
+      expect(pendingAfterReply).toBe(false);
       expect(moves()).toHaveLength(2);
     });
 
     it("frees the next tap once the match has moved on", () => {
       // Given a move on its way
-      const { controller, emitMatch, moves } = startMatch();
+      const { controller, emitMatch, moves, store } = startMatch();
       controller.submitCellAction(1, 1);
 
       // When the match update for that move arrives
       emitMatch({ turnNumber: 4 });
+      const pendingAfterReply = store.getSnapshot().movePending;
       controller.submitCellAction(2, 2);
 
-      // Then the next tap is sent
+      // Then the pending state clears and the next tap is sent
+      expect(pendingAfterReply).toBe(false);
       expect(moves()).toHaveLength(2);
     });
 
     it("frees the next tap when the reply arrives during the send, as on a direct-match host", () => {
       // Given a transport that replies before its send returns
-      const { controller, transport, emitMatch, moves } = startMatch();
+      const { controller, transport, emitMatch, moves, store } = startMatch();
       const send = transport.send;
       transport.send = (event) => {
         send(event);
@@ -488,6 +493,20 @@ describe("game client controller", () => {
 
       // Then both are sent, so the host is not frozen after its first move
       expect(moves()).toHaveLength(2);
+      expect(store.getSnapshot().movePending).toBe(false);
+    });
+
+    it("clears the pending move when the runtime is disposed", () => {
+      // Given a move awaiting a reply
+      const { controller, store } = startMatch();
+      controller.submitCellAction(1, 1);
+      expect(store.getSnapshot().movePending).toBe(true);
+
+      // When the runtime is disposed before the reply arrives
+      controller.dispose();
+
+      // Then consumers no longer see a move awaiting confirmation
+      expect(store.getSnapshot().movePending).toBe(false);
     });
 
     it("clears a refused move's message once the match has moved on", () => {
@@ -508,29 +527,33 @@ describe("game client controller", () => {
 
     it("frees the next tap when the connection drops, because no reply can come", () => {
       // Given a move on its way
-      const { controller, transport, moves } = startMatch();
+      const { controller, transport, moves, store } = startMatch();
       controller.submitCellAction(1, 1);
 
       // When the connection drops and returns
       transport.emitStatus({ status: "disconnected", closeCode: 1006 });
+      const pendingWhileOffline = store.getSnapshot().movePending;
       transport.emitStatus({ status: "connected" });
       controller.submitCellAction(2, 2);
 
-      // Then the next tap is sent
+      // Then the pending state clears while offline and the next tap is sent
+      expect(pendingWhileOffline).toBe(false);
       expect(moves()).toHaveLength(2);
     });
 
     it("does not stay blocked when a send fails on an open connection", () => {
       // Given an open connection on which one send fails, with no status change to free the tap
-      const { controller, transport, moves } = startMatch();
+      const { controller, transport, moves, store } = startMatch();
       transport.throwOnSend = true;
       controller.submitCellAction(1, 1);
+      const pendingAfterFailure = store.getSnapshot().movePending;
 
       // When sending works again and the player taps again
       transport.throwOnSend = false;
       controller.submitCellAction(1, 1);
 
-      // Then the tap is sent
+      // Then the failed send cleared its pending state and the tap is sent
+      expect(pendingAfterFailure).toBe(false);
       expect(moves()).toHaveLength(1);
     });
   });

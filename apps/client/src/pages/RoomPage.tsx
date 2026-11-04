@@ -4,6 +4,7 @@ import { useGameClient } from "../features/connection/useGameClient.js";
 import { MatchMessage } from "../features/match/MatchMessage.js";
 import { MatchView } from "../features/match/MatchView.js";
 import { HostDirectMatchPanel } from "../features/room/HostDirectMatchPanel.js";
+import { RoomRecoveryNotice } from "../features/room/RoomRecoveryNotice.js";
 import { RoomRestoringPanel } from "../features/room/RoomRestoringPanel.js";
 import { RoomUnavailablePanel } from "../features/room/RoomUnavailablePanel.js";
 import { type InviteNotice, RoomWaitingPanel } from "../features/room/RoomWaitingPanel.js";
@@ -103,11 +104,19 @@ export const RoomPage = () => {
           onExpire={gameClient.clearError}
         />
 
+        <RoomRecoveryNotice
+          waiting={connectionStatus !== "connected"}
+          displaced={error?.includes("active in another tab or window") ?? false}
+          isP2PDeployment={isP2PDeployment}
+          onReconnect={recovery.reconnect}
+        />
+
         <MatchView
           roomCode={roomCode}
           currentPlayerId={session.playerId}
           match={match}
           bombArmed={gameClient.bombArmed}
+          movePending={gameClient.movePending}
           connectionStatus={connectionStatus}
           chatMessages={gameClient.chatMessages}
           chatError={gameClient.chatError}

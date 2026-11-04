@@ -1,7 +1,7 @@
 import "../shared-ui/game-mode.css";
 
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
+import { GameHelp } from "../shared-ui/GameHelp.js";
 import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
 import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";
 import { SoloDifficultyPicker } from "../solo/SoloDifficultyPicker.js";
@@ -127,14 +127,7 @@ export const HomePage = ({
       footer={
         <footer className="arcade-footer">
           <p>No account needed.</p>
-          <details>
-            <summary>How to play</summary>
-            <p>
-              Take turns choosing squares. A mine scores a point and keeps your turn. A safe square
-              ends your turn. Your comeback bomb unlocks when you trail by {MIN_BOMB_DEFICIT} or
-              more.
-            </p>
-          </details>
+          <GameHelp />
         </footer>
       }
     >

@@ -252,9 +252,11 @@ export const MatchPlayArea = (props: PlayProps) => {
   // A reason applies until the turn moves on or the player does something else.
   const [bombNote, setBombNote] = useState<{ text: string; turnNumber: number } | null>(null);
   const activeNote = bombNote?.turnNumber === props.match.turnNumber ? bombNote.text : null;
-  const hint = aim
-    ? "Bomb aimed. Tap another hidden square to move it."
-    : (activeNote ?? props.view.turnHint);
+  const hint = !props.view.canAct
+    ? props.view.turnHint
+    : aim
+      ? "Bomb aimed. Tap another hidden square to move it."
+      : (activeNote ?? props.view.turnHint);
   const disarmOnEscape = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || !props.bombArmed || !props.view.canAct) return;
     focusBombButton(event.currentTarget);

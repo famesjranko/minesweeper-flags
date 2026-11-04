@@ -68,7 +68,8 @@ const onBackToLobby = vi.fn();
 const render = (
   match: MatchStateDto,
   chatMessages: ChatMessageDto[] = [],
-  connectionStatus: "connected" | "connecting" | "disconnected" = "connected"
+  connectionStatus: "connected" | "connecting" | "disconnected" = "connected",
+  pending: { movePending?: boolean; onCellSelect?: () => void } = {}
 ) =>
   act(() =>
     root.render(
@@ -78,12 +79,13 @@ const render = (
         match={match}
         bombArmed={false}
         connectionStatus={connectionStatus}
+        movePending={pending.movePending ?? false}
         chatMessages={chatMessages}
         chatError={null}
         chatDraft=""
         chatPending={false}
         onToggleBomb={() => {}}
-        onCellSelect={() => {}}
+        onCellSelect={pending.onCellSelect ?? (() => {})}
         onChatDraftChange={() => {}}
         onSendChatMessage={() => {}}
         onResign={() => {}}
@@ -396,4 +398,63 @@ describe("the unread chat chip", () => {
     expect(showModal).toHaveBeenCalledOnce();
     expect(chip()).toBeNull();
   });
+});
+
+describe("waiting for a move reply", () => {
+  it("acknowledges a pending move, blocks another selection, and keeps keyboard focus", () => {
+    // Given a focused square on the player's turn
+    const match = createMatch({
+      board: {
+        rows: 1,
+        columns: 1,
+        mineCount: 1,
+        cells: [
+          [{ row: 0, column: 0, status: "hidden", adjacentMines: null, claimedByPlayerId: null }]
+        ]
+      }
+    });
+    const select = vi.fn();
+    render(match, [], "connected", { onCellSelect: select });
+    const cell = container.querySelector<HTMLButtonElement>("button[data-cell]")!;
+    cell.focus();
+
+    // When a move is pending and the player attempts another selection
+    render(match, [], "connected", { movePending: true, onCellSelect: select });
+    act(() => cell.click());
+
+    // Then the board acknowledges the move, preserves focus, and sends nothing else
+    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe("Sending move…");
+    expect(document.activeElement).toBe(cell);
+    expect(cell.getAttribute("aria-disabled")).toBe("true");
+    expect(select).not.toHaveBeenCalled();
+
+    // And after the reply, the same focused square can be selected again
+    render(match, [], "connected", { onCellSelect: select });
+    expect(container.querySelector(".arcade-turn-hint")?.textContent).not.toContain("Sending");
+    expect(document.activeElement).toBe(cell);
+    act(() => cell.click());
+    expect(select).toHaveBeenCalledOnce();
+  });
+
+  it.each(["connecting", "disconnected"] as const)(
+    "clears stale self presence while %s",
+    (status) => {
+      // Given a snapshot received while both players were online
+      const match = createMatch();
+      render(match);
+
+      // When the local link goes down without a replacement snapshot
+      render(match, [], status);
+
+      // Then the local presence dot no longer claims the player is connected
+      const presence = container.querySelector(".is-self .arcade-player-presence");
+      expect(presence?.classList.contains("is-online")).toBe(false);
+      expect(presence?.getAttribute("aria-label")).toBe("Disconnected");
+      expect(match.players[0].connected).toBe(true);
+
+      // And the restored link shows connected presence again
+      render(match);
+      expect(container.querySelector(".is-self .arcade-player-presence.is-online")).not.toBeNull();
+    }
+  );
 });

@@ -26,7 +26,7 @@
   position: relative;
 }
 
-.arcade-match-options summary {
+.arcade-match-options > summary {
   display: grid;
   place-items: center;
   width: 44px;
@@ -38,7 +38,7 @@
   cursor: pointer;
 }
 
-.arcade-match-options summary::-webkit-details-marker {
+.arcade-match-options > summary::-webkit-details-marker {
   display: none;
 }
 
@@ -50,7 +50,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  width: 280px;
+  width: 320px;
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
   max-width: calc(100vw - 32px);
   padding: 16px;
   border: 1px solid #526888;
@@ -63,6 +65,16 @@
 
 .arcade-options-menu p {
   margin: 0;
+}
+
+@media (max-width: 679px) {
+  .arcade-options-menu {
+    position: fixed;
+    inset: 76px 16px auto;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 92px);
+  }
 }
 
 .arcade-options-menu a {

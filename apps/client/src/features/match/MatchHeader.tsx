@@ -1,5 +1,6 @@
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { ArcadeHeader } from "../../shared-ui/ArcadeHeader.js";
+import { GameHelp } from "../../shared-ui/GameHelp.js";
 
 const closeOptions = (details: HTMLDetailsElement) => {
   details.open = false;
@@ -71,7 +72,7 @@ export const MatchHeader = ({
           <p className="arcade-options-room">
             Room {roomCode} · Turn {match.turnNumber}
           </p>
-          <p>Claim mines to score. First to 26 wins.</p>
+          <GameHelp />
           <div className="arcade-options-bombs">
             <span>
               Blue · {match.players[0].bombsRemaining}{" "}
