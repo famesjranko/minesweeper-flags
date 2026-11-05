@@ -78,6 +78,8 @@ export interface FixtureOptions {
   longChat?: boolean;
   longNames?: boolean;
   offline?: boolean;
+  opponentTurn?: boolean;
+  connecting?: boolean;
   finished?: boolean;
   scoreDeficit?: number;
   bombArmed?: boolean;
@@ -89,7 +91,7 @@ export const nextPaint = () =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
   );
 
-export const renderFixture = async (options: FixtureOptions = {}) => {
+const createFixtureMatch = (options: FixtureOptions): MatchStateDto => {
   const match = createMatch();
   if (options.longNames) {
     match.players[0].displayName = "Captain McSweeperman";
@@ -99,6 +101,7 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
     match.players[1].connected = false;
     match.currentTurnPlayerId = "guest";
   }
+  if (options.opponentTurn) match.currentTurnPlayerId = "guest";
   match.players[1].score = options.finished ? 26 : (options.scoreDeficit ?? 0);
   for (const cell of match.board.cells.flat().slice(0, match.players[1].score)) {
     cell.status = "claimed";
@@ -114,6 +117,11 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
     match.winnerPlayerId = "guest";
     match.currentTurnPlayerId = null;
   }
+  return match;
+};
+
+export const renderFixture = async (options: FixtureOptions = {}) => {
+  const match = createFixtureMatch(options);
   const shared = {
     match,
     currentPlayerId: "host",
@@ -135,7 +143,7 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
     <MatchView
       {...shared}
       roomCode="ABCDE"
-      connectionStatus="connected"
+      connectionStatus={options.connecting ? "connecting" : "connected"}
       chatMessages={options.emptyChat ? [] : options.longChat ? longChat : messages}
       chatDraft=""
       chatPending={false}

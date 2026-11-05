@@ -53,6 +53,12 @@ it("lets a player zoom, select the same square, and return to the fitted board",
     winnerPlayerId: null,
     lastAction: null
   };
+  // Zoom is offered to touch screens only
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(pointer: coarse)",
+    addEventListener() {},
+    removeEventListener() {}
+  }));
   const onCellSelect = vi.fn();
   const container = document.createElement("div");
   document.body.append(container);
@@ -63,7 +69,7 @@ it("lets a player zoom, select the same square, and return to the fitted board",
         match={match}
         currentPlayerId="blue"
         bombArmed={false}
-        view={getMatchPresentation({ match, currentPlayerId: "blue", bombArmed: false })}
+        view={getMatchPresentation({ match, currentPlayerId: "blue" })}
         lastMove={NO_LAST_MOVE_MARKS}
         onCellSelect={onCellSelect}
         onToggleBomb={vi.fn()}
@@ -99,6 +105,7 @@ it("lets a player zoom, select the same square, and return to the fitted board",
       "Game board"
     );
   } finally {
+    vi.unstubAllGlobals();
     act(() => root.unmount());
     container.remove();
   }

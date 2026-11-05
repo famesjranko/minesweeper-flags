@@ -96,7 +96,6 @@ describe("MatchView bomb availability", () => {
       />
     );
 
-    expect(html).toContain("Bomb ready.");
     expect(html).toContain('class="inline-bomb is-ready"');
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("Bomb ready: click to arm a 5x5 blast.");
@@ -131,7 +130,6 @@ describe("MatchView bomb availability", () => {
 
     expect(html).toContain('class="inline-bomb is-locked"');
     expect(html).toContain('aria-disabled="true"');
-    expect(html).toContain(`Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`);
     expect(html).toContain(`trailing by ${MIN_BOMB_DEFICIT} or more`);
   });
 
@@ -162,11 +160,11 @@ describe("MatchView bomb availability", () => {
 
     expect(html).toContain('class="inline-bomb is-locked"');
     expect(html).toContain('aria-disabled="true"');
-    expect(html).not.toContain("Bomb ready.");
+    expect(html).not.toContain("is-ready");
   });
 });
 
-describe("MatchView turn hint", () => {
+describe("MatchView whose turn it is", () => {
   const renderFor = (currentPlayerId: string) =>
     renderToStaticMarkup(
       <MatchView
@@ -192,24 +190,34 @@ describe("MatchView turn hint", () => {
       />
     );
 
-  it("tells the player that it is their move", () => {
+  it("marks the player's own card and leaves the board open on their move", () => {
     // Given a live match where player-1 holds the turn
     // When player-1 views it
     const html = renderFor("player-1");
 
-    // Then the turn status identifies the player and says it is their turn
-    expect(html).toContain('data-turn-hint="YOU"');
-    expect(html).toContain("Your turn · First to 26");
+    // Then their own card is marked as on turn and the board is not waiting
+    expect(html).toMatch(/sidebar-player-panel-blue is-turn is-self/);
+    expect(html).not.toContain("is-waiting");
   });
 
-  it("tells the player that the opponent is moving", () => {
+  it("marks the opponent's card and holds the board while they move", () => {
     // Given a live match where player-1 holds the turn
     // When player-2 views it
     const html = renderFor("player-2");
 
-    // Then the move pill carries the OPPONENT hint
-    expect(html).toContain('data-turn-hint="OPPONENT"');
-    expect(html).toContain("Blue is moving…");
+    // Then the opponent's card is marked as on turn and the board waits
+    expect(html).toMatch(/sidebar-player-panel-blue is-turn"/);
+    expect(html).toContain("is-waiting");
+  });
+
+  it("shows no separate turn card for either player", () => {
+    // Given a live match where player-1 holds the turn
+    // When player-1 views it
+    const html = renderFor("player-1");
+
+    // Then no turn card or turn hint is rendered
+    expect(html).not.toContain("arcade-match-status");
+    expect(html).not.toContain("turn-hint");
   });
 });
 
@@ -371,9 +379,9 @@ describe("MatchView match end", () => {
       /sidebar-player-panel-red is-card-winner[\s\S]*player-crown-slot[\s\S]*winner-crown/
     );
 
-    // And the single result strip precedes the scores and board without an overlay
+    // And the single result line follows the scores and board without an overlay
     expect(html).toMatch(
-      /match-result-summary[\s\S]*arcade-match-scores[\s\S]*classic-board-frame/
+      /arcade-match-scores[\s\S]*classic-board-frame[\s\S]*match-result-line[\s\S]*match-result-summary/
     );
     expect(html.match(/match-result-summary/g)).toHaveLength(1);
     expect(html).not.toContain("match-result-overlay");

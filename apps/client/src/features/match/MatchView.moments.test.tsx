@@ -299,7 +299,7 @@ describe("the header's connection label", () => {
 });
 
 describe("a connection drop", () => {
-  it("is explained by the strip alone, so the board does not move", () => {
+  it("is shown on the player's own card, so the board does not move", () => {
     // Given a player in a live match
     render(createMatch());
     const rowsAboveBoard = container.querySelector(".arcade-match")?.children.length;
@@ -307,8 +307,10 @@ describe("a connection drop", () => {
     // When their own connection drops and the client starts retrying
     render(createMatch(), [], "connecting");
 
-    // Then the strip says so, and nothing is inserted above the board
-    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe("Reconnecting…");
+    // Then their own card says Offline, and nothing is inserted above the board
+    expect(container.querySelector(".is-self .sidebar-player-header span")?.textContent).toBe(
+      "Offline"
+    );
     expect(container.querySelector(".arcade-match")?.children.length).toBe(rowsAboveBoard);
   });
 });
@@ -469,7 +471,7 @@ describe("the unread chat chip", () => {
 });
 
 describe("waiting for a move reply", () => {
-  it("acknowledges a pending move, blocks another selection, and keeps keyboard focus", () => {
+  it("blocks another selection while a move is pending, and keeps keyboard focus", () => {
     // Given a focused square on the player's turn
     const match = createMatch({
       board: {
@@ -486,22 +488,17 @@ describe("waiting for a move reply", () => {
     const cell = container.querySelector<HTMLButtonElement>("button[data-cell]")!;
     cell.focus();
 
-    // When a slow move is still pending and the player attempts another selection
-    vi.useFakeTimers();
+    // When a move is pending and the player attempts another selection
     render(match, [], "connected", { movePending: true, onCellSelect: select });
-    act(() => vi.advanceTimersByTime(300));
     act(() => cell.click());
-    vi.useRealTimers();
 
-    // Then the board acknowledges the move, preserves focus, and sends nothing else
-    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe("Sending move…");
+    // Then the board preserves focus and sends nothing else
     expect(document.activeElement).toBe(cell);
     expect(cell.getAttribute("aria-disabled")).toBe("true");
     expect(select).not.toHaveBeenCalled();
 
     // And after the reply, the same focused square can be selected again
     render(match, [], "connected", { onCellSelect: select });
-    expect(container.querySelector(".arcade-turn-hint")?.textContent).not.toContain("Sending");
     expect(document.activeElement).toBe(cell);
     act(() => cell.click());
     expect(select).toHaveBeenCalledOnce();
@@ -520,7 +517,6 @@ describe("waiting for a move reply", () => {
       }
     });
     render(match);
-    const hintBefore = container.querySelector(".arcade-turn-hint")?.textContent;
 
     // When a move is sent and its reply has not arrived
     render(match, [], "connected", { movePending: true });
@@ -528,8 +524,8 @@ describe("waiting for a move reply", () => {
     // Then the tiles keep the turn colour
     expect(container.querySelector(".board-grid.is-waiting")).toBeNull();
 
-    // And the band and the tab title still say it is the player's turn
-    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe(hintBefore);
+    // And the player's card and the tab title still say it is the player's turn
+    expect(container.querySelector(".sidebar-player-panel.is-self.is-turn")).not.toBeNull();
     expect(document.title).toContain("Your turn");
   });
 
@@ -556,10 +552,7 @@ describe("waiting for a move reply", () => {
     // When the player fires and the reply has not arrived
     act(() => container.querySelector<HTMLButtonElement>("button[data-cell]")?.click());
 
-    // Then the band says the move is on its way
-    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe("Sending move…");
-
-    // And the bomb does not look ready to use again
+    // Then the bomb does not look ready to use again
     expect(container.querySelector("button.inline-bomb")?.classList).toContain("is-armed");
   });
 
@@ -580,7 +573,6 @@ describe("waiting for a move reply", () => {
         ],
         ...overrides
       });
-    const hintText = () => container.querySelector(".arcade-turn-hint")?.textContent;
     const bombState = () => container.querySelector("button.inline-bomb")?.className;
     const fire = (match: MatchStateDto) => {
       const send = () => render(match, [], "connected", { movePending: true });
@@ -588,7 +580,7 @@ describe("waiting for a move reply", () => {
       act(() => container.querySelector<HTMLButtonElement>("button[data-cell]")?.click());
     };
 
-    it("shows the same state when the bomb is fired from the Fire bomb button", () => {
+    it("keeps the bomb selected when it is fired from the Fire bomb button", () => {
       // Given a touch player who has aimed the bomb
       Element.prototype.scrollIntoView = () => {};
       const match = armedMatch();
@@ -608,10 +600,7 @@ describe("waiting for a move reply", () => {
       // When the player taps Fire bomb
       act(() => container.querySelector<HTMLButtonElement>('button[name="fire-bomb"]')?.click());
 
-      // Then the band says the move is on its way
-      expect(hintText()).toBe("Sending move…");
-
-      // And the bomb stays selected
+      // Then the bomb stays selected
       expect(bombState()).toContain("is-armed");
     });
 
@@ -623,8 +612,9 @@ describe("waiting for a move reply", () => {
       // When the reply keeps the player's turn
       render(match);
 
-      // Then the sending text is gone
-      expect(hintText()).not.toContain("Sending");
+      // Then the bomb is offered again and the board is open
+      expect(bombState()).toContain("is-ready");
+      expect(container.querySelector(".board-grid.is-waiting")).toBeNull();
     });
 
     it("shows the opponent's turn when the reply passes the turn", () => {
@@ -635,8 +625,11 @@ describe("waiting for a move reply", () => {
       // When the reply gives the turn to the opponent
       render(armedMatch({ currentTurnPlayerId: "them" }));
 
-      // Then the band and the bomb show that the player must wait
-      expect(hintText()).toContain("is moving");
+      // Then the opponent's card and the board show that the player must wait
+      expect(container.querySelector(".sidebar-player-panel:not(.is-self).is-turn")).not.toBeNull();
+      expect(container.querySelector(".board-grid.is-waiting")).not.toBeNull();
+
+      // And the bomb is no longer armed
       expect(bombState()).not.toContain("is-armed");
     });
 
@@ -649,25 +642,9 @@ describe("waiting for a move reply", () => {
       // When the player selects a tile
       act(() => container.querySelector<HTMLButtonElement>("button[data-cell]")?.click());
 
-      // Then the band still shows the player's turn for a quick reply
-      expect(hintText()).not.toContain("Sending");
+      // Then the bomb is not shown as fired
+      expect(bombState()).not.toContain("is-armed");
     });
-  });
-
-  it("does not carry a slow move's text into the next move", () => {
-    // Given a slow move that has finished
-    vi.useFakeTimers();
-    render(createMatch(), [], "connected", { movePending: true });
-    act(() => vi.advanceTimersByTime(300));
-    render(createMatch());
-
-    // When the next move is sent
-    render(createMatch(), [], "connected", { movePending: true });
-    const hint = container.querySelector(".arcade-turn-hint")?.textContent;
-    vi.useRealTimers();
-
-    // Then it starts without the sending text
-    expect(hint).not.toContain("Sending");
   });
 
   it("greys the tiles when the reply passes the turn to the opponent", () => {

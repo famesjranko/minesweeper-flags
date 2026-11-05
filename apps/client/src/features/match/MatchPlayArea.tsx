@@ -11,7 +11,7 @@ import type { LastMoveMarks } from "../../entities/board/last-move.js";
 import type { AimedCell } from "../../entities/board/useBoardInput.js";
 import { isUsingKeyboard } from "../../lib/browser/last-input.js";
 import { ZoomIcon } from "../../shared-ui/ZoomIcon.js";
-import { readBoardZoomed, writeBoardZoomed } from "./board-zoom-preference.js";
+import { canZoomBoard, readBoardZoomed, writeBoardZoomed } from "./board-zoom-preference.js";
 import { MatchRematchAction, MatchResultRibbon } from "./MatchResultRibbon.js";
 import { describeLastAction } from "./match-announcement.js";
 import type { MatchPresentation } from "./match-presentation.js";
@@ -138,68 +138,22 @@ const useDoubleTapGuard = () => {
   };
 };
 
-const MatchTools = ({
-  props,
-  hint,
-  showCancel,
-  zoomed,
-  onZoom
-}: {
-  props: PlayProps;
-  hint: string;
-  showCancel: boolean;
-  zoomed: boolean;
-  onZoom: () => void;
-}) => (
-  <div
-    className={`arcade-match-status${props.match.phase === "finished" ? " is-result" : ""} is-${props.view.activeTone}`}
+const ZoomButton = ({ zoomed, onZoom }: { zoomed: boolean; onZoom: () => void }) => (
+  <button
+    type="button"
+    className="arcade-zoom-button"
+    aria-label={zoomed ? "Fit board" : "Expand board to 150%"}
+    title={zoomed ? "Fit board" : "Expand board to 150%"}
+    aria-pressed={zoomed}
+    onClick={onZoom}
   >
-    <div
-      className="arcade-turn-hint"
-      data-turn-hint={
-        props.match.phase === "finished" ? undefined : props.view.isOwnTurn ? "YOU" : "OPPONENT"
-      }
-      role="status"
-    >
-      {props.match.phase === "finished" ? (
-        <MatchResultRibbon
-          match={props.match}
-          currentPlayerId={props.currentPlayerId}
-          playerTones={props.view.playerTones}
-        />
-      ) : (
-        hint
-      )}
-    </div>
-    {showCancel ? (
-      <button
-        type="button"
-        className="arcade-bomb-cancel"
-        aria-label="Cancel bomb"
-        onClick={(event) => {
-          focusBombButton(event.currentTarget);
-          props.onToggleBomb();
-        }}
-      >
-        Cancel
-      </button>
-    ) : null}
-    <button
-      type="button"
-      className="arcade-zoom-button"
-      aria-label={zoomed ? "Fit board" : "Expand board to 150%"}
-      title={zoomed ? "Fit board" : "Expand board to 150%"}
-      aria-pressed={zoomed}
-      onClick={onZoom}
-    >
-      <ZoomIcon zoomed={zoomed} />
-    </button>
-  </div>
+    <ZoomIcon zoomed={zoomed} />
+  </button>
 );
 
 const MatchActions = ({ props, aim }: { props: PlayProps; aim: AimedCell | null }) => {
   if (props.match.phase === "live") {
-    return aim ? (
+    return aim || (props.bombArmed && props.view.canAct) ? (
       <div className="match-resign-confirm">
         <button
           type="button"
@@ -216,7 +170,10 @@ const MatchActions = ({ props, aim }: { props: PlayProps; aim: AimedCell | null 
           type="button"
           name="fire-bomb"
           className="match-resign-action is-fire"
-          onClick={() => props.onCellSelect(aim.row, aim.column)}
+          disabled={!aim}
+          onClick={() => {
+            if (aim) props.onCellSelect(aim.row, aim.column);
+          }}
         >
           Fire bomb
         </button>
@@ -263,30 +220,24 @@ const useFocusAcrossPhases = (phase: string, playArea: RefObject<HTMLElement | n
   }, [phase, playArea]);
 };
 
-const getBandHint = (
-  view: MatchPresentation,
-  { bombInFlight, aim, note }: { bombInFlight: boolean; aim: AimedCell | null; note: string | null }
-) => {
-  if (bombInFlight) return "Sending move…";
-  if (!view.canAct) return view.turnHint;
-  if (aim) {
-    const verb = aim.pointerType === "mouse" ? "Click" : "Tap";
-    return `Bomb aimed. ${verb} another hidden square to move it.`;
-  }
-  return note ?? view.turnHint;
+const useBoardZoom = () => {
+  const [canZoom] = useState(canZoomBoard);
+  const [zoomed, setZoomed] = useState(() => canZoom && readBoardZoomed());
+  const toggleZoom = () => {
+    writeBoardZoomed(!zoomed);
+    setZoomed(!zoomed);
+  };
+  return { canZoom, zoomed, toggleZoom };
 };
 
 export const MatchPlayArea = (props: PlayProps) => {
   const playArea = useRef<HTMLElement>(null);
   const guardDoubleTap = useDoubleTapGuard();
   useFocusAcrossPhases(props.match.phase, playArea);
-  const [zoomed, setZoomed] = useState(readBoardZoomed);
+  const { canZoom, zoomed, toggleZoom } = useBoardZoom();
   const [aim, setAim] = useState<AimedCell | null>(null);
   // An aim belongs to one armed turn, so it must not come back when the bomb is armed again.
   if (aim && !(props.bombArmed && props.view.canAct)) setAim(null);
-  // A reason applies until the turn moves on or the player does something else.
-  const [bombNote, setBombNote] = useState<{ text: string; turnNumber: number } | null>(null);
-  const activeNote = bombNote?.turnNumber === props.match.turnNumber ? bombNote.text : null;
   // Firing clears the armed state before the reply, which would briefly offer the bomb again.
   const [bombFired, setBombFired] = useState(false);
   if (bombFired && props.view.canAct) setBombFired(false);
@@ -295,7 +246,6 @@ export const MatchPlayArea = (props: PlayProps) => {
     if (props.bombArmed) setBombFired(true);
     props.onCellSelect(row, column);
   };
-  const hint = getBandHint(props.view, { bombInFlight, aim, note: activeNote });
   const disarmOnEscape = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || !props.bombArmed || !props.view.canAct) return;
     focusBombButton(event.currentTarget);
@@ -313,16 +263,6 @@ export const MatchPlayArea = (props: PlayProps) => {
       <p className="visually-hidden" aria-live="polite">
         {describeLastAction(props.match, props.currentPlayerId)}
       </p>
-      <MatchTools
-        props={props}
-        hint={hint}
-        showCancel={props.bombArmed && props.view.canAct && !aim}
-        zoomed={zoomed}
-        onZoom={() => {
-          writeBoardZoomed(!zoomed);
-          setZoomed(!zoomed);
-        }}
-      />
       <div className="arcade-match-scores">
         {props.view.playerSlots.map((slot) => (
           <PlayerPanel
@@ -334,28 +274,34 @@ export const MatchPlayArea = (props: PlayProps) => {
             bombArmed={props.bombArmed || bombInFlight}
             canAct={props.view.isOwnTurn}
             onToggleBomb={() => {
-              if (!props.view.canAct) return;
-              setBombNote(null);
-              props.onToggleBomb();
+              if (props.view.canAct) props.onToggleBomb();
             }}
-            onExplainBomb={(text) => setBombNote({ text, turnNumber: props.match.turnNumber })}
           />
         ))}
       </div>
       <MatchBoard
-        props={{
-          ...props,
-          onCellSelect: (row, column) => {
-            setBombNote(null);
-            selectCell(row, column);
-          }
-        }}
+        props={{ ...props, onCellSelect: selectCell }}
         zoomed={zoomed}
         aim={aim}
         onAim={setAim}
       />
-      <div className="match-action-slot" onClickCapture={guardDoubleTap.onActionPress}>
-        <MatchActions props={{ ...props, onCellSelect: selectCell }} aim={aim} />
+      <div className="match-action-slot">
+        {props.match.phase === "finished" ? (
+          <p className="match-result-line" role="status">
+            <MatchResultRibbon
+              match={props.match}
+              currentPlayerId={props.currentPlayerId}
+              playerTones={props.view.playerTones}
+            />
+          </p>
+        ) : null}
+        <div className="match-action-row">
+          {/* Zoom sits outside the guard: it swaps no control, so it must not delay the next press. */}
+          <div className="match-action-main" onClickCapture={guardDoubleTap.onActionPress}>
+            <MatchActions props={{ ...props, onCellSelect: selectCell }} aim={aim} />
+          </div>
+          {canZoom ? <ZoomButton zoomed={zoomed} onZoom={toggleZoom} /> : null}
+        </div>
       </div>
     </section>
   );

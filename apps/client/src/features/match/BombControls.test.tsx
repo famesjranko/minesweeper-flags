@@ -62,7 +62,7 @@ const Controls = ({ match, onToggle }: { match: MatchStateDto; onToggle: () => v
       match={match}
       currentPlayerId="blue"
       bombArmed={bombArmed}
-      view={getMatchPresentation({ match, currentPlayerId: "blue", bombArmed })}
+      view={getMatchPresentation({ match, currentPlayerId: "blue" })}
       lastMove={NO_LAST_MOVE_MARKS}
       onCellSelect={() => {}}
       onToggleBomb={() => {
@@ -161,9 +161,7 @@ describe("bomb controls", () => {
     // When the player arms the bomb and then cancels it
     act(() => bomb.click());
     expect(bomb.getAttribute("aria-label")).toContain("cancel targeting");
-    expect(container.querySelector("[role=status]")?.textContent).toContain(
-      "Bomb armed · choose a square"
-    );
+    expect(container.querySelector("button[name=cancel-bomb]")).not.toBeNull();
     expect(bomb.getAttribute("aria-pressed")).toBe("true");
     act(() => bomb.click());
 
@@ -173,14 +171,14 @@ describe("bomb controls", () => {
     expect(onToggle).toHaveBeenCalledTimes(2);
   });
 
-  it("disarms an armed bomb from the Cancel button in the status strip", () => {
+  it("disarms an armed bomb from the Cancel button in the action row", () => {
     // Given a player who has armed the bomb
     const { bomb, onToggle } = render(createMatch());
     act(() => bomb.click());
 
-    // When the player presses Cancel in the status strip
+    // When the player presses Cancel in the action row
     const cancel = container.querySelector<HTMLButtonElement>(
-      ".arcade-match-status button.arcade-bomb-cancel"
+      ".match-action-row button[name=cancel-bomb]"
     );
     act(() => cancel?.click());
 
@@ -189,16 +187,16 @@ describe("bomb controls", () => {
     expect(bomb.getAttribute("aria-pressed")).toBe("false");
     expect(bomb.hasAttribute("aria-disabled")).toBe(false);
     expect(onToggle).toHaveBeenCalledTimes(2);
-    expect(container.querySelector(".arcade-bomb-cancel")).toBeNull();
-    expect(container.querySelector("[role=status]")?.textContent).not.toContain("Bomb armed");
+    expect(container.querySelector("button[name=cancel-bomb]")).toBeNull();
+    expect(container.querySelector("button[name=resign]")).not.toBeNull();
   });
 
   it("offers no bomb Cancel button while the bomb is not armed", () => {
     // Given a player whose bomb is ready but not armed
     render(createMatch());
 
-    // When the status strip renders
-    const cancel = container.querySelector(".arcade-bomb-cancel");
+    // When the action row renders
+    const cancel = container.querySelector("button[name=cancel-bomb]");
 
     // Then there is nothing to cancel
     expect(cancel).toBeNull();

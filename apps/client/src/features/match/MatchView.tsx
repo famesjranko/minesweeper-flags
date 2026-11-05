@@ -22,22 +22,6 @@ import { useUnreadChat } from "./useUnreadChat.js";
 import { WinBurst } from "./WinBurst.js";
 
 const NO_CHAT: readonly never[] = [];
-const SLOW_MOVE_MS = 300;
-
-// A reply normally arrives within moments, so announcing every move would only flicker.
-const useSlowMove = (movePending: boolean) => {
-  const [slow, setSlow] = useState(false);
-  useEffect(() => {
-    if (!movePending) return;
-    const timer = setTimeout(() => setSlow(true), SLOW_MOVE_MS);
-    return () => {
-      clearTimeout(timer);
-      setSlow(false);
-    };
-  }, [movePending]);
-  return movePending && slow;
-};
-
 export const MatchView = (props: MatchViewProps) => {
   const { match, currentPlayerId } = props;
   // Derive the trail during render so a refresh falls back to lastAction alone
@@ -56,8 +40,7 @@ export const MatchView = (props: MatchViewProps) => {
   useChatSounds(chatMessages, currentPlayerId, match.phase === "live");
   const chatRef = useMatchChat();
   const chat = useUnreadChat(chatMessages, currentPlayerId);
-  const moveSlow = useSlowMove(props.presentation !== "solo" && props.movePending === true);
-  const view = getMatchPresentation({ ...props, moveSlow });
+  const view = getMatchPresentation(props);
   useMatchTitle(match, currentPlayerId, view.isOwnTurn);
   const isSolo = props.presentation === "solo";
   const celebrateTone =

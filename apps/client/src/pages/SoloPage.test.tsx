@@ -106,9 +106,10 @@ it("disables local input while the bot thinks and disposes its session on unmoun
       "button[aria-label^='Row 1, column 1,']"
     );
 
-    // Then bot status is exposed and human controls cannot act
+    // Then the bot's card is marked as on turn and human controls cannot act
     expect(session.start).toHaveBeenCalledBefore(session.getSnapshot as ReturnType<typeof vi.fn>);
-    expect(container.textContent).toContain("Bot is moving…");
+    expect(container.querySelector(".sidebar-player-panel:not(.is-self).is-turn")).not.toBeNull();
+    expect(container.querySelector(".board-grid.is-waiting")).not.toBeNull();
     expect(cell?.getAttribute("aria-disabled")).toBe("true");
     expect(container.querySelector(".arcade-chat-preview")).toBeNull();
     expect(container.querySelector(".arcade-player-presence")).toBeNull();
@@ -237,7 +238,7 @@ it("creates a fresh session when Strict Mode reactivates the effect", () => {
   }
 });
 
-it("updates the persistent local status in place while bot input is disabled", () => {
+it("updates the turn marks in place while bot input is disabled", () => {
   // Given a started local session where the human owns the turn
   const { session, setSnapshot } = sessionFor({
     match: match("live", "solo-human"),
@@ -255,7 +256,7 @@ it("updates the persistent local status in place while bot input is disabled", (
   act(() => root.render(<SoloPage createSession={() => session} />));
 
   try {
-    const status = container.querySelector(".arcade-turn-hint");
+    const grid = container.querySelector(".board-grid");
     const cell = container.querySelector<HTMLButtonElement>(
       "button[aria-label^='Row 1, column 1,']"
     );
@@ -273,9 +274,10 @@ it("updates the persistent local status in place while bot input is disabled", (
       })
     );
 
-    // Then the same status row announces the bot state and disables human input
-    expect(container.querySelector(".arcade-turn-hint")).toBe(status);
-    expect(status?.textContent).toContain("Bot is moving…");
+    // Then the same board marks the bot's turn and disables human input
+    expect(container.querySelector(".board-grid")).toBe(grid);
+    expect(grid?.classList.contains("is-waiting")).toBe(true);
+    expect(container.querySelector(".sidebar-player-panel:not(.is-self).is-turn")).not.toBeNull();
     expect(container.querySelector(".solo-thinking")).toBeNull();
     expect(cell?.getAttribute("aria-disabled")).toBe("true");
 
@@ -292,9 +294,10 @@ it("updates the persistent local status in place while bot input is disabled", (
       })
     );
 
-    // Then the same status row announces the finished state without a transient card
-    expect(container.querySelector(".arcade-turn-hint")).toBe(status);
-    expect(status?.textContent).toContain("You won");
+    // Then the same board stays in place and the result line announces the finished state
+    expect(container.querySelector(".board-grid")).toBe(grid);
+    expect(container.querySelector(".match-result-line")?.textContent).toContain("You won");
+    expect(container.querySelector(".sidebar-player-panel.is-turn")).toBeNull();
     expect(container.querySelector(".solo-thinking")).toBeNull();
   } finally {
     act(() => root.unmount());
@@ -417,7 +420,7 @@ it.each(["easy", "hard"])(
       expect(JSON.parse(fresh)).toMatchObject({ starter: "human", difficulty, actions: [] });
       expect(window.location.search).toBe("");
       expect(window.sessionStorage.getItem(SOLO_STORAGE_KEY)).toBe(fresh);
-      expect(container.textContent).not.toContain("Bot is moving…");
+      expect(container.querySelector(".board-grid.is-waiting")).toBeNull();
       expect(
         container
           .querySelector<HTMLButtonElement>("button[aria-label^='Row 1, column 1,']")
