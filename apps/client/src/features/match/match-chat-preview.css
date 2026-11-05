@@ -38,11 +38,13 @@
   border-radius: 50%;
   background: #ffd45a;
 }
-@media (max-width: 440px) {
-  .arcade-header:has(.arcade-chat-chip) .arcade-brand {
+/* The wordmark fits beside a two-digit chip from 390px. Below that it stays hidden whether or not
+   there are unread messages, so a new message cannot shift the header. */
+@media (max-width: 389px) {
+  .arcade-header:has(.arcade-chat-chip, .arcade-chat-open) .arcade-brand {
     min-width: 44px;
   }
-  .arcade-header:has(.arcade-chat-chip) .arcade-brand > span:last-child {
+  .arcade-header:has(.arcade-chat-chip, .arcade-chat-open) .arcade-brand > span:last-child {
     display: none;
   }
 }

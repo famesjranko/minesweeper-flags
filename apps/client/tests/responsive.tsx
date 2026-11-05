@@ -2,8 +2,8 @@ import { nextPaint, renderFixture } from "./responsive-fixture.js";
 
 export { renderFixture } from "./responsive-fixture.js";
 
-// Open /tests/responsive.html on the client dev server. These checks use real components
-// without joining game rooms. A browser driver changes viewport height between assertions.
+// Run by responsive.check.mjs (make test-layout), or open /tests/responsive.html on the client dev
+// server. These checks use real components without joining game rooms.
 const box = (selector: string) => {
   const element = document.querySelector<HTMLElement>(selector);
   if (!element) throw new Error(`Missing layout element: ${selector}`);
@@ -25,6 +25,8 @@ export const readLayout = () => {
     board: box(".arcade-board-stage"),
     cell: box(".board-cell"),
     header: box(".arcade-header"),
+    band: box(".arcade-match-status"),
+    composer: box(".arcade-chat-region .chat-composer"),
     chat: dialog?.open ? (dialog.matches(":modal") ? "sheet" : "sidebar") : "preview",
     horizontalOverflow: document.documentElement.scrollWidth > innerWidth
   };

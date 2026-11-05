@@ -49,6 +49,7 @@ make test-server    # server only
 make test-signaling # signaling only
 make test-shared    # shared package
 make test-engine    # game-engine
+make test-layout    # match layouts in real Chrome (CI runs it as a separate job)
 
 npx vitest run path/to/file.test.ts        # one file
 npx vitest run path/to/file.test.ts -t "name pattern"  # one test

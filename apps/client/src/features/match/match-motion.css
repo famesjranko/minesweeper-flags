@@ -49,7 +49,7 @@
 
 @keyframes match-score-bump {
   40% {
-    transform: scale(1.2);
+    transform: scale(1.7);
     color: #ffd45a;
   }
 }
