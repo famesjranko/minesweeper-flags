@@ -94,6 +94,9 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
     cell.status = "claimed";
     cell.claimedByPlayerId = "guest";
   }
+  const numbered = match.board.cells[15]![15]!;
+  numbered.status = "revealed";
+  numbered.adjacentMines = 2;
   if (options.rematch) match.players[0].rematchRequested = true;
   if (options.finished) {
     match.phase = "finished";
