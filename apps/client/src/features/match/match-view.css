@@ -207,6 +207,22 @@
   font-size: calc(var(--board-cell-size) * 0.8);
 }
 
+/* Portrait phones need the large marks on their small tiles. Bigger tiles do not, so marks hold
+   about 20px until tiles reach 36px, then keep the same share of the tile. */
+@media (min-width: 601px) {
+  .arcade-match .board-cell svg {
+    width: max(60%, min(80%, 21px));
+    height: max(60%, min(80%, 21px));
+  }
+
+  .arcade-match .cell-number {
+    font-size: max(
+      calc(var(--board-cell-size) * 0.56),
+      min(calc(var(--board-cell-size) * 0.8), 20px)
+    );
+  }
+}
+
 .arcade-match :is(.arcade-options-close, .arcade-chat-close) {
   display: inline-flex;
   align-items: center;

@@ -69,7 +69,7 @@ const render = (
   match: MatchStateDto,
   chatMessages: ChatMessageDto[] = [],
   connectionStatus: "connected" | "connecting" | "disconnected" = "connected",
-  pending: { movePending?: boolean; onCellSelect?: () => void } = {}
+  pending: { movePending?: boolean; onCellSelect?: () => void; onToggleBomb?: () => void } = {}
 ) =>
   act(() =>
     root.render(
@@ -84,7 +84,7 @@ const render = (
         chatError={null}
         chatDraft=""
         chatPending={false}
-        onToggleBomb={() => {}}
+        onToggleBomb={pending.onToggleBomb ?? (() => {})}
         onCellSelect={pending.onCellSelect ?? (() => {})}
         onChatDraftChange={() => {}}
         onSendChatMessage={() => {}}
@@ -418,9 +418,12 @@ describe("waiting for a move reply", () => {
     const cell = container.querySelector<HTMLButtonElement>("button[data-cell]")!;
     cell.focus();
 
-    // When a move is pending and the player attempts another selection
+    // When a slow move is still pending and the player attempts another selection
+    vi.useFakeTimers();
     render(match, [], "connected", { movePending: true, onCellSelect: select });
+    act(() => vi.advanceTimersByTime(300));
     act(() => cell.click());
+    vi.useRealTimers();
 
     // Then the board acknowledges the move, preserves focus, and sends nothing else
     expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe("Sending move…");
@@ -434,6 +437,76 @@ describe("waiting for a move reply", () => {
     expect(document.activeElement).toBe(cell);
     act(() => cell.click());
     expect(select).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the player's turn on show while a quick move is pending", () => {
+    // Given the player's turn on a board with hidden tiles
+    const match = createMatch({
+      board: {
+        rows: 1,
+        columns: 1,
+        mineCount: 1,
+        cells: [
+          [{ row: 0, column: 0, status: "hidden", adjacentMines: null, claimedByPlayerId: null }]
+        ]
+      }
+    });
+    render(match);
+    const hintBefore = container.querySelector(".arcade-turn-hint")?.textContent;
+
+    // When a move is sent and its reply has not arrived
+    render(match, [], "connected", { movePending: true });
+
+    // Then the tiles keep the turn colour
+    expect(container.querySelector(".board-grid.is-waiting")).toBeNull();
+
+    // And the band and the tab title still say it is the player's turn
+    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe(hintBefore);
+    expect(document.title).toContain("Your turn");
+  });
+
+  it("greys the tiles when the reply passes the turn to the opponent", () => {
+    // Given a move pending on the player's turn
+    render(createMatch(), [], "connected", { movePending: true });
+
+    // When the reply gives the turn to the opponent
+    render(createMatch({ currentTurnPlayerId: "them" }));
+
+    // Then the board shows the player must wait
+    expect(container.querySelector(".board-grid.is-waiting")).not.toBeNull();
+  });
+
+  it("greys the tiles when the connection drops during a pending move", () => {
+    // Given the player's turn
+    // When the connection drops with a move still pending
+    render(createMatch(), [], "connecting", { movePending: true });
+
+    // Then the board shows the player cannot move
+    expect(container.querySelector(".board-grid.is-waiting")).not.toBeNull();
+  });
+
+  it("keeps a ready bomb ready while a move is pending, without letting it arm", () => {
+    // Given the player's turn with the bomb unlocked
+    const onToggleBomb = vi.fn();
+    const match = createMatch({
+      players: [
+        { ...createMatch().players[0], score: 0 },
+        { ...createMatch().players[1], score: 10 }
+      ]
+    });
+    render(match, [], "connected", { onToggleBomb });
+    const bomb = () => container.querySelector<HTMLButtonElement>("button.inline-bomb");
+    expect(bomb()?.classList).toContain("is-ready");
+
+    // When a move is pending and the player taps the bomb
+    render(match, [], "connected", { movePending: true, onToggleBomb });
+    act(() => bomb()?.click());
+
+    // Then the bomb still looks ready
+    expect(bomb()?.classList).toContain("is-ready");
+
+    // And it does not arm
+    expect(onToggleBomb).not.toHaveBeenCalled();
   });
 
   it.each(["connecting", "disconnected"] as const)(

@@ -2,7 +2,7 @@ import "./match-view.css";
 import "./match-controls.css";
 import "./match-motion.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   advanceLastMoveTrail,
   getLastMoveMarks,
@@ -22,6 +22,21 @@ import { useUnreadChat } from "./useUnreadChat.js";
 import { WinBurst } from "./WinBurst.js";
 
 const NO_CHAT: readonly never[] = [];
+const SLOW_MOVE_MS = 300;
+
+// A reply normally arrives within moments, so announcing every move would only flicker.
+const useSlowMove = (movePending: boolean) => {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!movePending) return;
+    const timer = setTimeout(() => setSlow(true), SLOW_MOVE_MS);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [movePending]);
+  return movePending && slow;
+};
 
 export const MatchView = (props: MatchViewProps) => {
   const { match, currentPlayerId } = props;
@@ -36,8 +51,9 @@ export const MatchView = (props: MatchViewProps) => {
   useChatSounds(chatMessages, currentPlayerId, match.phase === "live");
   const chatRef = useMatchChat();
   const chat = useUnreadChat(chatMessages, currentPlayerId);
-  const view = getMatchPresentation(props);
-  useMatchTitle(match, currentPlayerId, view.canAct);
+  const moveSlow = useSlowMove(props.presentation !== "solo" && props.movePending === true);
+  const view = getMatchPresentation({ ...props, moveSlow });
+  useMatchTitle(match, currentPlayerId, view.isOwnTurn);
   const isSolo = props.presentation === "solo";
   const celebrateTone =
     finishedWhileWatching && match.winnerPlayerId === currentPlayerId

@@ -13,6 +13,8 @@ type PlayerTones = Record<string, "blue" | "red">;
 interface BoardGridProps {
   match: MatchStateDto;
   canAct: boolean;
+  /** Sets the tile colour. It differs from canAct while a move is pending, which only blocks input. */
+  isOwnTurn?: boolean;
   bombArmed: boolean;
   playerTones: PlayerTones;
   lastMove?: LastMoveMarks;
@@ -197,6 +199,7 @@ const BoardOverlays = ({
 export const BoardGrid = ({
   match,
   canAct,
+  isOwnTurn = canAct,
   bombArmed,
   playerTones,
   lastMove = NO_LAST_MOVE_MARKS,
@@ -238,7 +241,7 @@ export const BoardGrid = ({
       className={[
         "board-grid",
         previewBounds ? "is-bomb-preview-active" : "",
-        match.phase === "live" && !canAct ? "is-waiting" : "",
+        match.phase === "live" && !isOwnTurn ? "is-waiting" : "",
         celebrateTone ? `celebrate-${celebrateTone}` : ""
       ]
         .filter(Boolean)
