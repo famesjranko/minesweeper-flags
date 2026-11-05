@@ -148,16 +148,29 @@ describe("ChatMessageList", () => {
     // When the conversation renders
     render(messages);
 
-    // Then one group labels all three messages without losing their text or accessible times
+    // Then one group labels all three messages without losing their text
     expect(container.querySelectorAll(".chat-message-group")).toHaveLength(1);
     expect(container.querySelectorAll(".chat-message-meta strong")).toHaveLength(1);
     expect(container.querySelectorAll("time")).toHaveLength(1);
-    expect([...container.querySelectorAll("article")].map((entry) => entry.textContent)).toEqual([
-      "Message 1",
-      "Message 2",
-      "Message 3"
-    ]);
-    expect([...container.querySelectorAll("article")].every((entry) => entry.ariaLabel)).toBe(true);
+    expect(container.querySelectorAll("article .chat-message-text")).toHaveLength(3);
+    expect(container.querySelector("article")?.textContent).toBe("Message 1");
+    expect(container.querySelectorAll("article")[2]?.textContent).toContain("Message 3");
+  });
+
+  it("puts the sender in the text of a follow-up, where a live region can announce it", () => {
+    // Given a chat with one message from a player
+    render([message(1)]);
+    const log = container.querySelector('[role="log"]')!;
+    const changes = new MutationObserver(() => {});
+    changes.observe(log, { childList: true, subtree: true });
+
+    // When the same player sends a follow-up
+    render([message(1), message(2)]);
+
+    // Then the text added to the log names the sender and the time beside the message
+    const added = changes.takeRecords().flatMap((record) => [...record.addedNodes]);
+    changes.disconnect();
+    expect(added.map((node) => node.textContent).join("")).toMatch(/^Guest, .+: Message 2$/);
   });
 
   it("starts a new group when the sender changes even if the display names match", () => {

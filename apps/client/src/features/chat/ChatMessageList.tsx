@@ -5,6 +5,8 @@ interface ChatMessageListProps {
   currentPlayerId: string;
   playerTones: Record<string, "blue" | "red">;
   messages: ChatMessageDto[];
+  /** Shows only the latest messages. Earlier ones still count towards the groups. */
+  limit?: number | undefined;
 }
 
 const timeFormatter = new Intl.DateTimeFormat(undefined, {
@@ -58,7 +60,17 @@ const groupMessages = (messages: ChatMessageDto[]) => {
   return groups;
 };
 
-const ChatMessageGroup = ({ messages, currentPlayerId, playerTones }: ChatMessageListProps) => {
+interface ChatMessageGroupProps extends Omit<ChatMessageListProps, "limit"> {
+  /** How many of the group's first messages the limit has cut. */
+  hiddenCount: number;
+}
+
+const ChatMessageGroup = ({
+  messages,
+  hiddenCount,
+  currentPlayerId,
+  playerTones
+}: ChatMessageGroupProps) => {
   const first = messages[0]!;
   const isSelf = first.playerId === currentPlayerId;
   const sender = isSelf ? "You" : first.displayName;
@@ -78,13 +90,17 @@ const ChatMessageGroup = ({ messages, currentPlayerId, playerTones }: ChatMessag
           {timeFormatter.format(first.sentAt)}
         </time>
       </header>
-      {messages.map((message) => (
-        <article
-          key={message.messageId}
-          className="chat-message"
-          aria-label={`${sender}, ${timeFormatter.format(message.sentAt)}`}
-        >
-          <p className="chat-message-text">{renderChatText(message.text)}</p>
+      {messages.slice(hiddenCount).map((message) => (
+        <article key={message.messageId} className="chat-message">
+          <p className="chat-message-text">
+            {/* A log announces added text, and a follow-up arrives without the group's header. */}
+            {message === first ? null : (
+              <span className="visually-hidden">
+                {sender}, {timeFormatter.format(message.sentAt)}:{" "}
+              </span>
+            )}
+            {renderChatText(message.text)}
+          </p>
         </article>
       ))}
     </div>
@@ -94,7 +110,8 @@ const ChatMessageGroup = ({ messages, currentPlayerId, playerTones }: ChatMessag
 export const ChatMessageList = ({
   currentPlayerId,
   playerTones,
-  messages
+  messages,
+  limit = Number.POSITIVE_INFINITY
 }: ChatMessageListProps) => {
   const { listRef, onScroll } = useChatScroll(messages);
 
@@ -107,6 +124,11 @@ export const ChatMessageList = ({
     );
   }
 
+  // Group before applying the limit, so a group keeps its key as the window slides. A new key would
+  // remount the group, and the log would announce its earlier messages again.
+  const firstShown = messages.length - limit;
+  let seen = 0;
+
   return (
     <div
       ref={listRef}
@@ -115,14 +137,20 @@ export const ChatMessageList = ({
       role="log"
       aria-live="polite"
     >
-      {groupMessages(messages).map((group) => (
-        <ChatMessageGroup
-          key={group[0]!.messageId}
-          messages={group}
-          currentPlayerId={currentPlayerId}
-          playerTones={playerTones}
-        />
-      ))}
+      {groupMessages(messages).map((group) => {
+        const start = seen;
+        seen += group.length;
+        const hiddenCount = Math.max(0, firstShown - start);
+        return hiddenCount < group.length ? (
+          <ChatMessageGroup
+            key={group[0]!.messageId}
+            messages={group}
+            hiddenCount={hiddenCount}
+            currentPlayerId={currentPlayerId}
+            playerTones={playerTones}
+          />
+        ) : null;
+      })}
     </div>
   );
 };
