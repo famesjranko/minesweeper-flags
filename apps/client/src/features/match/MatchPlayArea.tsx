@@ -98,6 +98,7 @@ const focusBombButton = (from: HTMLElement) => {
 };
 
 const DOUBLE_TAP_GUARD_MS = 800;
+const BOARD_TAP_GUARD_MS = 400;
 const SAFE_ACTIONS = 'button[name="keep-playing"], button[name="cancel-bomb"]';
 
 // Each press in the action slot swaps the control under the finger, so the next tap of a double
@@ -106,13 +107,28 @@ const SAFE_ACTIONS = 'button[name="keep-playing"], button[name="cancel-bomb"]';
 // technology clicks have detail 0 and pass, because they cannot miss in that way.
 const useDoubleTapGuard = () => {
   const lastPress = useRef(Number.NEGATIVE_INFINITY);
-  return (event: MouseEvent<HTMLElement>) => {
-    if (event.detail === 0) return;
-    const isTooSoon = event.timeStamp - lastPress.current < DOUBLE_TAP_GUARD_MS;
-    lastPress.current = event.timeStamp;
-    if (isTooSoon && !(event.target as Element).closest(SAFE_ACTIONS)) {
-      event.preventDefault();
-      event.stopPropagation();
+  const lastBoardPress = useRef(Number.NEGATIVE_INFINITY);
+  return {
+    onBoardPress: (event: MouseEvent<HTMLElement>) => {
+      if (event.detail !== 0 && (event.target as Element).closest(".board-cell")) {
+        lastBoardPress.current = event.timeStamp;
+      }
+    },
+    onActionPress: (event: MouseEvent<HTMLElement>) => {
+      if (event.detail === 0) return;
+      // On short windows the action is pinned over the board, so a tile's press can make Fire bomb
+      // or a rematch appear under the finger. Nothing is safe here, as Cancel would drop the aim.
+      if (event.timeStamp - lastBoardPress.current < BOARD_TAP_GUARD_MS) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const isTooSoon = event.timeStamp - lastPress.current < DOUBLE_TAP_GUARD_MS;
+      lastPress.current = event.timeStamp;
+      if (isTooSoon && !(event.target as Element).closest(SAFE_ACTIONS)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     }
   };
 };
@@ -270,6 +286,7 @@ export const MatchPlayArea = (props: PlayProps) => {
       className="arcade-play-area"
       aria-label="Match board and scores"
       onKeyDown={disarmOnEscape}
+      onClickCapture={guardDoubleTap.onBoardPress}
     >
       <p className="visually-hidden" aria-live="polite">
         {describeLastAction(props.match, props.currentPlayerId)}
@@ -315,7 +332,7 @@ export const MatchPlayArea = (props: PlayProps) => {
         aim={aim}
         onAim={setAim}
       />
-      <div className="match-action-slot" onClickCapture={guardDoubleTap}>
+      <div className="match-action-slot" onClickCapture={guardDoubleTap.onActionPress}>
         <MatchActions props={props} aim={aim} />
       </div>
     </section>
