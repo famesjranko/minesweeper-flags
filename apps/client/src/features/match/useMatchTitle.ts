@@ -8,12 +8,12 @@ const APP_TITLE = "Minesweeper Flags";
 export const useMatchTitle = (
   match: MatchStateDto,
   currentPlayerId: string,
-  canAct: boolean
+  isOwnTurn: boolean
 ): void => {
   const status =
     match.phase === "finished"
       ? getResultTitle(match, currentPlayerId)
-      : canAct
+      : isOwnTurn
         ? "Your turn"
         : null;
 

@@ -299,6 +299,12 @@
     margin-top: 8px;
   }
 }
+/* Short desktop windows such as 1024×768: a smaller board keeps the footer on screen. */
+@media (min-width: 900px) and (min-height: 501px) and (max-height: 799px) {
+  .solo-entry-content {
+    grid-template-columns: 360px minmax(0, 1fr);
+  }
+}
 /* Landscape phones: tighter spacing and a smaller board keep the primary action on screen. */
 @media (min-width: 680px) and (max-height: 500px) {
   .page-shell.arcade-page-shell.solo-home-shell {

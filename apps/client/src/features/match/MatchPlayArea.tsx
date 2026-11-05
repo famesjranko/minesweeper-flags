@@ -74,6 +74,7 @@ const MatchBoard = ({
           <BoardGrid
             match={match}
             canAct={view.canAct}
+            isOwnTurn={view.isOwnTurn}
             bombArmed={bombArmed}
             playerTones={view.playerTones}
             lastMove={lastMove}
@@ -135,7 +136,7 @@ const MatchTools = ({
     <div
       className="arcade-turn-hint"
       data-turn-hint={
-        props.match.phase === "finished" ? undefined : props.view.canAct ? "YOU" : "OPPONENT"
+        props.match.phase === "finished" ? undefined : props.view.isOwnTurn ? "YOU" : "OPPONENT"
       }
       role="status"
     >
@@ -292,8 +293,9 @@ export const MatchPlayArea = (props: PlayProps) => {
             hidePresence={props.hidePresence ?? false}
             note={slot.isSelf ? undefined : props.solo?.botLevel}
             bombArmed={props.bombArmed}
-            canAct={props.view.canAct}
+            canAct={props.view.isOwnTurn}
             onToggleBomb={() => {
+              if (!props.view.canAct) return;
               setBombNote(null);
               props.onToggleBomb();
             }}

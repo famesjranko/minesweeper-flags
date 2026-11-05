@@ -22,6 +22,21 @@ import { useUnreadChat } from "./useUnreadChat.js";
 import { WinBurst } from "./WinBurst.js";
 
 const NO_CHAT: readonly never[] = [];
+const SLOW_MOVE_MS = 300;
+
+// A reply normally arrives within moments, so announcing every move would only flicker.
+const useSlowMove = (movePending: boolean) => {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!movePending) return;
+    const timer = setTimeout(() => setSlow(true), SLOW_MOVE_MS);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [movePending]);
+  return movePending && slow;
+};
 
 export const MatchView = (props: MatchViewProps) => {
   const { match, currentPlayerId } = props;
@@ -30,18 +45,20 @@ export const MatchView = (props: MatchViewProps) => {
   const [storedTrail, setStoredTrail] = useState<LastMoveTrail>([]);
   const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
-  // A short screen may have scrolled to reach the invite controls. Start the match at its turn band.
+  // A short screen may have scrolled to reach the invite or rematch controls. Each new match starts
+  // at its turn band.
   useEffect(() => {
-    document.documentElement.scrollTop = 0;
-  }, []);
+    if (match.phase === "live") document.documentElement.scrollTop = 0;
+  }, [match.phase]);
   const finishedWhileWatching = useTurnedOnSinceMount(match.phase === "finished");
   const chatMessages = props.presentation === "solo" ? NO_CHAT : props.chatMessages;
   useMatchSounds(match, currentPlayerId);
   useChatSounds(chatMessages, currentPlayerId, match.phase === "live");
   const chatRef = useMatchChat();
   const chat = useUnreadChat(chatMessages, currentPlayerId);
-  const view = getMatchPresentation(props);
-  useMatchTitle(match, currentPlayerId, view.canAct);
+  const moveSlow = useSlowMove(props.presentation !== "solo" && props.movePending === true);
+  const view = getMatchPresentation({ ...props, moveSlow });
+  useMatchTitle(match, currentPlayerId, view.isOwnTurn);
   const isSolo = props.presentation === "solo";
   const celebrateTone =
     finishedWhileWatching && match.winnerPlayerId === currentPlayerId

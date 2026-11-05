@@ -201,6 +201,22 @@
   font-size: calc(var(--board-cell-size) * 0.8);
 }
 
+/* Portrait phones need the large marks on their small tiles. Bigger tiles do not, so marks hold
+   about 20px until tiles reach 36px, then keep the same share of the tile. */
+@media (min-width: 601px) {
+  .arcade-match .board-cell svg {
+    width: max(60%, min(80%, 21px));
+    height: max(60%, min(80%, 21px));
+  }
+
+  .arcade-match .cell-number {
+    font-size: max(
+      calc(var(--board-cell-size) * 0.56),
+      min(calc(var(--board-cell-size) * 0.8), 20px)
+    );
+  }
+}
+
 .arcade-match :is(.arcade-options-close, .arcade-chat-close) {
   display: inline-flex;
   align-items: center;
@@ -266,13 +282,31 @@
   }
 }
 
-/* The column is taller than these windows, so the turn must stay readable while the player works
-   the lower rows. */
-@media (max-height: 500px), (min-width: 900px) and (max-height: 806px) {
+/* The column is taller than these windows, so the turn and the current action stay reachable while
+   the player works the board. Tiles scrolled to by focus or an aim must clear both. */
+@media (max-height: 500px), (min-width: 601px) and (max-width: 899px) and (max-height: 950px),
+  (min-width: 900px) and (max-height: 806px) {
+  :root:has(.arcade-match-status) {
+    scroll-padding: 68px 0 62px;
+  }
+
   .arcade-match-status {
     position: sticky;
     top: 8px;
     z-index: 5;
+  }
+
+  /* Resign stays in place: it is rarely wanted, and pinning it would cover a row of tiles. */
+  .match-action-slot > :is(.match-resign-confirm, .match-primary-action, .match-rematch-action) {
+    position: sticky;
+    bottom: 8px;
+    z-index: 5;
+  }
+
+  .match-rematch-action {
+    padding: 8px;
+    border-radius: 10px;
+    background: #13233b;
   }
 }
 
