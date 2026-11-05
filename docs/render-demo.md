@@ -17,15 +17,9 @@ The live demo is managed separately through Render service settings.
 | `minesweeper-flags-api` | Node WebSocket game server | Free web service, Frankfurt |
 | `minesweeper-flags-state` | Redis-compatible room, match, chat, and session state | Free Key Value, Frankfurt |
 
-Last verified on 21 October 2026:
-
-| Service | Deployed commit | Deployment date |
-| --- | --- | --- |
-| Frontend | [`ba7c5ef`](https://github.com/famesjranko/minesweeper-flags/commit/ba7c5efc6ebcb7765d55358a83ee19c8bd1144de) | 21 October 2026 |
-| Game server | [`ba7c5ef`](https://github.com/famesjranko/minesweeper-flags/commit/ba7c5efc6ebcb7765d55358a83ee19c8bd1144de) | 21 October 2026 |
-
 Both services run the same commit after a verified release through
-`make deploy TARGET=all`. Both services track `main`, with auto-deploys and
+`make deploy TARGET=all`. Run `make deploy-status` to see the commit each
+service runs now. Both services track `main`, with auto-deploys and
 previews disabled. The original Blueprint was disconnected on 21 October 2026;
 its resources and settings were retained. Public template changes cannot sync
 into these services. GitHub Actions runs checks and image builds; it does not
