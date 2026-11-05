@@ -1,6 +1,5 @@
-/* --match-board-fit comes from the match page shell in match-view.css. */
 .solo-match {
-  width: min(100%, 720px, var(--match-board-fit));
+  width: min(100%, 720px);
   margin: 0 auto;
 }
 .solo-match > .arcade-header {
@@ -30,21 +29,19 @@
   background: #422d35;
   color: #ffd3ca;
 }
-@media (max-width: 1000px) {
+@media (min-width: 900px) {
+  /* --match-board-fit comes from the match page shell in match-view.css. */
   .solo-match {
-    width: min(100%, 624px, var(--match-board-fit));
+    width: min(100%, var(--match-board-fit));
+  }
+}
+@media (max-width: 899px) {
+  .solo-match {
+    width: min(100%, 624px);
   }
 }
 @media (max-width: 600px) {
   .solo-match {
-    width: min(100%, 760px, var(--match-board-fit));
-  }
-}
-@media (max-height: 500px) and (orientation: landscape) {
-  .solo-match {
-    width: min(100%, 880px);
-  }
-  .solo-match .arcade-match.is-solo {
-    max-width: none;
+    width: min(100%, 760px);
   }
 }

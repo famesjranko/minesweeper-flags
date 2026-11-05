@@ -24,6 +24,7 @@
 }
 
 .arcade-brand {
+  min-width: 0;
   /* Keeps a usable tap target when the mark shrinks on narrow phones. */
   min-height: 44px;
   color: inherit;
@@ -35,7 +36,13 @@
   white-space: nowrap;
 }
 
+.arcade-brand > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .arcade-brand-mark {
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 28px;
@@ -50,6 +57,7 @@
 }
 
 .arcade-header-actions {
+  flex-shrink: 0;
   gap: 12px;
 }
 
@@ -114,7 +122,7 @@
 
 .arcade-recovery {
   width: min(100%, 480px);
-  margin: 100px auto 0;
+  margin: 32px auto 0;
   padding: 32px;
   border: 1px solid #354562;
   border-radius: 16px;

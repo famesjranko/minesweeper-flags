@@ -200,7 +200,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 27px;
+  min-width: 36px;
   min-height: 0;
   height: 38px;
   padding: 0;
@@ -336,7 +336,7 @@ button.inline-bomb.is-armed::after {
   color: #bdd5f0;
   overflow-wrap: anywhere;
 }
-@media (max-width: 1000px) {
+@media (max-width: 899px) {
   .arcade-match.is-solo {
     max-width: 624px;
   }

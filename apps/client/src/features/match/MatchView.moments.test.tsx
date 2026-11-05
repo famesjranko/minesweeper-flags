@@ -308,7 +308,46 @@ describe("a connection drop", () => {
   });
 });
 
+describe("arriving at a match", () => {
+  it("starts at the top of the page after the player scrolled in the waiting room", () => {
+    // Given a page the player scrolled to reach the invite controls
+    document.documentElement.scrollTop = 329;
+
+    // When the match appears
+    render(createMatch());
+
+    // Then the page is back at the top, with the turn band on screen
+    expect(document.documentElement.scrollTop).toBe(0);
+  });
+
+  it("keeps the player's place when a new snapshot arrives", () => {
+    // Given a running match the player has scrolled down
+    render(createMatch());
+    document.documentElement.scrollTop = 200;
+
+    // When the next move arrives
+    render(createMatch({ turnNumber: 6 }));
+
+    // Then the page stays where the player left it
+    expect(document.documentElement.scrollTop).toBe(200);
+  });
+});
+
 describe("the unread chat chip", () => {
+  it("keeps chat available from the header before any unread message arrives", () => {
+    // Given a quiet match with no unread messages
+    render(createMatch());
+    const openChat = container.querySelector<HTMLButtonElement>(".arcade-chat-open");
+
+    // When the player opens chat from the header
+    act(() => openChat?.click());
+
+    // Then chat opens without waiting for an unread notification
+    expect(openChat?.getAttribute("aria-label")).toBe("Open chat");
+    expect(showModal).toHaveBeenCalledOnce();
+    expect(chip()).toBeNull();
+  });
+
   it("is absent until the opponent sends something", () => {
     // Given a quiet chat
     // When the match renders

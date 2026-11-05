@@ -50,6 +50,7 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 	test-client \
 	test-shared \
 	test-engine \
+	test-layout \
 	server-start \
 	signaling-start \
 	check \
@@ -169,6 +170,10 @@ test-client: ## Run the client test suite
 
 test-shared: ## Run the shared package test suite
 	$(NPM) run test -w $(SHARED_WORKSPACE)
+
+test-layout: ## Check match layouts in Chrome; set CHROME_PATH if it is not installed as a channel
+	$(NPM) run build -w $(ENGINE_WORKSPACE) -w $(SHARED_WORKSPACE)
+	node --test apps/client/tests/responsive.check.mjs
 
 test-engine: ## Run the game engine test suite
 	$(NPM) run test -w $(ENGINE_WORKSPACE)

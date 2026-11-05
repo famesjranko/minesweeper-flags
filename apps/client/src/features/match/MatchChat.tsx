@@ -53,8 +53,7 @@ export const MatchChat = ({
         aria-label="Match chat"
         onClose={(event) => {
           onChatSeen();
-          // The chip that opened the chat has gone, so the browser has nowhere to return focus.
-          // It may not have left the closed dialog yet, and it would fall to the body next.
+          // If the browser could not restore focus, return to the preview's open control.
           const focused = document.activeElement;
           if (focused === document.body || event.currentTarget.contains(focused)) {
             event.currentTarget
