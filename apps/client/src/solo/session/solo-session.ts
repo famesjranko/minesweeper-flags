@@ -29,6 +29,8 @@ const defaultScheduler: SoloScheduler = {
 export interface SoloSessionOptions {
   /** Explicit lobby Start new intent; ordinary entry restores live progress. */
   startFresh?: boolean;
+  /** A reload should show the same page, so a finished match stays until the player leaves it. */
+  keepFinished?: boolean;
   scheduler?: SoloScheduler;
   storage?: SoloStorage;
   now?: () => number;
@@ -237,7 +239,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   const restoreSaved = (): void => {
     const recovered = storage.read();
     const restored = recovered.record ? replaySoloRecord(recovered.record) : null;
-    if (restored?.phase === "finished") {
+    if (restored?.phase === "finished" && !options.keepFinished) {
       beginFresh("human", recovered.notice);
       return;
     }

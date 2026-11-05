@@ -47,7 +47,9 @@ export const createSoloEntrySessionFactory = () => {
     return createSoloSession({
       storage,
       preferredDifficulty: () => difficulty ?? readSoloDifficulty(),
-      startFresh: firstActivation && entry.startFresh
+      startFresh: firstActivation && entry.startFresh,
+      // Links from the home page always name a level, so no level means a reload of this page.
+      keepFinished: entry.difficulty === null
     });
   };
 };
