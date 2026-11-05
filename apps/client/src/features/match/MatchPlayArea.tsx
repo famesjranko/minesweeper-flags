@@ -99,6 +99,7 @@ const focusBombButton = (from: HTMLElement) => {
 
 const DOUBLE_TAP_GUARD_MS = 800;
 const BOARD_TAP_GUARD_MS = 400;
+const TAP_SPOT_PX = 48;
 const SAFE_ACTIONS = 'button[name="keep-playing"], button[name="cancel-bomb"]';
 
 // Each press in the action slot swaps the control under the finger, so the next tap of a double
@@ -107,18 +108,22 @@ const SAFE_ACTIONS = 'button[name="keep-playing"], button[name="cancel-bomb"]';
 // technology clicks have detail 0 and pass, because they cannot miss in that way.
 const useDoubleTapGuard = () => {
   const lastPress = useRef(Number.NEGATIVE_INFINITY);
-  const lastBoardPress = useRef(Number.NEGATIVE_INFINITY);
+  const lastTilePress = useRef({ at: Number.NEGATIVE_INFINITY, x: 0, y: 0 });
   return {
     onBoardPress: (event: MouseEvent<HTMLElement>) => {
       if (event.detail !== 0 && (event.target as Element).closest(".board-cell")) {
-        lastBoardPress.current = event.timeStamp;
+        lastTilePress.current = { at: event.timeStamp, x: event.clientX, y: event.clientY };
       }
     },
     onActionPress: (event: MouseEvent<HTMLElement>) => {
       if (event.detail === 0) return;
       // On short windows the action is pinned over the board, so a tile's press can make Fire bomb
       // or a rematch appear under the finger. Nothing is safe here, as Cancel would drop the aim.
-      if (event.timeStamp - lastBoardPress.current < BOARD_TAP_GUARD_MS) {
+      // Each ignored tap extends the wait, so more taps at that spot cannot get through either.
+      const tile = lastTilePress.current;
+      const sameSpot = Math.hypot(event.clientX - tile.x, event.clientY - tile.y) < TAP_SPOT_PX;
+      if (sameSpot && event.timeStamp - tile.at < BOARD_TAP_GUARD_MS) {
+        tile.at = event.timeStamp;
         event.preventDefault();
         event.stopPropagation();
         return;

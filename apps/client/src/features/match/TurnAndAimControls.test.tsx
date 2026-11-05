@@ -409,11 +409,11 @@ describe("the board zoom choice", () => {
 
 describe("double taps on the action slot", () => {
   // A real tap has detail 1; keyboard and assistive-technology clicks have detail 0.
-  const realTap = (target: HTMLElement | null, atMs: number) => {
+  const realTap = (target: HTMLElement | null, atMs: number, clientY = 0) => {
     const time = vi.spyOn(Event.prototype, "timeStamp", "get").mockReturnValue(atMs);
     act(() => {
       target?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 })
+        new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1, clientY })
       );
     });
     time.mockRestore();
@@ -500,6 +500,33 @@ describe("double taps on the action slot", () => {
     }
   );
 
+  it("keeps ignoring repeated taps at the same spot, so a triple tap cannot fire", () => {
+    // Given an armed bomb
+    render();
+    act(() => bomb().click());
+
+    // When the player taps a low tile three times, with Fire bomb now under the finger
+    touchTile(cell(1, 1), 1000);
+    realTap(named("fire-bomb"), 1211);
+    realTap(named("fire-bomb"), 1435);
+
+    // Then the bomb has not fired
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("fires at once when Fire bomb is nowhere near the tile that was tapped", () => {
+    // Given an armed bomb on a tall phone, where Fire bomb sits far below the tile
+    render();
+    act(() => bomb().click());
+
+    // When the player aims at a tile, then quickly taps Fire bomb elsewhere on the screen
+    touchTile(cell(1, 1), 1000);
+    realTap(named("fire-bomb"), 1200, 300);
+
+    // Then the bomb fires at the aimed square
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(1, 1);
+  });
+
   it("fires when the player taps Fire bomb promptly but deliberately after aiming", () => {
     // Given an armed bomb
     render();
@@ -532,8 +559,8 @@ describe("double taps on the action slot", () => {
     // Then no rematch was requested
     expect(onRequestRematch).not.toHaveBeenCalled();
 
-    // And a deliberate tap afterwards still works
-    realTap(container.querySelector(".match-primary-action"), 1500);
+    // And a deliberate tap after the wait still works, as the ignored tap extended it
+    realTap(container.querySelector(".match-primary-action"), 1600);
     expect(onRequestRematch).toHaveBeenCalledOnce();
   });
 
