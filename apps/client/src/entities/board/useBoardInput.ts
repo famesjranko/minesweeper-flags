@@ -29,11 +29,15 @@ const getKeyboardTarget = (
   }
 };
 
+export interface AimedCell extends CellPosition {
+  pointerType: string;
+}
+
 interface BoardInputOptions {
   columns: number;
   bombArmed: boolean;
   onSelectCell: (row: number, column: number) => void;
-  onAimCell: ((cell: CellPosition) => void) | undefined;
+  onAimCell: ((cell: AimedCell) => void) | undefined;
 }
 
 /** How a keyboard, a mouse and a touch each move around the board and choose a square. */
@@ -45,13 +49,14 @@ export const useBoardInput = ({
 }: BoardInputOptions) => {
   // The board is one tab stop; arrow keys move within it and Tab leaves it.
   const [tabStop, setTabStop] = useState<CellPosition>({ row: 0, column: 0 });
-  // Touch has no hover to preview with, so a tap must aim before anything fires.
+  // The bomb can be used once, so a click or tap only aims and one stray press cannot spend it.
+  // A keyboard press has no pointer, and its focus has already shown the preview.
   const lastPointerType = useRef<string | null>(null);
 
   const selectCell = (row: number, column: number) => {
-    const isTouch = lastPointerType.current === "touch" || lastPointerType.current === "pen";
+    const pointerType = lastPointerType.current;
     lastPointerType.current = null;
-    if (bombArmed && isTouch && onAimCell) onAimCell({ row, column });
+    if (bombArmed && pointerType && onAimCell) onAimCell({ row, column, pointerType });
     else onSelectCell(row, column);
   };
 

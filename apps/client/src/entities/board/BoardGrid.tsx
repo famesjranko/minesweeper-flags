@@ -5,7 +5,7 @@ import { type CSSProperties, useState } from "react";
 import { FlagIcon } from "../../shared-ui/FlagIcon.js";
 import { type BombPreviewBounds, getBombPreviewBounds } from "./bomb-preview.js";
 import { type LastMoveMarks, NO_LAST_MOVE_MARKS } from "./last-move.js";
-import { type CellPosition, useBoardInput } from "./useBoardInput.js";
+import { type AimedCell, type CellPosition, useBoardInput } from "./useBoardInput.js";
 import { useTurnedOnSinceMount } from "./useTurnedOnSinceMount.js";
 
 type PlayerTones = Record<string, "blue" | "red">;
@@ -18,13 +18,13 @@ interface BoardGridProps {
   bombArmed: boolean;
   playerTones: PlayerTones;
   lastMove?: LastMoveMarks;
-  /** The square a touch player has aimed the bomb at. */
+  /** The square a mouse or touch player has aimed the bomb at. */
   aimedCell?: CellPosition | null;
   /** The winner's colour, while the win is being celebrated. */
   celebrateTone?: "blue" | "red" | undefined;
   onSelectCell: (row: number, column: number) => void;
-  /** With this set, a touch on an armed board aims the bomb, and the caller confirms it. */
-  onAimCell?: (cell: CellPosition) => void;
+  /** With this set, a click or tap on an armed board aims the bomb, and the caller confirms it. */
+  onAimCell?: (cell: AimedCell) => void;
 }
 
 type BoardCellState = MatchStateDto["board"]["cells"][number][number];

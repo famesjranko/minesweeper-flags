@@ -55,7 +55,7 @@ const getTurnHint = ({
   if (!isOwnTurn) {
     return opponentOffline ? describeOfflineOpponent(opponentName) : `${opponentName} is moving…`;
   }
-  if (bombArmed) return "Bomb armed · tap a square";
+  if (bombArmed) return "Bomb armed · choose a square";
   if (canBomb) return "Your turn · Bomb ready.";
   if (scoreDeficit > 0 && scoreDeficit < MIN_BOMB_DEFICIT) {
     return `Your turn · Bomb unlocks when you trail by ${MIN_BOMB_DEFICIT}.`;

@@ -282,6 +282,85 @@ describe("explaining an unavailable bomb", () => {
   });
 });
 
+describe("aiming the bomb with a mouse", () => {
+  const press = (target: HTMLElement) =>
+    act(() => {
+      target.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" })
+      );
+      target.click();
+    });
+
+  it("aims on a click instead of firing, and says to click", () => {
+    // Given an armed bomb
+    render();
+    act(() => bomb().click());
+
+    // When the player clicks a hidden square with a mouse
+    press(cell(1, 1));
+
+    // Then nothing has fired
+    expect(onSelect).not.toHaveBeenCalled();
+
+    // And the player can choose, with wording for a mouse
+    expect(named("fire-bomb")).not.toBeNull();
+    expect(named("cancel-bomb")).not.toBeNull();
+    expect(hint()).toBe("Bomb aimed. Click another hidden square to move it.");
+  });
+
+  it("moves the aim on another click and fires only from Fire bomb", () => {
+    // Given a square aimed at with a mouse
+    render();
+    act(() => bomb().click());
+    press(cell(1, 1));
+
+    // When the player clicks another square, then Fire bomb
+    press(cell(0, 0));
+    act(() => named("fire-bomb")?.click());
+
+    // Then the bomb fires once, at the latest square
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(0, 0);
+  });
+
+  it("lets the player change their mind with Cancel", () => {
+    // Given a square aimed at with a mouse
+    render();
+    act(() => bomb().click());
+    press(cell(1, 1));
+
+    // When the player chooses Cancel
+    act(() => named("cancel-bomb")?.click());
+
+    // Then nothing fired, and the bomb is no longer armed
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(bomb().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("still fires at once from the keyboard, which has no aiming step", () => {
+    // Given an armed bomb and keyboard focus on a square
+    render();
+    act(() => bomb().click());
+    act(() => cell(1, 1).focus());
+
+    // When the player activates the square without a pointer
+    act(() => cell(1, 1).click());
+
+    // Then the bomb fires at that square
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(1, 1);
+  });
+
+  it("does not turn an ordinary click into an aim", () => {
+    // Given no armed bomb
+    render();
+
+    // When the player clicks a hidden square with a mouse
+    press(cell(1, 1));
+
+    // Then it is a normal move
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(1, 1);
+  });
+});
+
 describe("aiming the bomb on touch", () => {
   const aim = () => {
     render();
@@ -293,7 +372,7 @@ describe("aiming the bomb on touch", () => {
     // Given an armed bomb
     render();
     act(() => bomb().click());
-    expect(hint()).toBe("Bomb armed · tap a square");
+    expect(hint()).toBe("Bomb armed · choose a square");
     expect(named("resign")).not.toBeNull();
 
     // When the player taps a square
@@ -347,7 +426,7 @@ describe("aiming the bomb on touch", () => {
 
     // Then nothing fired and the old aim did not come back
     expect(onSelect).not.toHaveBeenCalled();
-    expect(hint()).toBe("Bomb armed · tap a square");
+    expect(hint()).toBe("Bomb armed · choose a square");
     expect(container.querySelector(".board-bomb-preview")).toBeNull();
   });
 

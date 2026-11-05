@@ -20,8 +20,8 @@ export const GameHelp = () => (
         shifts inward at board edges to keep the full area on the board.
       </p>
       <p>
-        With a bomb armed, mouse clicks fire at the preview. On touch, tap a hidden square to aim,
-        then choose Fire bomb. Tap another hidden square to move the aim, or Cancel to disarm.
+        With a bomb armed, click or tap a hidden square to aim, then choose Fire bomb. Click or tap
+        another hidden square to move the aim, or Cancel to disarm.
       </p>
       <p>
         <strong>Keyboard:</strong> Tab enters or leaves the board. Arrow keys move between squares.

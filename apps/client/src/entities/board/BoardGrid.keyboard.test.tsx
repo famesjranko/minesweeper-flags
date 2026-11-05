@@ -306,21 +306,21 @@ describe("BoardGrid turn and touch states", () => {
     tap(cellAt(1, 2), "touch");
 
     // Then the square is aimed at and nothing is sent
-    expect(onAimCell).toHaveBeenCalledExactlyOnceWith({ row: 1, column: 2 });
+    expect(onAimCell).toHaveBeenCalledExactlyOnceWith({ row: 1, column: 2, pointerType: "touch" });
     expect(onSelectCell).not.toHaveBeenCalled();
   });
 
-  it("fires at once for a mouse click on an armed board", () => {
-    // Given an armed bomb and a mouse, whose hover already showed the preview
+  it("aims rather than fires when a mouse click lands on an armed board", () => {
+    // Given an armed bomb and a mouse
     const onAimCell = vi.fn();
     renderAiming(liveBoard(), onAimCell);
 
     // When the player clicks a hidden square
     tap(cellAt(1, 2), "mouse");
 
-    // Then the bomb is sent without an aiming step
-    expect(onSelectCell).toHaveBeenCalledExactlyOnceWith(1, 2);
-    expect(onAimCell).not.toHaveBeenCalled();
+    // Then the square is aimed at and nothing is sent
+    expect(onAimCell).toHaveBeenCalledExactlyOnceWith({ row: 1, column: 2, pointerType: "mouse" });
+    expect(onSelectCell).not.toHaveBeenCalled();
   });
 
   it("fires at once for a key press that follows a touch", () => {
