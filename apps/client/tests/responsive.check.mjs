@@ -217,21 +217,78 @@ test("Fire bomb and the aimed square share a landscape phone's screen", async ()
   assert.ok(preview.top >= 0 && preview.top < fire.top, `preview starts at ${preview.top}px`);
 });
 
+test("a long chat adds no blank scroll space to the page", async () => {
+  for (const [width, height, pageHeight] of [
+    [1366, 650, 807],
+    [1920, 935, 935]
+  ]) {
+    // Given a match with a long chat from one sender
+    await layoutAt(width, height, { longChat: true });
+
+    // When the page height is measured
+    const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+
+    // Then the chat scrolls inside its own panel
+    assert.ok(scrollHeight <= pageHeight, `${width}x${height}: page is ${scrollHeight}px`);
+  }
+});
+
+test("a long chat gives the chat sheet itself nothing to scroll", async () => {
+  // Given a phone match with a long chat from one sender
+  await layoutAt(390, 844, { longChat: true });
+
+  // When the player opens the chat sheet
+  const { client, scroll } = await page.evaluate(async () => {
+    document.querySelector(".arcade-chat-open, .arcade-chat-chip").click();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const sheet = document.querySelector(".arcade-chat-region");
+    const measured = { client: sheet.clientHeight, scroll: sheet.scrollHeight };
+    sheet.close();
+    return measured;
+  });
+
+  // Then only the message list scrolls, so the input stays put
+  assert.ok(scroll <= client, `sheet scrolls ${scroll}px in ${client}px`);
+});
+
+test("copying chat text leaves out the hidden sender", async () => {
+  // Given a side chat with follow-up messages
+  await layoutAt(1280, 900, { longChat: true });
+
+  // When the player selects the whole conversation
+  const copied = await page.evaluate(() => {
+    getSelection().selectAllChildren(document.querySelector(".arcade-chat-region [role=log]"));
+    const text = getSelection().toString();
+    getSelection().removeAllRanges();
+    return text;
+  });
+
+  // Then the visible header appears, but no hidden sender and time
+  assert.ok(copied.includes("First Mate"), "the visible sender is missing");
+  assert.ok(!copied.includes("First Mate,"), `copied text includes: ${copied.slice(0, 120)}`);
+});
+
 test("a focused tile is not hidden under the pinned rematch action", async () => {
-  // Given a finished match on a short window with a rematch waiting for the opponent
-  await layoutAt(1024, 600, { finished: true, rematch: true });
-  await page.evaluate(() => document.querySelector(".board-cell").focus());
+  for (const [width, height, fixture] of [
+    [1024, 600, {}],
+    [320, 568, { longNames: true }]
+  ]) {
+    // Given a finished match on a short window with a rematch waiting for the opponent
+    await layoutAt(width, height, { ...fixture, finished: true, rematch: true });
+    await page.evaluate(() => document.querySelector(".board-cell").focus());
 
-  for (let row = 1; row < 16; row += 1) {
-    // When the player presses the down arrow through the rows
-    await page.keyboard.press("ArrowDown");
-    const { action, tile } = await page.evaluate(() => ({
-      action: document.querySelector(".match-rematch-action").getBoundingClientRect().top,
-      tile: document.activeElement.getBoundingClientRect().bottom
-    }));
+    for (let row = 1; row < 16; row += 1) {
+      // When the player presses the down arrow through the rows
+      await page.keyboard.press("ArrowDown");
+      const { action, tile } = await page.evaluate(() => ({
+        action: document.querySelector(".match-rematch-action").getBoundingClientRect().top,
+        tile: document.activeElement.getBoundingClientRect().bottom
+      }));
 
-    // Then each tile stays clear of the action
-    assert.ok(tile <= action, `row ${row}: tile ends at ${tile}px, action starts at ${action}px`);
+      // Then each tile stays clear of the action
+      const label = `${width}x${height} row ${row}: tile ends at ${tile}, action starts at ${action}`;
+      assert.ok(tile <= action, label);
+    }
   }
 });
 

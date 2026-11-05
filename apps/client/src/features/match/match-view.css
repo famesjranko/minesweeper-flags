@@ -308,7 +308,7 @@
   }
 
   :root:has(.match-rematch-action) {
-    scroll-padding-bottom: 110px;
+    scroll-padding-bottom: 124px;
   }
 
   .match-action-slot > :is(.match-resign-confirm, .match-primary-action, .match-rematch-action) {

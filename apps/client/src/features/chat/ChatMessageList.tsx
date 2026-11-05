@@ -95,7 +95,7 @@ const ChatMessageGroup = ({
           <p className="chat-message-text">
             {/* A log announces added text, and a follow-up arrives without the group's header. */}
             {message === first ? null : (
-              <span className="visually-hidden">
+              <span className="visually-hidden chat-message-sender">
                 {sender}, {timeFormatter.format(message.sentAt)}:{" "}
               </span>
             )}

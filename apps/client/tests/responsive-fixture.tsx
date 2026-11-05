@@ -21,6 +21,15 @@ const messages: ChatMessageDto[] = [
   }
 ];
 
+const longChat: ChatMessageDto[] = Array.from({ length: 30 }, (_, index) => ({
+  messageId: `long-${index}`,
+  playerId: "guest",
+  displayName: "First Mate",
+  text:
+    index % 10 === 0 ? "A longer message that wraps across several lines in a chat panel." : "ok",
+  sentAt: index + 1
+}));
+
 const createMatch = (): MatchStateDto => ({
   roomId: "layout-check",
   phase: "live",
@@ -66,6 +75,7 @@ const createMatch = (): MatchStateDto => ({
 export interface FixtureOptions {
   solo?: boolean;
   emptyChat?: boolean;
+  longChat?: boolean;
   longNames?: boolean;
   offline?: boolean;
   finished?: boolean;
@@ -126,7 +136,7 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
       {...shared}
       roomCode="ABCDE"
       connectionStatus="connected"
-      chatMessages={options.emptyChat ? [] : messages}
+      chatMessages={options.emptyChat ? [] : options.longChat ? longChat : messages}
       chatDraft=""
       chatPending={false}
       chatError={null}
