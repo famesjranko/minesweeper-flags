@@ -322,6 +322,15 @@
     border-radius: 10px;
     background: #13233b;
   }
+
+  /* The scroll padding above assumes this height, so a long name or wide font must not grow it. */
+  .match-rematch-action p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    line-height: 18px;
+  }
 }
 
 /* A zoomed 5x5 preview is taller than the room between the band and Fire bomb on a landscape phone,

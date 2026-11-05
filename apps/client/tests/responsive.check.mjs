@@ -292,6 +292,20 @@ test("a focused tile is not hidden under the pinned rematch action", async () =>
   }
 });
 
+test("a long name in a wide font cannot make the pinned rematch block taller", async () => {
+  // Given a finished match with long names on a narrow phone
+  await layoutAt(320, 568, { longNames: true, finished: true, rematch: true });
+
+  // When the status text is much wider than usual, as on a machine with different fonts
+  const height = await page.evaluate(() => {
+    document.querySelector(".match-rematch-action p").style.letterSpacing = "3px";
+    return document.querySelector(".match-rematch-action").getBoundingClientRect().height;
+  });
+
+  // Then the block stays within the page's scroll padding
+  assert.ok(height + 8 <= 124, `the block is ${height}px tall`);
+});
+
 test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async () => {
   for (const [width, height] of [
     [844, 390],
