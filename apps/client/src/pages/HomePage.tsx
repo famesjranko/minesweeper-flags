@@ -126,7 +126,6 @@ export const HomePage = ({
       }
       footer={
         <footer className="arcade-footer">
-          <p>No account needed.</p>
           <GameHelp />
         </footer>
       }

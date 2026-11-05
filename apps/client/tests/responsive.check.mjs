@@ -16,6 +16,7 @@ const LAPTOPS = [
 let server;
 let browser;
 let page;
+let harnessUrl;
 
 before(async () => {
   server = await createServer({
@@ -31,7 +32,8 @@ before(async () => {
       : { channel: "chrome" })
   });
   page = await browser.newPage();
-  await page.goto(`${server.resolvedUrls.local[0]}tests/responsive.html`);
+  harnessUrl = `${server.resolvedUrls.local[0]}tests/responsive.html`;
+  await page.goto(harnessUrl);
 });
 
 after(async () => {
@@ -391,6 +393,33 @@ test("a focused tile is not hidden under the turn band", async () => {
 
   // Then the whole tile is below the band
   assert.ok(tile >= band, `tile starts at ${tile}px, band ends at ${band}px`);
+});
+
+test("opening How to play leaves its control in place", async () => {
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 800]
+  ]) {
+    // Given the home page with How to play closed
+    await page.setViewportSize({ width, height });
+    await page.goto(new URL("/", page.url()).href);
+    const summary = page.locator(".game-help summary");
+    await summary.waitFor();
+    const closed = await summary.boundingBox();
+
+    // When the player opens it
+    await summary.click();
+    const open = await summary.boundingBox();
+
+    // Then the control has not moved under the pointer
+    assert.equal(open.y, closed.y, `${width}x${height}: moved down`);
+    const closedRight = closed.x + closed.width;
+    assert.ok(Math.abs(open.x + open.width - closedRight) <= 1, `${width}x${height}: moved across`);
+
+    // And it sits at the right of the page, where it has always been
+    assert.ok(closedRight > width * 0.75, `${width}x${height}: ends at ${closedRight}`);
+  }
+  await page.goto(harnessUrl);
 });
 
 test("no width scrolls the page sideways", async () => {

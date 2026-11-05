@@ -121,7 +121,7 @@
   gap: 8px;
 }
 .solo-home .arcade-footer {
-  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: baseline;
   min-height: 44px;
   margin-top: 14px;
@@ -129,7 +129,7 @@
   border: 0;
   font-size: 13px;
 }
-/* The open text needs the whole row; beside the note it would squeeze both into thin columns. */
+/* The open text needs the whole row. */
 .solo-home .arcade-footer details[open] {
   flex-basis: 100%;
   max-width: none;
