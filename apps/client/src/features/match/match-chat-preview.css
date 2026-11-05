@@ -1,6 +1,22 @@
 .arcade-chat-preview {
   display: none;
 }
+.arcade-chat-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  background: #243c59;
+  color: #dfedff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+}
 .arcade-chat-chip {
   display: inline-flex;
   align-items: center;
@@ -22,21 +38,62 @@
   border-radius: 50%;
   background: #ffd45a;
 }
+@media (max-width: 440px) {
+  .arcade-header:has(.arcade-chat-chip) .arcade-brand {
+    min-width: 44px;
+  }
+  .arcade-header:has(.arcade-chat-chip) .arcade-brand > span:last-child {
+    display: none;
+  }
+}
 /* The side panel shows every message on large screens, so there is nothing to announce. */
-@media (min-width: 1001px) and (min-height: 501px) {
-  .arcade-chat-chip {
+@media (min-width: 900px) {
+  .arcade-chat-chip,
+  .arcade-chat-open {
     display: none;
   }
 }
 .arcade-match .is-compact .chat-message-list,
 .arcade-match .is-compact .chat-empty-state {
-  height: 100px;
+  height: auto;
+  max-height: 84px;
 }
 .arcade-match .is-compact .chat-message-list {
-  gap: 8px;
+  gap: 4px;
   padding: 0;
 }
+.arcade-match .is-compact .chat-message-group {
+  display: grid;
+  grid-template-columns: fit-content(35%) minmax(0, 1fr);
+  gap: 2px 8px;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.arcade-match .is-compact .chat-message-group .chat-message-meta {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arcade-match .is-compact .chat-empty-state {
+  justify-items: start;
+  padding: 4px 0;
+  background: transparent;
+  text-align: left;
+}
+.arcade-match .is-compact .chat-empty-state p + p {
+  display: none;
+}
 .arcade-match .is-compact .chat-message {
+  grid-column: 2;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -57,7 +114,6 @@
 }
 .arcade-match .is-compact .chat-message-text {
   display: inline;
-  margin-left: 8px;
 }
 .arcade-match .chat-expand {
   min-height: 44px;
@@ -72,7 +128,7 @@
 .arcade-match .is-compact .chat-inline-status {
   margin: 0;
 }
-@media (max-width: 1000px), (max-height: 500px) {
+@media (max-width: 899px) {
   .arcade-chat-preview {
     display: block;
     min-width: 0;
@@ -84,5 +140,6 @@
 }
 
 .arcade-match .arcade-match-chat.is-compact {
-  grid-template-rows: auto 100px auto;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
 }

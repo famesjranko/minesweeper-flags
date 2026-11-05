@@ -43,6 +43,54 @@ const renderChatText = (text: string) =>
     );
   });
 
+const groupMessages = (messages: ChatMessageDto[]) => {
+  const groups: ChatMessageDto[][] = [];
+  for (const message of messages) {
+    const group = groups.at(-1);
+    const previous = group?.at(-1);
+    const elapsed = previous ? message.sentAt - previous.sentAt : 0;
+    if (!previous || previous.playerId !== message.playerId || elapsed < 0 || elapsed > 300_000) {
+      groups.push([message]);
+    } else {
+      group!.push(message);
+    }
+  }
+  return groups;
+};
+
+const ChatMessageGroup = ({ messages, currentPlayerId, playerTones }: ChatMessageListProps) => {
+  const first = messages[0]!;
+  const isSelf = first.playerId === currentPlayerId;
+  const sender = isSelf ? "You" : first.displayName;
+  const playerTone = playerTones[first.playerId] ?? "blue";
+
+  return (
+    <div
+      className={[
+        "chat-message-group",
+        isSelf ? "is-self" : "is-opponent",
+        `is-${playerTone}-player`
+      ].join(" ")}
+    >
+      <header className="chat-message-meta">
+        <strong>{sender}</strong>
+        <time dateTime={new Date(first.sentAt).toISOString()}>
+          {timeFormatter.format(first.sentAt)}
+        </time>
+      </header>
+      {messages.map((message) => (
+        <article
+          key={message.messageId}
+          className="chat-message"
+          aria-label={`${sender}, ${timeFormatter.format(message.sentAt)}`}
+        >
+          <p className="chat-message-text">{renderChatText(message.text)}</p>
+        </article>
+      ))}
+    </div>
+  );
+};
+
 export const ChatMessageList = ({
   currentPlayerId,
   playerTones,
@@ -67,29 +115,14 @@ export const ChatMessageList = ({
       role="log"
       aria-live="polite"
     >
-      {messages.map((message) => {
-        const isSelf = message.playerId === currentPlayerId;
-        const playerTone = playerTones[message.playerId] ?? "blue";
-
-        return (
-          <article
-            key={message.messageId}
-            className={[
-              "chat-message",
-              isSelf ? "is-self" : "is-opponent",
-              `is-${playerTone}-player`
-            ].join(" ")}
-          >
-            <header className="chat-message-meta">
-              <strong>{isSelf ? "You" : message.displayName}</strong>
-              <time dateTime={new Date(message.sentAt).toISOString()}>
-                {timeFormatter.format(message.sentAt)}
-              </time>
-            </header>
-            <p className="chat-message-text">{renderChatText(message.text)}</p>
-          </article>
-        );
-      })}
+      {groupMessages(messages).map((group) => (
+        <ChatMessageGroup
+          key={group[0]!.messageId}
+          messages={group}
+          currentPlayerId={currentPlayerId}
+          playerTones={playerTones}
+        />
+      ))}
     </div>
   );
 };

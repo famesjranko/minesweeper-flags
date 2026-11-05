@@ -309,6 +309,20 @@ describe("a connection drop", () => {
 });
 
 describe("the unread chat chip", () => {
+  it("keeps chat available from the header before any unread message arrives", () => {
+    // Given a quiet match with no unread messages
+    render(createMatch());
+    const openChat = container.querySelector<HTMLButtonElement>(".arcade-chat-open");
+
+    // When the player opens chat from the header
+    act(() => openChat?.click());
+
+    // Then chat opens without waiting for an unread notification
+    expect(openChat?.getAttribute("aria-label")).toBe("Open chat");
+    expect(showModal).toHaveBeenCalledOnce();
+    expect(chip()).toBeNull();
+  });
+
   it("is absent until the opponent sends something", () => {
     // Given a quiet chat
     // When the match renders
