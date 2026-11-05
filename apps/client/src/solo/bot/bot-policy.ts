@@ -1,6 +1,7 @@
 import { BOMB_RADIUS } from "@minesweeper-flags/game-engine";
 import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
 import type { BotAnalysis } from "./bot-analysis.js";
+import { type Focus, focusOf, isNoticed, isPlausible } from "./bot-attention.js";
 import { type BoardShape, columnOf, distance, hasRevealedNeighbor, rowOf } from "./bot-board.js";
 import type { BotProfile } from "./bot-profiles.js";
 
@@ -42,11 +43,12 @@ const shuffle = <T>(items: T[], random: () => number): T[] => {
   return copy;
 };
 
-/** The best `count` items by score; equal scores are ordered at random, never by board position. */
+/** Items best score first; equal scores are ordered at random, never by board position. */
+const rankByScore = (items: Scored[], random: () => number): Scored[] =>
+  shuffle(items, random).sort((a, b) => b.score - a.score);
+
 const topByScore = (items: Scored[], count: number, random: () => number): Scored[] =>
-  shuffle(items, random)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, Math.max(1, count));
+  rankByScore(items, random).slice(0, Math.max(1, count));
 
 const pickWeighted = (items: Scored[], weights: number[], random: () => number): number => {
   const total = weights.reduce((sum, weight) => sum + weight, 0);
@@ -68,18 +70,12 @@ const softmaxPick = (items: Scored[], temperature: number, random: () => number)
   return pickWeighted(items, weights, random);
 };
 
-const focusOf = (match: MatchStateDto): { row: number; column: number } | null =>
-  match.lastAction ? { row: match.lastAction.row, column: match.lastAction.column } : null;
+const closeness = (shape: BoardShape, cell: number, focus: Focus | null): number =>
+  focus ? 1 / Math.max(1, distance(shape, cell, focus)) : 0;
 
-const closeness = (
-  shape: BoardShape,
-  cell: number,
-  focus: { row: number; column: number } | null
-): number => (focus ? 1 / Math.max(1, distance(shape, cell, focus)) : 0);
-
-const chooseCertainMine = (input: PolicyInput, hidden: number[]): number | null => {
+const chooseCertainMine = (input: PolicyInput, noticed: number[]): number | null => {
   const focus = focusOf(input.match);
-  const certain = hidden
+  const certain = noticed
     .filter((cell) => input.analysis.probabilities[cell] === 1)
     .map((cell) => ({ cell, score: closeness(input.analysis.board, cell, focus) }));
   return certain.length === 0 ? null : topByScore(certain, 1, input.random)[0]!.cell;
@@ -141,17 +137,32 @@ const chooseOpening = (shape: BoardShape, hidden: number[], random: () => number
   return pickWeighted(items, weights, random);
 };
 
-const chooseScored = (input: PolicyInput, hidden: number[]): number => {
+// The best cell is the bot's own judgement and may lie away from the clues when the
+// odds there are better; other cells with the same odds are just as good. Any worse
+// cell must be plausible, so a looser spread never becomes a random click far from
+// the clues, even when no other plausible cell exists. Excluding far equal-odds cells
+// too was measured to make Normal stronger, so this rule keeps Normal and Hard as
+// they were.
+const choicePool = (input: PolicyInput, ranked: Scored[], size: number): Scored[] => {
+  const { board, probabilities } = input.analysis;
+  const [best, ...rest] = ranked;
+  const bestOdds = roundScore(probabilities[best!.cell]!);
+  const eligible = rest.filter(
+    (item) => isPlausible(board, item.cell) || roundScore(probabilities[item.cell]!) === bestOdds
+  );
+  return [best!, ...eligible.slice(0, size - 1)];
+};
+
+const chooseScored = (input: PolicyInput, noticed: number[]): number => {
+  const { board, probabilities } = input.analysis;
   const focus = focusOf(input.match);
-  const { localityWeight, temperature, topK } = input.profile;
-  const scored = hidden.map((cell) => ({
+  const { localityWeight, choicePool: poolSize, choiceTemperature } = input.profile;
+  const scored = noticed.map((cell) => ({
     cell,
-    score: roundScore(
-      input.analysis.probabilities[cell]! +
-        localityWeight * closeness(input.analysis.board, cell, focus)
-    )
+    score: roundScore(probabilities[cell]! + localityWeight * closeness(board, cell, focus))
   }));
-  return softmaxPick(topByScore(scored, topK, input.random), temperature, input.random);
+  const pool = choicePool(input, rankByScore(scored, input.random), Math.max(1, poolSize));
+  return softmaxPick(pool, choiceTemperature, input.random);
 };
 
 const select = (shape: BoardShape, cell: number, kind: SoloDecisionKind): SoloDecision => ({
@@ -165,7 +176,10 @@ export const decide = (input: PolicyInput): SoloDecision | null => {
   if (hidden.length === 0) {
     return null;
   }
-  const certain = chooseCertainMine(input, hidden);
+  // An attention window always holds a hidden plausible cell, so `noticed` is never empty.
+  const { attention } = input.analysis;
+  const noticed = attention ? hidden.filter((cell) => isNoticed(board, attention, cell)) : hidden;
+  const certain = chooseCertainMine(input, noticed);
   if (certain !== null) {
     return select(board, certain, "certain");
   }
@@ -179,6 +193,6 @@ export const decide = (input: PolicyInput): SoloDecision | null => {
   if (board.clues.every((clue) => clue < 0)) {
     return select(board, chooseOpening(board, hidden, input.random), "guess");
   }
-  const cell = chooseScored(input, hidden);
+  const cell = chooseScored(input, noticed);
   return select(board, cell, hasRevealedNeighbor(board, cell) ? "frontier" : "guess");
 };

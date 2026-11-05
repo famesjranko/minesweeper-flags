@@ -96,6 +96,19 @@ export const claim = (match: MatchStateDto, row: number, column: number): void =
   };
 };
 
+/** Records a safe reveal by the human at the cell, which becomes the bot's focus. */
+export const lastActionAt = (match: MatchStateDto, row: number, column: number): void => {
+  match.lastAction = {
+    type: "select",
+    playerId: HUMAN_ID,
+    row,
+    column,
+    outcome: "safe_reveal",
+    revealedCount: 1,
+    claimedMineCount: 0
+  };
+};
+
 /** Mulberry32: a small, well-mixed generator so tests can replay exact bot choices. */
 export const createSeededRandom = (seed: number): (() => number) => {
   let state = seed | 0;
