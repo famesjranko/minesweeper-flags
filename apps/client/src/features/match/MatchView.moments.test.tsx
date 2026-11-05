@@ -69,7 +69,12 @@ const render = (
   match: MatchStateDto,
   chatMessages: ChatMessageDto[] = [],
   connectionStatus: "connected" | "connecting" | "disconnected" = "connected",
-  pending: { movePending?: boolean; onCellSelect?: () => void; onToggleBomb?: () => void } = {}
+  pending: {
+    movePending?: boolean;
+    bombArmed?: boolean;
+    onCellSelect?: () => void;
+    onToggleBomb?: () => void;
+  } = {}
 ) =>
   act(() =>
     root.render(
@@ -77,7 +82,7 @@ const render = (
         roomCode="ABCDE"
         currentPlayerId="me"
         match={match}
-        bombArmed={false}
+        bombArmed={pending.bombArmed ?? false}
         connectionStatus={connectionStatus}
         movePending={pending.movePending ?? false}
         chatMessages={chatMessages}
@@ -526,6 +531,52 @@ describe("waiting for a move reply", () => {
     // And the band and the tab title still say it is the player's turn
     expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe(hintBefore);
     expect(document.title).toContain("Your turn");
+  });
+
+  it("does not offer the bomb again while a fired bomb waits for its reply", () => {
+    // Given an armed bomb on the player's turn, with the bomb unlocked and a hidden tile
+    const match = createMatch({
+      board: {
+        rows: 1,
+        columns: 1,
+        mineCount: 1,
+        cells: [
+          [{ row: 0, column: 0, status: "hidden", adjacentMines: null, claimedByPlayerId: null }]
+        ]
+      },
+      players: [
+        { ...createMatch().players[0], score: 0 },
+        { ...createMatch().players[1], score: 10 }
+      ]
+    });
+    // As in the controller, the send sets the pending state and clears the armed state at once.
+    const send = () => render(match, [], "connected", { movePending: true });
+    render(match, [], "connected", { bombArmed: true, onCellSelect: send });
+
+    // When the player fires and the reply has not arrived
+    act(() => container.querySelector<HTMLButtonElement>("button[data-cell]")?.click());
+
+    // Then the band says the move is on its way
+    expect(container.querySelector(".arcade-turn-hint")?.textContent).toBe("Sending move…");
+
+    // And the bomb does not look ready to use again
+    expect(container.querySelector("button.inline-bomb")?.classList).toContain("is-armed");
+  });
+
+  it("does not carry a slow move's text into the next move", () => {
+    // Given a slow move that has finished
+    vi.useFakeTimers();
+    render(createMatch(), [], "connected", { movePending: true });
+    act(() => vi.advanceTimersByTime(300));
+    render(createMatch());
+
+    // When the next move is sent
+    render(createMatch(), [], "connected", { movePending: true });
+    const hint = container.querySelector(".arcade-turn-hint")?.textContent;
+    vi.useRealTimers();
+
+    // Then it starts without the sending text
+    expect(hint).not.toContain("Sending");
   });
 
   it("greys the tiles when the reply passes the turn to the opponent", () => {

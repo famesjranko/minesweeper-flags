@@ -269,11 +269,21 @@ export const MatchPlayArea = (props: PlayProps) => {
   // A reason applies until the turn moves on or the player does something else.
   const [bombNote, setBombNote] = useState<{ text: string; turnNumber: number } | null>(null);
   const activeNote = bombNote?.turnNumber === props.match.turnNumber ? bombNote.text : null;
-  const hint = !props.view.canAct
-    ? props.view.turnHint
-    : aim
-      ? "Bomb aimed. Tap another hidden square to move it."
-      : (activeNote ?? props.view.turnHint);
+  // Firing clears the armed state before the reply, which would briefly offer the bomb again.
+  const [bombFired, setBombFired] = useState(false);
+  if (bombFired && props.view.canAct) setBombFired(false);
+  const bombInFlight = bombFired && props.view.isOwnTurn;
+  const selectCell = (row: number, column: number) => {
+    if (props.bombArmed) setBombFired(true);
+    props.onCellSelect(row, column);
+  };
+  const hint = bombInFlight
+    ? "Sending move…"
+    : !props.view.canAct
+      ? props.view.turnHint
+      : aim
+        ? "Bomb aimed. Tap another hidden square to move it."
+        : (activeNote ?? props.view.turnHint);
   const disarmOnEscape = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || !props.bombArmed || !props.view.canAct) return;
     focusBombButton(event.currentTarget);
@@ -309,7 +319,7 @@ export const MatchPlayArea = (props: PlayProps) => {
             match={props.match}
             hidePresence={props.hidePresence ?? false}
             note={slot.isSelf ? undefined : props.solo?.botLevel}
-            bombArmed={props.bombArmed}
+            bombArmed={props.bombArmed || bombInFlight}
             canAct={props.view.isOwnTurn}
             onToggleBomb={() => {
               if (!props.view.canAct) return;
@@ -325,7 +335,7 @@ export const MatchPlayArea = (props: PlayProps) => {
           ...props,
           onCellSelect: (row, column) => {
             setBombNote(null);
-            props.onCellSelect(row, column);
+            selectCell(row, column);
           }
         }}
         zoomed={zoomed}
@@ -333,7 +343,7 @@ export const MatchPlayArea = (props: PlayProps) => {
         onAim={setAim}
       />
       <div className="match-action-slot" onClickCapture={guardDoubleTap.onActionPress}>
-        <MatchActions props={props} aim={aim} />
+        <MatchActions props={{ ...props, onCellSelect: selectCell }} aim={aim} />
       </div>
     </section>
   );
