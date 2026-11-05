@@ -8,7 +8,7 @@ import {
 } from "react";
 import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import type { LastMoveMarks } from "../../entities/board/last-move.js";
-import type { CellPosition } from "../../entities/board/useBoardInput.js";
+import type { AimedCell } from "../../entities/board/useBoardInput.js";
 import { isUsingKeyboard } from "../../lib/browser/last-input.js";
 import { ZoomIcon } from "../../shared-ui/ZoomIcon.js";
 import { readBoardZoomed, writeBoardZoomed } from "./board-zoom-preference.js";
@@ -43,8 +43,8 @@ const MatchBoard = ({
 }: {
   props: PlayProps;
   zoomed: boolean;
-  aim: CellPosition | null;
-  onAim: (cell: CellPosition) => void;
+  aim: AimedCell | null;
+  onAim: (cell: AimedCell) => void;
 }) => {
   const { match, view, bombArmed, lastMove, onCellSelect, celebrateTone } = props;
   const viewportRef = useRef<HTMLElement>(null);
@@ -197,7 +197,7 @@ const MatchTools = ({
   </div>
 );
 
-const MatchActions = ({ props, aim }: { props: PlayProps; aim: CellPosition | null }) => {
+const MatchActions = ({ props, aim }: { props: PlayProps; aim: AimedCell | null }) => {
   if (props.match.phase === "live") {
     return aim ? (
       <div className="match-resign-confirm">
@@ -263,12 +263,25 @@ const useFocusAcrossPhases = (phase: string, playArea: RefObject<HTMLElement | n
   }, [phase, playArea]);
 };
 
+const getBandHint = (
+  view: MatchPresentation,
+  { bombInFlight, aim, note }: { bombInFlight: boolean; aim: AimedCell | null; note: string | null }
+) => {
+  if (bombInFlight) return "Sending move…";
+  if (!view.canAct) return view.turnHint;
+  if (aim) {
+    const verb = aim.pointerType === "mouse" ? "Click" : "Tap";
+    return `Bomb aimed. ${verb} another hidden square to move it.`;
+  }
+  return note ?? view.turnHint;
+};
+
 export const MatchPlayArea = (props: PlayProps) => {
   const playArea = useRef<HTMLElement>(null);
   const guardDoubleTap = useDoubleTapGuard();
   useFocusAcrossPhases(props.match.phase, playArea);
   const [zoomed, setZoomed] = useState(readBoardZoomed);
-  const [aim, setAim] = useState<CellPosition | null>(null);
+  const [aim, setAim] = useState<AimedCell | null>(null);
   // An aim belongs to one armed turn, so it must not come back when the bomb is armed again.
   if (aim && !(props.bombArmed && props.view.canAct)) setAim(null);
   // A reason applies until the turn moves on or the player does something else.
@@ -282,13 +295,7 @@ export const MatchPlayArea = (props: PlayProps) => {
     if (props.bombArmed) setBombFired(true);
     props.onCellSelect(row, column);
   };
-  const hint = bombInFlight
-    ? "Sending move…"
-    : !props.view.canAct
-      ? props.view.turnHint
-      : aim
-        ? "Bomb aimed. Tap another hidden square to move it."
-        : (activeNote ?? props.view.turnHint);
+  const hint = getBandHint(props.view, { bombInFlight, aim, note: activeNote });
   const disarmOnEscape = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || !props.bombArmed || !props.view.canAct) return;
     focusBombButton(event.currentTarget);
