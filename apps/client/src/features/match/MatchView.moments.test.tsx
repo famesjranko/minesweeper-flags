@@ -563,6 +563,97 @@ describe("waiting for a move reply", () => {
     expect(container.querySelector("button.inline-bomb")?.classList).toContain("is-armed");
   });
 
+  describe("after firing", () => {
+    const armedMatch = (overrides: Partial<MatchStateDto> = {}) =>
+      createMatch({
+        board: {
+          rows: 1,
+          columns: 1,
+          mineCount: 1,
+          cells: [
+            [{ row: 0, column: 0, status: "hidden", adjacentMines: null, claimedByPlayerId: null }]
+          ]
+        },
+        players: [
+          { ...createMatch().players[0], score: 0 },
+          { ...createMatch().players[1], score: 10 }
+        ],
+        ...overrides
+      });
+    const hintText = () => container.querySelector(".arcade-turn-hint")?.textContent;
+    const bombState = () => container.querySelector("button.inline-bomb")?.className;
+    const fire = (match: MatchStateDto) => {
+      const send = () => render(match, [], "connected", { movePending: true });
+      render(match, [], "connected", { bombArmed: true, onCellSelect: send });
+      act(() => container.querySelector<HTMLButtonElement>("button[data-cell]")?.click());
+    };
+
+    it("shows the same state when the bomb is fired from the Fire bomb button", () => {
+      // Given a touch player who has aimed the bomb
+      Element.prototype.scrollIntoView = () => {};
+      const match = armedMatch();
+      const send = () => render(match, [], "connected", { movePending: true });
+      render(match, [], "connected", { bombArmed: true, onCellSelect: send });
+      const tile = container.querySelector<HTMLButtonElement>("button[data-cell]")!;
+      act(() => {
+        tile.dispatchEvent(
+          new (window.PointerEvent ?? MouseEvent)("pointerdown", {
+            bubbles: true,
+            pointerType: "touch"
+          } as PointerEventInit)
+        );
+        tile.click();
+      });
+
+      // When the player taps Fire bomb
+      act(() => container.querySelector<HTMLButtonElement>('button[name="fire-bomb"]')?.click());
+
+      // Then the band says the move is on its way
+      expect(hintText()).toBe("Sending move…");
+
+      // And the bomb stays selected
+      expect(bombState()).toContain("is-armed");
+    });
+
+    it("returns to normal when the reply keeps the turn", () => {
+      // Given a fired bomb waiting for its reply
+      const match = armedMatch();
+      fire(match);
+
+      // When the reply keeps the player's turn
+      render(match);
+
+      // Then the sending text is gone
+      expect(hintText()).not.toContain("Sending");
+    });
+
+    it("shows the opponent's turn when the reply passes the turn", () => {
+      // Given a fired bomb waiting for its reply
+      const match = armedMatch();
+      fire(match);
+
+      // When the reply gives the turn to the opponent
+      render(armedMatch({ currentTurnPlayerId: "them" }));
+
+      // Then the band and the bomb show that the player must wait
+      expect(hintText()).toContain("is moving");
+      expect(bombState()).not.toContain("is-armed");
+    });
+
+    it("does not treat an ordinary move as a fired bomb", () => {
+      // Given the player's turn with no bomb armed
+      const match = armedMatch();
+      const send = () => render(match, [], "connected", { movePending: true });
+      render(match, [], "connected", { onCellSelect: send });
+
+      // When the player selects a tile
+      act(() => container.querySelector<HTMLButtonElement>("button[data-cell]")?.click());
+
+      // Then the band still shows the player's turn for a quick reply
+      expect(hintText()).not.toContain("Sending");
+    });
+  });
+
   it("does not carry a slow move's text into the next move", () => {
     // Given a slow move that has finished
     vi.useFakeTimers();
