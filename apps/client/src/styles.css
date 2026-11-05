@@ -1491,24 +1491,6 @@ button {
   background: rgba(255, 255, 255, 0.88);
 }
 
-.chat-message.is-self {
-  margin-left: 14px;
-}
-
-.chat-message.is-opponent {
-  margin-right: 14px;
-}
-
-.chat-message.is-blue-player {
-  border-left: 4px solid #2f8ce3;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
-}
-
-.chat-message.is-red-player {
-  border-left: 4px solid #ff8a2a;
-  background: linear-gradient(180deg, #fffaf4 0%, #fff0df 100%);
-}
-
 .chat-message-meta {
   display: flex;
   justify-content: space-between;
@@ -1520,14 +1502,6 @@ button {
   font-size: 0.72rem;
   letter-spacing: 0.02em;
   text-transform: none;
-}
-
-.chat-message.is-blue-player .chat-message-meta strong {
-  color: #2f78cb;
-}
-
-.chat-message.is-red-player .chat-message-meta strong {
-  color: #d36517;
 }
 
 .chat-message-meta time {

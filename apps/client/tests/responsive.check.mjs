@@ -108,6 +108,9 @@ test("the side chat input is on screen without scrolling", async () => {
 
 test("the turn band stays on screen after scrolling to the last row", async () => {
   for (const [width, height] of [
+    [683, 650],
+    [768, 600],
+    [899, 600],
     [844, 390],
     [1024, 600],
     [1366, 650]
@@ -143,7 +146,9 @@ test("a phone or tablet keeps one board size as the toolbar changes the height",
   }
 });
 
-test("scrolling never resizes the board", async () => {
+// Desktop Chrome has no collapsing toolbar, so this catches a layout that reacts to scrolling but
+// not dvh on a wide window. The height-change test above covers dvh below 900px.
+test("scrolling keeps the board size", async () => {
   for (const [width, height] of [
     [390, 844],
     [844, 390],
@@ -156,6 +161,75 @@ test("scrolling never resizes the board", async () => {
     // Then the board, tiles and header keep their sizes
     await harness((checks) => checks.checkScrolling());
   }
+});
+
+test("the rematch action is on screen when a match ends on a short window", async () => {
+  for (const [width, height] of [
+    [844, 390],
+    [667, 375],
+    [1024, 600],
+    [1366, 650]
+  ]) {
+    // Given a finished match on a window too short for the whole column
+    await layoutAt(width, height, { finished: true });
+
+    // When the player looks for the next action
+    const bottom = await page.evaluate(
+      () => document.querySelector(".match-primary-action").getBoundingClientRect().bottom
+    );
+
+    // Then it is on screen without scrolling
+    assert.ok(bottom <= height, `${width}x${height}: action ends at ${bottom}px`);
+  }
+});
+
+test("Fire bomb and the aimed square share a landscape phone's screen", async () => {
+  // Given an armed bomb on a landscape phone with touch input
+  const touch = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true
+  });
+  const phone = await touch.newPage();
+  await phone.goto(page.url());
+  await phone.evaluate(async () => {
+    const checks = await import("/tests/responsive.tsx");
+    await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
+  });
+
+  // When the player taps a hidden square near the top of the board
+  await phone.locator(".board-cell").nth(20).tap({ force: true });
+  await phone.locator('button[name="fire-bomb"]').waitFor();
+  const { fire, preview } = await phone.evaluate(() => {
+    const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+    return { fire: box('button[name="fire-bomb"]'), preview: box(".board-bomb-preview") };
+  });
+  await touch.close();
+
+  // Then Fire bomb is on screen
+  assert.ok(fire.top >= 0 && fire.bottom <= 390, `Fire bomb spans ${fire.top}-${fire.bottom}px`);
+
+  // And the aimed square is on screen above it
+  assert.ok(preview.top >= 0 && preview.top < fire.top, `preview starts at ${preview.top}px`);
+});
+
+test("a focused tile is not hidden under the turn band", async () => {
+  // Given a short window scrolled to the bottom, with focus on the second row
+  await layoutAt(1024, 600);
+  await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    document.querySelectorAll(".board-cell")[16].focus();
+  });
+
+  // When the player presses the up arrow to reach the top row
+  await page.keyboard.press("ArrowUp");
+  const { band, tile } = await page.evaluate(() => ({
+    band: document.querySelector(".arcade-match-status").getBoundingClientRect().bottom,
+    tile: document.activeElement.getBoundingClientRect().top
+  }));
+
+  // Then the whole tile is below the band
+  assert.ok(tile >= band, `tile starts at ${tile}px, band ends at ${band}px`);
 });
 
 test("no width scrolls the page sideways", async () => {

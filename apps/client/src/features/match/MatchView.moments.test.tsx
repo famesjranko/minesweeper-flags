@@ -320,6 +320,30 @@ describe("arriving at a match", () => {
     expect(document.documentElement.scrollTop).toBe(0);
   });
 
+  it("returns to the top when a rematch starts", () => {
+    // Given a finished match the player scrolled down to reach the rematch action
+    render(finished("them"));
+    document.documentElement.scrollTop = 705;
+
+    // When the rematch starts
+    render(createMatch({ turnNumber: 1 }));
+
+    // Then the page is back at the top, with the turn band on screen
+    expect(document.documentElement.scrollTop).toBe(0);
+  });
+
+  it("keeps the player's place when a match finishes", () => {
+    // Given a running match the player has scrolled down
+    render(createMatch());
+    document.documentElement.scrollTop = 200;
+
+    // When the match ends
+    render(finished("me"));
+
+    // Then the result appears without moving the page
+    expect(document.documentElement.scrollTop).toBe(200);
+  });
+
   it("keeps the player's place when a new snapshot arrives", () => {
     // Given a running match the player has scrolled down
     render(createMatch());
