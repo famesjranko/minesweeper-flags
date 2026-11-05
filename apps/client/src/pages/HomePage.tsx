@@ -132,7 +132,7 @@ export const HomePage = ({
       }
     >
       <section className="solo-entry-card" aria-label="Choose a game mode">
-        {/* Both panels share one grid cell so the card keeps the taller panel's height in every mode. */}
+        {/* Wide layouts reserve both panels' height so switching modes keeps the frame steady. */}
         <div className="solo-entry-panels">
           <div
             id="solo-panel"

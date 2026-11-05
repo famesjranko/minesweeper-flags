@@ -35,18 +35,20 @@ export const MatchHeader = ({
       roomCode={roomCode}
       onHome={onBackToLobby}
     >
-      {unreadChat > 0 ? (
-        <button
-          type="button"
-          className="arcade-chat-chip"
-          aria-haspopup="dialog"
-          aria-label={`Open chat, ${unreadChat} new ${unreadChat === 1 ? "message" : "messages"}`}
-          onClick={onOpenChat}
-        >
-          <span className="arcade-chat-chip-dot" />
-          Chat · {unreadChat}
-        </button>
-      ) : null}
+      <button
+        type="button"
+        className={unreadChat > 0 ? "arcade-chat-chip" : "arcade-chat-open"}
+        aria-haspopup="dialog"
+        aria-label={
+          unreadChat > 0
+            ? `Open chat, ${unreadChat} new ${unreadChat === 1 ? "message" : "messages"}`
+            : "Open chat"
+        }
+        onClick={onOpenChat}
+      >
+        {unreadChat > 0 ? <span className="arcade-chat-chip-dot" /> : null}
+        {unreadChat > 0 ? `Chat · ${unreadChat}` : "Chat"}
+      </button>
       <details
         className="arcade-match-options"
         onKeyDown={(event) => {

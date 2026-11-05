@@ -1,18 +1,12 @@
 .page-shell.arcade-page-shell.arcade-match-page {
   --match-page-padding: 24px;
-  /* The board is square, so it must also fit the height left after the rest of the column:
-     header 65px, status row 52px, scores 80px, resign control 46px, and three 12px gaps. The
-     floor keeps phone boards at their width-driven size. */
-  --match-board-fit: max(288px, calc(100dvh - 2 * var(--match-page-padding) - 279px));
-  min-height: 100dvh;
+  min-height: 100svh;
   padding: var(--match-page-padding);
 }
 
 .arcade-match {
   width: 100%;
-  /* The side chat column takes 288px plus a 24px gap. The board grows with the window height
-     up to 720px, so short windows keep the height-fitted size. */
-  max-width: min(1032px, calc(var(--match-board-fit) + 312px));
+  max-width: 1032px;
   margin: 0 auto;
 }
 
@@ -265,11 +259,36 @@
   display: none;
 }
 
-@media (min-width: 1001px) and (min-height: 501px) {
+@media (min-width: 900px) {
+  .page-shell.arcade-page-shell.arcade-match-page {
+    /* The board also fits the height left after the header 65px, status row 52px, scores 80px,
+       resign control 46px, and three 12px gaps. svh ignores toolbars, so scrolling cannot resize
+       it. The floor keeps tiles large enough to aim at on short windows, which then scroll. */
+    --match-board-fit: clamp(480px, calc(100svh - 2 * var(--match-page-padding) - 279px), 720px);
+  }
+
+  .arcade-match {
+    max-width: min(1032px, calc(var(--match-board-fit) + 312px));
+  }
+
   .arcade-chat-region {
-    /* Let the board size the shared row; chat history must scroll inside it. */
+    /* Let the board size the shared row; chat history must scroll inside it. There is no unread
+       chip at this width, so the panel also stays on screen below the 65px header. */
     contain: size;
-    height: auto;
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    height: min(100%, calc(100svh - 2 * var(--match-page-padding) - 65px));
+  }
+}
+
+/* The column is taller than these windows, so the turn must stay readable while the player works
+   the lower rows. */
+@media (max-height: 500px), (min-width: 900px) and (max-height: 806px) {
+  .arcade-match-status {
+    position: sticky;
+    top: 8px;
+    z-index: 5;
   }
 }
 
@@ -334,6 +353,10 @@
 }
 
 .arcade-match .chat-message-list {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
   min-height: 0;
   padding: 4px;
   border: 0;
@@ -341,30 +364,36 @@
   box-shadow: none;
 }
 
-.arcade-match .chat-message {
+.arcade-match .chat-message-group {
+  flex-shrink: 0;
   min-width: 0;
-  padding: 10px 12px;
+  max-width: 92%;
+  padding: 7px 10px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 9px;
   background: #13233b;
   box-shadow: none;
 }
 
-.arcade-match .chat-message.is-blue-player {
+.arcade-match .chat-message-group.is-self {
+  align-self: end;
+}
+
+.arcade-match .chat-message-group.is-blue-player {
   border-left: 3px solid #5bbdfb;
   background: #203854;
 }
 
-.arcade-match .chat-message.is-red-player {
+.arcade-match .chat-message-group.is-red-player {
   border-left: 3px solid #efa46c;
   background: #3f3442;
 }
 
-.arcade-match .chat-message.is-blue-player .chat-message-meta strong {
+.arcade-match .chat-message-group.is-blue-player .chat-message-meta strong {
   color: #9bd1ff;
 }
 
-.arcade-match .chat-message.is-red-player .chat-message-meta strong {
+.arcade-match .chat-message-group.is-red-player .chat-message-meta strong {
   color: #ffc394;
 }
 
@@ -373,6 +402,23 @@
   font-size: 13px;
   font-weight: 650;
   overflow-wrap: anywhere;
+}
+
+.arcade-match .chat-message-meta {
+  margin-bottom: 2px;
+}
+
+.arcade-match .chat-message {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.arcade-match .chat-message + .chat-message {
+  margin-top: 2px;
 }
 
 .arcade-match .chat-message-meta time {
@@ -453,7 +499,7 @@
   box-shadow: none;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 899px) {
   .page-shell.arcade-page-shell.arcade-match-page {
     --match-page-padding: 20px;
   }
@@ -463,11 +509,11 @@
   }
 
   .arcade-match {
-    max-width: min(624px, var(--match-board-fit));
+    max-width: 624px;
   }
 }
 
-@media (max-width: 1000px), (max-height: 500px) {
+@media (max-width: 899px) {
   .arcade-chat-region {
     position: fixed;
     inset: auto 16px 16px;
@@ -506,7 +552,7 @@
   }
 
   .arcade-match {
-    max-width: min(760px, var(--match-board-fit));
+    max-width: none;
   }
 
   /* Dock the full chat to the bottom edge like a sheet, so no page shows beneath it. */
@@ -521,78 +567,32 @@
   }
 }
 
-/* Small screens: a tighter grid gives the space to the tiles, where a thumb needs it. */
-@media (max-width: 600px), (max-height: 500px) {
+/* Phone tiles use the same spacing in either orientation. */
+@media (max-width: 600px) {
   .arcade-match .board-grid {
     --board-pad: 3px;
     --board-gap: 1.5px;
   }
-
   .arcade-board-viewport {
     border-radius: 8px;
   }
-}
-
-/* Phones: the board reaches past the other rows, nearly to the screen edge. The height budget
-   loses the same 20px so the column still fits on one screen. */
-@media (max-width: 600px) and (min-height: 621px) and (orientation: portrait) {
-  .page-shell.arcade-page-shell.arcade-match-page {
-    --match-board-fit: max(288px, calc(100dvh - 2 * var(--match-page-padding) - 299px));
-  }
-
   .arcade-board-stage {
     width: calc(100% + 20px);
   }
 }
 
-/* Short phones such as 320x568: tighter spacing keeps Resign on screen. */
-@media (max-width: 600px) and (max-height: 620px) and (orientation: portrait) {
+@media (max-width: 350px) {
   .page-shell.arcade-page-shell.arcade-match-page {
     padding-block: 8px;
   }
-
-  /* The page shell lifts these above solo.css, which loads later and sets 12px. */
   .page-shell .solo-match > .arcade-header,
   .page-shell .arcade-match .arcade-header {
     margin-bottom: 8px;
   }
-
   .arcade-play-area {
     gap: 8px;
   }
-}
-
-/* Landscape phones and short windows: a stacked column would leave a tiny board, so the board
-   takes the full height and the match controls sit beside it. */
-@media (max-height: 500px) and (orientation: landscape) {
-  .page-shell.arcade-page-shell.arcade-match-page {
-    --match-page-padding: 16px;
-    /* Only the header (65px) shares the height with the board here. */
-    --match-board-fit: max(200px, calc(100dvh - 2 * var(--match-page-padding) - 65px));
-  }
-
-  .arcade-match {
-    max-width: 880px;
-  }
-
-  .arcade-match-main {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .arcade-play-area {
-    display: grid;
-    grid-template-columns: min(var(--match-board-fit), 624px) minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr);
-    align-items: start;
-    gap: 12px 16px;
-  }
-
-  .arcade-play-area > * {
-    grid-column: 2;
-  }
-
-  .arcade-play-area > .arcade-board-stage {
-    grid-column: 1;
-    grid-row: 1 / -1;
+  .arcade-board-stage {
+    width: 100%;
   }
 }

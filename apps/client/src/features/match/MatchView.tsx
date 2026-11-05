@@ -45,6 +45,10 @@ export const MatchView = (props: MatchViewProps) => {
   const [storedTrail, setStoredTrail] = useState<LastMoveTrail>([]);
   const lastMoveTrail = advanceLastMoveTrail(storedTrail, match, currentPlayerId);
   if (lastMoveTrail !== storedTrail) setStoredTrail(lastMoveTrail);
+  // A short screen may have scrolled to reach the invite controls. Start the match at its turn band.
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+  }, []);
   const finishedWhileWatching = useTurnedOnSinceMount(match.phase === "finished");
   const chatMessages = props.presentation === "solo" ? NO_CHAT : props.chatMessages;
   useMatchSounds(match, currentPlayerId);

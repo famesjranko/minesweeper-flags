@@ -43,7 +43,7 @@ const scroll = (top: number) =>
     container.querySelector('[role="log"]')!.dispatchEvent(new Event("scroll"));
   });
 
-describe("chat scroll following", () => {
+describe("ChatMessageList", () => {
   beforeEach(() => {
     height = 200;
     contentHeight = 600;
@@ -139,5 +139,60 @@ describe("chat scroll following", () => {
     contentHeight = 800;
     render([message(1), message(2), message(3), message(4)]);
     expect(position).toBe(650);
+  });
+
+  it("shows one sender and time for consecutive messages from the same player", () => {
+    // Given consecutive messages from one player
+    const messages = [message(1), message(2), message(3)];
+
+    // When the conversation renders
+    render(messages);
+
+    // Then one group labels all three messages without losing their text or accessible times
+    expect(container.querySelectorAll(".chat-message-group")).toHaveLength(1);
+    expect(container.querySelectorAll(".chat-message-meta strong")).toHaveLength(1);
+    expect(container.querySelectorAll("time")).toHaveLength(1);
+    expect([...container.querySelectorAll("article")].map((entry) => entry.textContent)).toEqual([
+      "Message 1",
+      "Message 2",
+      "Message 3"
+    ]);
+    expect([...container.querySelectorAll("article")].every((entry) => entry.ariaLabel)).toBe(true);
+  });
+
+  it("starts a new group when the sender changes even if the display names match", () => {
+    // Given two players with the same display name taking turns to speak
+    const messages = [message(1), { ...message(2), playerId: "host" }, message(3)];
+
+    // When the conversation renders
+    render(messages);
+
+    // Then every sender change has its own identity and player colour
+    const groups = [...container.querySelectorAll(".chat-message-group")];
+    expect(groups).toHaveLength(3);
+    expect(groups.map((group) => group.querySelector("strong")!.textContent)).toEqual([
+      "Guest",
+      "You",
+      "Guest"
+    ]);
+    expect(groups[1]!.classList.contains("is-blue-player")).toBe(true);
+    expect(groups[0]!.classList.contains("is-red-player")).toBe(true);
+  });
+
+  it("starts a new group after more than five minutes of silence", () => {
+    // Given messages at the five-minute boundary and after a longer pause
+    const messages = [
+      { ...message(1), sentAt: 1_000 },
+      { ...message(2), sentAt: 301_000 },
+      { ...message(3), sentAt: 601_001 }
+    ];
+
+    // When the conversation renders
+    render(messages);
+
+    // Then only the message after the longer pause receives a new sender and time
+    const groups = [...container.querySelectorAll(".chat-message-group")];
+    expect(groups.map((group) => group.querySelectorAll("article").length)).toEqual([2, 1]);
+    expect(container.querySelectorAll("time")).toHaveLength(2);
   });
 });
