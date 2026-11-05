@@ -58,6 +58,7 @@ let container: HTMLDivElement;
 let root: Root;
 const onSelect = vi.fn();
 const onResign = vi.fn();
+const onRequestRematch = vi.fn();
 const scrollIntoView = vi.fn();
 
 type Connection = "connected" | "connecting" | "disconnected";
@@ -87,7 +88,7 @@ const Scene = ({
         setBombArmed(false);
         onSelect(row, column);
       }}
-      onRequestRematch={() => {}}
+      onRequestRematch={onRequestRematch}
       onCancelRematch={() => {}}
       onResign={onResign}
       resignDisabled={connection !== "connected"}
@@ -124,6 +125,7 @@ afterEach(() => {
   container.remove();
   onSelect.mockClear();
   onResign.mockClear();
+  onRequestRematch.mockClear();
   vi.unstubAllGlobals();
 });
 
@@ -407,11 +409,11 @@ describe("the board zoom choice", () => {
 
 describe("double taps on the action slot", () => {
   // A real tap has detail 1; keyboard and assistive-technology clicks have detail 0.
-  const realTap = (target: HTMLElement | null, atMs: number) => {
+  const realTap = (target: HTMLElement | null, atMs: number, clientY = 0) => {
     const time = vi.spyOn(Event.prototype, "timeStamp", "get").mockReturnValue(atMs);
     act(() => {
       target?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 })
+        new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1, clientY })
       );
     });
     time.mockRestore();
@@ -465,6 +467,101 @@ describe("double taps on the action slot", () => {
     // Then the prompt closes without a second try
     expect(named("confirm-resign")).toBeNull();
     expect(named("resign")).not.toBeNull();
+  });
+
+  const touchTile = (target: HTMLElement, atMs: number) => {
+    act(() => {
+      target.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" })
+      );
+    });
+    realTap(target, atMs);
+  };
+
+  it.each([
+    ["Fire bomb", "fire-bomb"],
+    ["Cancel", "cancel-bomb"]
+  ])(
+    "ignores the second tap of a double tap on a tile when %s appears under it",
+    (_name, control) => {
+      // Given an armed bomb
+      render();
+      act(() => bomb().click());
+
+      // When the player double-taps a low tile, and the pinned control appears under the finger
+      touchTile(cell(1, 1), 1000);
+      realTap(named(control), 1110);
+
+      // Then the bomb has not fired
+      expect(onSelect).not.toHaveBeenCalled();
+
+      // And the aim is still waiting for a decision
+      expect(named("fire-bomb")).not.toBeNull();
+    }
+  );
+
+  it("keeps ignoring repeated taps at the same spot, so a triple tap cannot fire", () => {
+    // Given an armed bomb
+    render();
+    act(() => bomb().click());
+
+    // When the player taps a low tile three times, with Fire bomb now under the finger
+    touchTile(cell(1, 1), 1000);
+    realTap(named("fire-bomb"), 1211);
+    realTap(named("fire-bomb"), 1435);
+
+    // Then the bomb has not fired
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("fires at once when Fire bomb is nowhere near the tile that was tapped", () => {
+    // Given an armed bomb on a tall phone, where Fire bomb sits far below the tile
+    render();
+    act(() => bomb().click());
+
+    // When the player aims at a tile, then quickly taps Fire bomb elsewhere on the screen
+    touchTile(cell(1, 1), 1000);
+    realTap(named("fire-bomb"), 1200, 300);
+
+    // Then the bomb fires at the aimed square
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(1, 1);
+  });
+
+  it("fires when the player taps Fire bomb promptly but deliberately after aiming", () => {
+    // Given an armed bomb
+    render();
+    act(() => bomb().click());
+
+    // When the player aims, then taps Fire bomb half a second later
+    touchTile(cell(1, 1), 1000);
+    realTap(named("fire-bomb"), 1500);
+
+    // Then the bomb fires at the aimed square
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(1, 1);
+  });
+
+  it("does not request a rematch from a double tap on the winning tile", () => {
+    // Given a live match about to be won by the next tile
+    render();
+
+    // When the player double-taps the tile, and the rematch action appears under the finger
+    touchTile(cell(1, 1), 1000);
+    render(
+      createMatch({
+        phase: "finished",
+        turnPhase: "ended",
+        currentTurnPlayerId: null,
+        winnerPlayerId: "me"
+      })
+    );
+    realTap(container.querySelector(".match-primary-action"), 1110);
+
+    // Then no rematch was requested
+    expect(onRequestRematch).not.toHaveBeenCalled();
+
+    // And a deliberate tap after the wait still works, as the ignored tap extended it
+    realTap(container.querySelector(".match-primary-action"), 1600);
+    expect(onRequestRematch).toHaveBeenCalledOnce();
   });
 
   it("does not let a double tap on Fire bomb open the resign prompt", () => {

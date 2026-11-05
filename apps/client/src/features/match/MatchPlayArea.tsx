@@ -98,6 +98,8 @@ const focusBombButton = (from: HTMLElement) => {
 };
 
 const DOUBLE_TAP_GUARD_MS = 800;
+const BOARD_TAP_GUARD_MS = 400;
+const TAP_SPOT_PX = 48;
 const SAFE_ACTIONS = 'button[name="keep-playing"], button[name="cancel-bomb"]';
 
 // Each press in the action slot swaps the control under the finger, so the next tap of a double
@@ -106,13 +108,32 @@ const SAFE_ACTIONS = 'button[name="keep-playing"], button[name="cancel-bomb"]';
 // technology clicks have detail 0 and pass, because they cannot miss in that way.
 const useDoubleTapGuard = () => {
   const lastPress = useRef(Number.NEGATIVE_INFINITY);
-  return (event: MouseEvent<HTMLElement>) => {
-    if (event.detail === 0) return;
-    const isTooSoon = event.timeStamp - lastPress.current < DOUBLE_TAP_GUARD_MS;
-    lastPress.current = event.timeStamp;
-    if (isTooSoon && !(event.target as Element).closest(SAFE_ACTIONS)) {
-      event.preventDefault();
-      event.stopPropagation();
+  const lastTilePress = useRef({ at: Number.NEGATIVE_INFINITY, x: 0, y: 0 });
+  return {
+    onBoardPress: (event: MouseEvent<HTMLElement>) => {
+      if (event.detail !== 0 && (event.target as Element).closest(".board-cell")) {
+        lastTilePress.current = { at: event.timeStamp, x: event.clientX, y: event.clientY };
+      }
+    },
+    onActionPress: (event: MouseEvent<HTMLElement>) => {
+      if (event.detail === 0) return;
+      // On short windows the action is pinned over the board, so a tile's press can make Fire bomb
+      // or a rematch appear under the finger. Nothing is safe here, as Cancel would drop the aim.
+      // Each ignored tap extends the wait, so more taps at that spot cannot get through either.
+      const tile = lastTilePress.current;
+      const sameSpot = Math.hypot(event.clientX - tile.x, event.clientY - tile.y) < TAP_SPOT_PX;
+      if (sameSpot && event.timeStamp - tile.at < BOARD_TAP_GUARD_MS) {
+        tile.at = event.timeStamp;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const isTooSoon = event.timeStamp - lastPress.current < DOUBLE_TAP_GUARD_MS;
+      lastPress.current = event.timeStamp;
+      if (isTooSoon && !(event.target as Element).closest(SAFE_ACTIONS)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     }
   };
 };
@@ -253,11 +274,21 @@ export const MatchPlayArea = (props: PlayProps) => {
   // A reason applies until the turn moves on or the player does something else.
   const [bombNote, setBombNote] = useState<{ text: string; turnNumber: number } | null>(null);
   const activeNote = bombNote?.turnNumber === props.match.turnNumber ? bombNote.text : null;
-  const hint = !props.view.canAct
-    ? props.view.turnHint
-    : aim
-      ? "Bomb aimed. Tap another hidden square to move it."
-      : (activeNote ?? props.view.turnHint);
+  // Firing clears the armed state before the reply, which would briefly offer the bomb again.
+  const [bombFired, setBombFired] = useState(false);
+  if (bombFired && props.view.canAct) setBombFired(false);
+  const bombInFlight = bombFired && props.view.isOwnTurn;
+  const selectCell = (row: number, column: number) => {
+    if (props.bombArmed) setBombFired(true);
+    props.onCellSelect(row, column);
+  };
+  const hint = bombInFlight
+    ? "Sending move…"
+    : !props.view.canAct
+      ? props.view.turnHint
+      : aim
+        ? "Bomb aimed. Tap another hidden square to move it."
+        : (activeNote ?? props.view.turnHint);
   const disarmOnEscape = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || !props.bombArmed || !props.view.canAct) return;
     focusBombButton(event.currentTarget);
@@ -270,6 +301,7 @@ export const MatchPlayArea = (props: PlayProps) => {
       className="arcade-play-area"
       aria-label="Match board and scores"
       onKeyDown={disarmOnEscape}
+      onClickCapture={guardDoubleTap.onBoardPress}
     >
       <p className="visually-hidden" aria-live="polite">
         {describeLastAction(props.match, props.currentPlayerId)}
@@ -292,7 +324,7 @@ export const MatchPlayArea = (props: PlayProps) => {
             match={props.match}
             hidePresence={props.hidePresence ?? false}
             note={slot.isSelf ? undefined : props.solo?.botLevel}
-            bombArmed={props.bombArmed}
+            bombArmed={props.bombArmed || bombInFlight}
             canAct={props.view.isOwnTurn}
             onToggleBomb={() => {
               if (!props.view.canAct) return;
@@ -308,15 +340,15 @@ export const MatchPlayArea = (props: PlayProps) => {
           ...props,
           onCellSelect: (row, column) => {
             setBombNote(null);
-            props.onCellSelect(row, column);
+            selectCell(row, column);
           }
         }}
         zoomed={zoomed}
         aim={aim}
         onAim={setAim}
       />
-      <div className="match-action-slot" onClickCapture={guardDoubleTap}>
-        <MatchActions props={props} aim={aim} />
+      <div className="match-action-slot" onClickCapture={guardDoubleTap.onActionPress}>
+        <MatchActions props={{ ...props, onCellSelect: selectCell }} aim={aim} />
       </div>
     </section>
   );

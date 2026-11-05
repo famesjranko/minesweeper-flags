@@ -282,12 +282,12 @@
   }
 }
 
-/* The column is taller than these windows, so the turn and the current action stay reachable while
-   the player works the board. Tiles scrolled to by focus or an aim must clear both. */
+/* The column is taller than these windows, so the turn stays readable while the player works the
+   lower rows, and focus must clear it. Portrait phones skip this: their board nearly fits. */
 @media (max-height: 500px), (min-width: 601px) and (max-width: 899px) and (max-height: 950px),
   (min-width: 900px) and (max-height: 806px) {
   :root:has(.arcade-match-status) {
-    scroll-padding: 68px 0 62px;
+    scroll-padding-top: 68px;
   }
 
   .arcade-match-status {
@@ -295,8 +295,22 @@
     top: 8px;
     z-index: 5;
   }
+}
 
-  /* Resign stays in place: it is rarely wanted, and pinning it would cover a row of tiles. */
+/* Windows too short for the column also pin the action the player must reach. Resign stays in place:
+   it is rarely wanted, and pinning it would cover a row of tiles. The rematch block has status text
+   as well, so it needs more clearance and its own background over the tiles. */
+@media (max-height: 500px), (min-width: 601px) and (max-width: 899px) and (max-height: 950px),
+  (min-width: 900px) and (max-height: 806px), (max-width: 600px) and (max-height: 730px),
+  (min-width: 431px) and (max-width: 600px) and (max-height: 900px) {
+  :root:has(.arcade-match-status) {
+    scroll-padding-bottom: 62px;
+  }
+
+  :root:has(.match-rematch-action) {
+    scroll-padding-bottom: 124px;
+  }
+
   .match-action-slot > :is(.match-resign-confirm, .match-primary-action, .match-rematch-action) {
     position: sticky;
     bottom: 8px;
@@ -307,6 +321,27 @@
     padding: 8px;
     border-radius: 10px;
     background: #13233b;
+  }
+
+  /* The scroll padding above assumes this height, so a long name or wide font must not grow it. */
+  .match-rematch-action p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    line-height: 18px;
+  }
+}
+
+/* A zoomed 5x5 preview is taller than the room between the band and Fire bomb on a landscape phone,
+   so the band gives way until the player fires or cancels. */
+@media (max-height: 500px) {
+  :root:has(.is-zoomed):has(button[name="fire-bomb"]) {
+    scroll-padding-top: 8px;
+  }
+
+  .arcade-play-area:has(.is-zoomed):has(button[name="fire-bomb"]) .arcade-match-status {
+    position: static;
   }
 }
 

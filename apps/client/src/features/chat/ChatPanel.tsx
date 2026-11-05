@@ -91,7 +91,8 @@ export const ChatPanel = ({
       <ChatMessageList
         currentPlayerId={currentPlayerId}
         playerTones={playerTones}
-        messages={onExpand ? messages.slice(-2) : messages}
+        messages={messages}
+        limit={onExpand ? 2 : undefined}
       />
 
       <form

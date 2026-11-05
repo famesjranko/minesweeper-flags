@@ -1449,6 +1449,8 @@ button {
 }
 
 .chat-message-list {
+  /* Hidden sender text is absolutely positioned. It must scroll with the list, not the page. */
+  position: relative;
   height: 100%;
   overflow-y: auto;
   display: grid;
@@ -1489,6 +1491,10 @@ button {
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     0 1px 0 rgba(255, 255, 255, 0.45);
   background: rgba(255, 255, 255, 0.88);
+}
+
+.chat-message-sender {
+  user-select: none;
 }
 
 .chat-message-meta {

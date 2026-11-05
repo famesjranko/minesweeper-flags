@@ -168,7 +168,11 @@ test("the rematch action is on screen when a match ends on a short window", asyn
     [844, 390],
     [667, 375],
     [1024, 600],
-    [1366, 650]
+    [1366, 650],
+    [390, 664],
+    [375, 553],
+    [360, 560],
+    [600, 800]
   ]) {
     // Given a finished match on a window too short for the whole column
     await layoutAt(width, height, { finished: true });
@@ -211,6 +215,163 @@ test("Fire bomb and the aimed square share a landscape phone's screen", async ()
 
   // And the aimed square is on screen above it
   assert.ok(preview.top >= 0 && preview.top < fire.top, `preview starts at ${preview.top}px`);
+});
+
+test("a long chat adds no blank scroll space to the page", async () => {
+  for (const [width, height, pageHeight] of [
+    [1366, 650, 807],
+    [1920, 935, 935]
+  ]) {
+    // Given a match with a long chat from one sender
+    await layoutAt(width, height, { longChat: true });
+
+    // When the page height is measured
+    const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+
+    // Then the chat scrolls inside its own panel
+    assert.ok(scrollHeight <= pageHeight, `${width}x${height}: page is ${scrollHeight}px`);
+  }
+});
+
+test("a long chat gives the chat sheet itself nothing to scroll", async () => {
+  // Given a phone match with a long chat from one sender
+  await layoutAt(390, 844, { longChat: true });
+
+  // When the player opens the chat sheet
+  const { client, scroll } = await page.evaluate(async () => {
+    document.querySelector(".arcade-chat-open, .arcade-chat-chip").click();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const sheet = document.querySelector(".arcade-chat-region");
+    const measured = { client: sheet.clientHeight, scroll: sheet.scrollHeight };
+    sheet.close();
+    return measured;
+  });
+
+  // Then only the message list scrolls, so the input stays put
+  assert.ok(scroll <= client, `sheet scrolls ${scroll}px in ${client}px`);
+});
+
+test("copying chat text leaves out the hidden sender", async () => {
+  // Given a side chat with follow-up messages
+  await layoutAt(1280, 900, { longChat: true });
+
+  // When the player selects the whole conversation
+  const copied = await page.evaluate(() => {
+    getSelection().selectAllChildren(document.querySelector(".arcade-chat-region [role=log]"));
+    const text = getSelection().toString();
+    getSelection().removeAllRanges();
+    return text;
+  });
+
+  // Then the visible header appears, but no hidden sender and time
+  assert.ok(copied.includes("First Mate"), "the visible sender is missing");
+  assert.ok(!copied.includes("First Mate,"), `copied text includes: ${copied.slice(0, 120)}`);
+});
+
+test("a focused tile is not hidden under the pinned rematch action", async () => {
+  for (const [width, height, fixture] of [
+    [1024, 600, {}],
+    [320, 568, { longNames: true }]
+  ]) {
+    // Given a finished match on a short window with a rematch waiting for the opponent
+    await layoutAt(width, height, { ...fixture, finished: true, rematch: true });
+    await page.evaluate(() => document.querySelector(".board-cell").focus());
+
+    for (let row = 1; row < 16; row += 1) {
+      // When the player presses the down arrow through the rows
+      await page.keyboard.press("ArrowDown");
+      const { action, tile } = await page.evaluate(() => ({
+        action: document.querySelector(".match-rematch-action").getBoundingClientRect().top,
+        tile: document.activeElement.getBoundingClientRect().bottom
+      }));
+
+      // Then each tile stays clear of the action
+      const label = `${width}x${height} row ${row}: tile ends at ${tile}, action starts at ${action}`;
+      assert.ok(tile <= action, label);
+    }
+  }
+});
+
+test("a long name in a wide font cannot make the pinned rematch block taller", async () => {
+  // Given a finished match with long names on a narrow phone
+  await layoutAt(320, 568, { longNames: true, finished: true, rematch: true });
+
+  // When the status text is much wider than usual, as on a machine with different fonts
+  const height = await page.evaluate(() => {
+    document.querySelector(".match-rematch-action p").style.letterSpacing = "3px";
+    return document.querySelector(".match-rematch-action").getBoundingClientRect().height;
+  });
+
+  // Then the block stays within the page's scroll padding
+  assert.ok(height + 8 <= 124, `the block is ${height}px tall`);
+});
+
+test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async () => {
+  for (const [width, height] of [
+    [844, 390],
+    [667, 375],
+    [568, 320]
+  ]) {
+    // Given a zoomed board with an armed bomb on a landscape phone
+    const touch = await browser.newContext({
+      viewport: { width, height },
+      hasTouch: true,
+      isMobile: true
+    });
+    const phone = await touch.newPage();
+    await phone.goto(page.url());
+    await phone.evaluate(async () => {
+      const checks = await import("/tests/responsive.tsx");
+      await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
+    });
+    await phone.getByRole("button", { name: /Expand board/ }).tap();
+
+    // When the player aims at a square in the middle of the board
+    await phone.locator(".board-cell").nth(102).tap({ force: true });
+    await phone.locator('button[name="fire-bomb"]').waitFor();
+    await phone.waitForTimeout(100);
+    const { band, fire, preview } = await phone.evaluate(() => {
+      const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+      return {
+        band: box(".arcade-match-status"),
+        fire: box('button[name="fire-bomb"]'),
+        preview: box(".board-bomb-preview")
+      };
+    });
+    await touch.close();
+
+    // Then the turn band does not cover the preview
+    assert.ok(band.bottom <= preview.top, `${width}x${height}: band ends at ${band.bottom}`);
+
+    // And the whole preview is on screen above Fire bomb
+    const label = `${width}x${height}: preview ${preview.top}-${preview.bottom}, Fire at ${fire.top}`;
+    assert.ok(preview.top >= 0 && preview.bottom <= fire.top, label);
+  }
+});
+
+test("tile marks keep their size limit on large tiles and stay large on phones", async () => {
+  for (const [width, height, ratio, limit] of [
+    [390, 844, 0.8, 18],
+    [1920, 935, 0.58, 21],
+    [1920, 1200, 0.56, 24]
+  ]) {
+    // Given a match with a flag and a number on the board
+    await layoutAt(width, height, { scoreDeficit: 1 });
+
+    // When the marks are measured
+    const { tile, flag, number } = await page.evaluate(() => ({
+      tile: document.querySelector(".board-cell").getBoundingClientRect().width,
+      flag: document.querySelector(".board-cell svg").getBoundingClientRect().width,
+      number: Number.parseFloat(getComputedStyle(document.querySelector(".cell-number")).fontSize)
+    }));
+
+    // Then the number has the chosen size for this tile
+    assert.ok(number <= limit, `${width}x${height}: number is ${number}px on a ${tile}px tile`);
+    assert.ok(number >= tile * ratio - 1, `${width}x${height}: number is ${number}px`);
+
+    // And the flag stays close to the number
+    assert.ok(Math.abs(flag - number) <= 2, `${width}x${height}: flag is ${flag}px`);
+  }
 });
 
 test("a focused tile is not hidden under the turn band", async () => {

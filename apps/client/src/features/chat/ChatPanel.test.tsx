@@ -73,6 +73,27 @@ it("shows the latest two messages in the preview and keeps full history availabl
   render([...messages, message(4)]);
   expect(container.querySelectorAll("article")).toHaveLength(4);
 });
+it("adds only the new message to the preview's log when the window slides", () => {
+  // Given a preview showing the latest two messages from one sender
+  mount();
+  const expand = vi.fn();
+  render([message(1), message(2)], { expand });
+  const log = container.querySelector('[role="log"]')!;
+  const changes = new MutationObserver(() => {});
+  changes.observe(log, { childList: true, subtree: true });
+
+  // When a third message arrives
+  render([message(1), message(2), message(3)], { expand });
+
+  // Then earlier messages are not added again for a screen reader to repeat
+  const added = changes.takeRecords().flatMap((record) => [...record.addedNodes]);
+  changes.disconnect();
+  expect(added.map((node) => node.textContent).join("")).toMatch(/^Friend, .+: Message 3$/);
+
+  // And the preview still shows the latest two
+  expect(container.querySelectorAll("article")).toHaveLength(2);
+  expect(container.textContent).not.toContain("Message 1");
+});
 it("keeps a quick reply while offline and sends it once connected", () => {
   // Given an offline preview containing a draft reply
   mount();
