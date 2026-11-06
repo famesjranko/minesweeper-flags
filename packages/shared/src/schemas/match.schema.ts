@@ -1,3 +1,4 @@
+import { BOARD_SIZES } from "@minesweeper-flags/game-engine";
 import { z } from "zod";
 import { coordinateSchema, displayNameSchema, playerIdSchema } from "./primitives.js";
 
@@ -11,9 +12,15 @@ export const boardCellDtoSchema = z.object({
   claimedByPlayerId: playerIdSchema.nullable()
 });
 
+// A peer can send any board, so the size is capped at the largest preset; a huge board would
+// otherwise freeze the tab that renders it.
+const MAX_BOARD_SIDE = Math.max(
+  ...Object.values(BOARD_SIZES).flatMap(({ rows, columns }) => [rows, columns])
+);
+
 export const boardStateDtoSchema = z.object({
-  rows: z.number().int().positive(),
-  columns: z.number().int().positive(),
+  rows: z.number().int().positive().max(MAX_BOARD_SIDE),
+  columns: z.number().int().positive().max(MAX_BOARD_SIDE),
   mineCount: z.number().int().positive(),
   cells: z.array(z.array(boardCellDtoSchema))
 });

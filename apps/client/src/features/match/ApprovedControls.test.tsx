@@ -166,6 +166,7 @@ it.each([
 ])("uses the declared Red winner after resignation at %i–%i", (blueScore, redScore) => {
   // Given Blue resigned and Red won with a lower or equal score
   const match = createMatch();
+  match.board.mineCount = 51;
   match.phase = "finished";
   match.currentTurnPlayerId = null;
   match.turnPhase = "ended";

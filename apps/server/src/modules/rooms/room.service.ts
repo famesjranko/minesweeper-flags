@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import { KeyedSerialTaskRunner } from "../../lib/async/keyed-serial-task-runner.js";
 import { createId, createInviteToken, createRoomCode } from "../../lib/ids/id.js";
 import type { RoomRepository } from "./room.repository.js";
@@ -13,6 +14,7 @@ export class RoomService {
 
   async createRoom(
     displayName: string,
+    boardSize: BoardSize,
     maxConcurrentRooms?: number
   ): Promise<{ room: RoomRecord; player: RoomPlayer }> {
     return await this.taskRunner.run(ROOM_CREATION_LOCK_KEY, async () => {
@@ -42,6 +44,7 @@ export class RoomService {
         inviteToken: createInviteToken(),
         players: [player],
         nextStarterIndex: 0,
+        boardSize,
         createdAt: now,
         updatedAt: now
       };

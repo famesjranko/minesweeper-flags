@@ -35,6 +35,16 @@
     width: min(100%, var(--match-board-fit));
   }
 }
+/* The header follows the match below it, whichever layout that is. */
+@media (min-width: 900px) and (min-height: 580px) {
+  .solo-match {
+    width: fit-content;
+  }
+  /* A notice takes height from the board, so the match still fits the window. */
+  .solo-match:has(> .solo-notice, > .solo-error) {
+    --match-notice-height: 52px;
+  }
+}
 @media (max-width: 899px) {
   .solo-match {
     width: min(100%, 624px);

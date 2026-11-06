@@ -5,6 +5,7 @@ import type { SoundName, SoundRecipe } from "./sound-player.js";
 // Filtered noise loses most of its energy in the filter, so the noise layer has a larger gain.
 export const SOUND_RECIPES: Record<SoundName, SoundRecipe> = {
   // A 45 ms chip blip that drops in pitch, so a tile feels like it settles; a quiet square adds the click.
+  // The gains are set by ear on a phone speaker, which dropped this short sound entirely at 0.1.
   reveal: {
     segments: [
       {
@@ -13,7 +14,7 @@ export const SOUND_RECIPES: Record<SoundName, SoundRecipe> = {
         startHz: 1200,
         endHz: 600,
         durationMs: 12,
-        gain: 0.035,
+        gain: 0.09,
         offsetMs: 0,
         attackMs: 1
       },
@@ -23,7 +24,7 @@ export const SOUND_RECIPES: Record<SoundName, SoundRecipe> = {
         startHz: 900,
         endHz: 600,
         durationMs: 45,
-        gain: 0.1,
+        gain: 0.25,
         offsetMs: 0,
         attackMs: 1
       }

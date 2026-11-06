@@ -134,7 +134,7 @@ describe("RoomLobby", () => {
       const { onCreateRoom, onJoinRoom } = pressEnter("");
 
       // Then a room is created
-      expect(onCreateRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper");
+      expect(onCreateRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper", "large");
       expect(onJoinRoom).not.toHaveBeenCalled();
     });
 
@@ -417,7 +417,7 @@ describe("RoomLobby", () => {
     act(submitActions);
 
     // Then only the connected submissions reach their callbacks
-    expect(onCreateRoom).toHaveBeenCalledExactlyOnceWith("First Mate");
+    expect(onCreateRoom).toHaveBeenCalledExactlyOnceWith("First Mate", "large");
     expect(onJoinRoom).toHaveBeenCalledExactlyOnceWith("First Mate", "AbCdEfGhIjKlMnOpQrStUw");
 
     act(() => {
@@ -451,7 +451,7 @@ describe("RoomLobby", () => {
     expect(p2pContainer.querySelector<HTMLButtonElement>(".lobby-create-button")?.disabled).toBe(
       false
     );
-    expect(onP2PCreateRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper");
+    expect(onP2PCreateRoom).toHaveBeenCalledExactlyOnceWith("Captain Sweeper", "large");
     act(() => {
       p2pRoot.unmount();
     });

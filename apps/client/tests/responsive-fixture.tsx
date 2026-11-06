@@ -1,3 +1,9 @@
+import {
+  BOARD_SIZES,
+  type BoardSize,
+  getBombDeficit,
+  getWinningScore
+} from "@minesweeper-flags/game-engine";
 import type { ChatMessageDto, MatchStateDto } from "@minesweeper-flags/shared";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -30,15 +36,13 @@ const longChat: ChatMessageDto[] = Array.from({ length: 30 }, (_, index) => ({
   sentAt: index + 1
 }));
 
-const createMatch = (): MatchStateDto => ({
+const createMatch = (boardSize: BoardSize): MatchStateDto => ({
   roomId: "layout-check",
   phase: "live",
   board: {
-    rows: 16,
-    columns: 16,
-    mineCount: 51,
-    cells: Array.from({ length: 16 }, (_, row) =>
-      Array.from({ length: 16 }, (_, column) => ({
+    ...BOARD_SIZES[boardSize],
+    cells: Array.from({ length: BOARD_SIZES[boardSize].rows }, (_, row) =>
+      Array.from({ length: BOARD_SIZES[boardSize].columns }, (_, column) => ({
         row,
         column,
         status: "hidden",
@@ -73,6 +77,8 @@ const createMatch = (): MatchStateDto => ({
 });
 
 export interface FixtureOptions {
+  boardSize?: BoardSize;
+  soloNotice?: boolean;
   solo?: boolean;
   emptyChat?: boolean;
   longChat?: boolean;
@@ -82,6 +88,7 @@ export interface FixtureOptions {
   connecting?: boolean;
   finished?: boolean;
   scoreDeficit?: number;
+  bombReady?: boolean;
   bombArmed?: boolean;
   rematch?: boolean;
 }
@@ -92,25 +99,40 @@ export const nextPaint = () =>
   );
 
 const createFixtureMatch = (options: FixtureOptions): MatchStateDto => {
-  const match = createMatch();
+  const size = options.boardSize ?? "large";
+  const match = createMatch(size);
   if (options.longNames) {
     match.players[0].displayName = "Captain McSweeperman";
     match.players[1].displayName = "WWWWWWWWWWWWWWWWWWWW";
+  }
+  if (options.solo) {
+    match.players[0].displayName = "You";
+    match.players[1].displayName = "Bot";
   }
   if (options.offline) {
     match.players[1].connected = false;
     match.currentTurnPlayerId = "guest";
   }
   if (options.opponentTurn) match.currentTurnPlayerId = "guest";
-  match.players[1].score = options.finished ? 26 : (options.scoreDeficit ?? 0);
+  match.players[1].score = options.finished
+    ? getWinningScore(BOARD_SIZES[size].mineCount)
+    : options.bombReady
+      ? getBombDeficit(BOARD_SIZES[size].mineCount)
+      : (options.scoreDeficit ?? 0);
   for (const cell of match.board.cells.flat().slice(0, match.players[1].score)) {
     cell.status = "claimed";
     cell.claimedByPlayerId = "guest";
   }
-  const numbered = match.board.cells[15]![15]!;
+  const last = BOARD_SIZES[size].rows - 1;
+  const numbered = match.board.cells[last]![last]!;
   numbered.status = "revealed";
   numbered.adjacentMines = 2;
   if (options.rematch) match.players[0].rematchRequested = true;
+  if (options.finished) {
+    // A finished match shows the mines nobody claimed.
+    const unclaimed = match.board.cells[last]![0]!;
+    unclaimed.status = "mine-revealed";
+  }
   if (options.finished) {
     match.phase = "finished";
     match.turnPhase = "ended";
@@ -137,7 +159,12 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
           Leave solo match
         </a>
       </ArcadeHeader>
-      <MatchView {...shared} presentation="solo" onRematch={noop} />
+      {options.soloNotice ? (
+        <p className="solo-notice" role="status">
+          Solo progress cannot be saved in this browser.
+        </p>
+      ) : null}
+      <MatchView {...shared} presentation="solo" botLevel="Normal" onRematch={noop} />
     </div>
   ) : (
     <MatchView

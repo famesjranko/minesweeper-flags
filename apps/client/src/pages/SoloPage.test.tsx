@@ -7,7 +7,7 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import type { SoloSession, SoloSnapshot } from "../solo/session/solo-session.js";
 import { createSoloSession } from "../solo/session/solo-session.js";
-import { SOLO_DIFFICULTY_KEY } from "../solo/storage/solo-difficulty-preference.js";
+import { SOLO_DIFFICULTY_KEY } from "../solo/storage/solo-preferences.js";
 import { SOLO_STORAGE_KEY } from "../solo/storage/solo-storage.js";
 import { SoloPage } from "./SoloPage.js";
 

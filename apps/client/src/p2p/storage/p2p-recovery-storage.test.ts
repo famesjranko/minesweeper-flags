@@ -68,6 +68,7 @@ const hostRecord: P2PRecoveryHostRecord = {
       { playerId: "player-2", displayName: "Guest" }
     ],
     nextStarterIndex: 1,
+    boardSize: "large",
     createdAt: 100,
     updatedAt: 200
   },
@@ -179,6 +180,20 @@ describe("p2p recovery storage", () => {
     });
     expect(state.room).not.toBe(hostRecord.room);
     expect(state.match).not.toBe(hostRecord.match);
+  });
+
+  it("restores a host record saved before board sizes as a classic room", () => {
+    // Given a stored host record whose room has no board size
+    const localStorage = new MemoryStorage();
+    (globalThis as unknown as { window: MockWindow }).window = { localStorage };
+    const { boardSize: _omitted, ...legacyRoom } = hostRecord.room;
+    localStorage.setItem(P2P_RECOVERY_KEY, JSON.stringify({ ...hostRecord, room: legacyRoom }));
+
+    // When the record is read back
+    const restored = createBrowserP2PRecoveryPersistence().read(ROOM_CODE);
+
+    // Then the room uses the classic board
+    expect(restored?.role === "host" && restored.room.boardSize).toBe("classic");
   });
 
   it("preserves match field order across read/write (regression for safeParse reorder)", () => {

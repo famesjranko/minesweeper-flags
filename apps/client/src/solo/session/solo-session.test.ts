@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import { createMatchState } from "@minesweeper-flags/game-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chooseSoloAction } from "../bot/solo-bot.js";
@@ -72,6 +73,7 @@ describe("solo session", () => {
       createdAt: 1,
       starter: "bot",
       difficulty: "normal",
+      boardSize: "classic",
       actions: []
     };
 
@@ -101,6 +103,7 @@ describe("solo session", () => {
       createdAt: 1,
       starter: "bot",
       difficulty: "normal",
+      boardSize: "classic",
       actions: []
     });
     const session = createSoloSession({
@@ -138,6 +141,7 @@ describe("solo session", () => {
         createdAt: 1,
         starter: "bot",
         difficulty: "normal",
+        boardSize: "classic",
         actions: []
       })
     });
@@ -155,6 +159,7 @@ describe("solo session", () => {
       createdAt: 1,
       starter: "bot" as const,
       difficulty: "normal" as const,
+      boardSize: "classic" as const,
       actions: []
     };
     const session = createSoloSession({
@@ -277,6 +282,7 @@ describe("solo session", () => {
         createdAt: 99,
         starter: "human",
         difficulty: "hard",
+        boardSize: "classic",
         actions: []
       });
     }
@@ -355,6 +361,7 @@ const replayFor = (starter: "human" | "bot" = "bot"): SoloReplayRecord => ({
   createdAt: 20,
   starter,
   difficulty: "normal",
+  boardSize: "classic",
   actions: []
 });
 
@@ -730,7 +737,7 @@ it("plays a fresh match at the chosen level", () => {
   expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "hard");
 });
 
-it("resumes a saved match at its own level and says the new level comes next", () => {
+it("resumes a saved match at its own level, and Play again keeps it", () => {
   // Given a saved bot turn played at the easy level and a player who has since picked hard.
   const scheduler = createScheduler();
   const chooseAction = vi.fn(() => null);
@@ -749,17 +756,14 @@ it("resumes a saved match at its own level and says the new level comes next", (
   expect(session.getSnapshot().difficulty).toBe("easy");
   expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "easy");
 
-  // And the player is told that hard starts with the next match.
-  expect(session.getSnapshot().recoveryNotice).toBe(
-    "Resumed your Easy match. Hard starts with your next match."
-  );
+  // And no notice talks about the level.
+  expect(session.getSnapshot().recoveryNotice).toBeNull();
 
   // When the player then chooses Play again.
   session.rematch();
 
-  // Then the notice is gone and the new match is at the hard level.
-  expect(session.getSnapshot().recoveryNotice).toBeNull();
-  expect(session.getSnapshot().difficulty).toBe("hard");
+  // Then the new match stays at the level just played.
+  expect(session.getSnapshot().difficulty).toBe("easy");
 });
 
 it("lets the default bot reason at the match's level", () => {
@@ -773,6 +777,7 @@ it("lets the default bot reason at the match's level", () => {
       createdAt: 1,
       starter: "bot",
       difficulty: "hard",
+      boardSize: "classic",
       actions: [
         { type: "select", playerId: SOLO_BOT_ID, row: 8, column: 0 },
         { type: "select", playerId: SOLO_HUMAN_ID, row: 0, column: 0 }
@@ -795,4 +800,129 @@ it("lets the default bot reason at the match's level", () => {
   expect({ type: lastAction?.type, row: lastAction?.row, column: lastAction?.column }).toEqual(
     hardMove
   );
+});
+
+it("plays a fresh match on the chosen board size, including Play again", () => {
+  // Given a fresh session whose player has chosen the 30×30 board.
+  const storage = createStorage();
+  const session = createSoloSession({
+    storage,
+    scheduler: createScheduler(),
+    preferredBoardSize: () => "giant"
+  });
+
+  // When the match starts.
+  session.start();
+
+  // Then the board and the saved replay use the 30×30 board.
+  const { board } = session.getSnapshot().match;
+  expect([board.rows, board.columns, board.mineCount]).toEqual([30, 30, 179]);
+  expect(storage.saved?.boardSize).toBe("giant");
+
+  // And when the player chooses Play again, the next match uses it too.
+  session.rematch();
+  expect(session.getSnapshot().match.board.columns).toBe(30);
+});
+
+it("resumes a saved match on its own board size and says the new size comes next", () => {
+  // Given a saved classic match and a player who has since picked the 30×30 board.
+  const session = createSoloSession({
+    storage: createStorage(replayFor("human")),
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal",
+    preferredBoardSize: () => "giant"
+  });
+
+  // When the session restores the replay.
+  session.start();
+
+  // Then the restored match stays on the classic board.
+  expect(session.getSnapshot().match.board.columns).toBe(16);
+
+  // And no notice talks about the board.
+  expect(session.getSnapshot().recoveryNotice).toBeNull();
+});
+
+it("plays again on the same board when the home page has since picked another", () => {
+  // Given a 20×20 match started when that was the choice, and a later choice of 30×30
+  let choice: BoardSize = "large";
+  const session = createSoloSession({
+    storage: createStorage(),
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal",
+    preferredBoardSize: () => choice
+  });
+  session.start();
+  choice = "giant";
+
+  // When the player resigns and chooses Play again
+  session.resign();
+  session.rematch();
+
+  // Then the new match is on the 20×20 board
+  expect(session.getSnapshot().match.board.columns).toBe(20);
+});
+
+it("moves a saved 16×16 match up to the current choice on Play again", () => {
+  // Given a saved 16×16 match, a size that is no longer offered
+  const session = createSoloSession({
+    storage: createStorage(replayFor("human")),
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal",
+    preferredBoardSize: () => "large"
+  });
+  session.start();
+  expect(session.getSnapshot().match.board.columns).toBe(16);
+
+  // When the player resigns and chooses Play again
+  session.resign();
+  session.rematch();
+
+  // Then the new match is on the current choice
+  expect(session.getSnapshot().match.board.columns).toBe(20);
+});
+
+it("keeps the bomb locked on a 30×30 board until the human trails by that board's threshold", () => {
+  // Given a saved 30×30 match where the bot claimed four mines and then revealed a safe square.
+  const cells = createMatchState({
+    roomId: "solo-local",
+    players: [
+      { playerId: SOLO_HUMAN_ID, displayName: "You" },
+      { playerId: SOLO_BOT_ID, displayName: "Bot" }
+    ],
+    seed: 11,
+    createdAt: 20,
+    startingPlayerId: SOLO_BOT_ID,
+    boardSize: "giant"
+  }).board.cells.flat();
+  const botClaims = (count: number) => {
+    const mines = cells.filter((cell) => cell.hasMine).slice(0, count);
+    const safe = cells.find((cell) => !cell.hasMine)!;
+    return [...mines, safe].map((cell) => ({
+      type: "select" as const,
+      playerId: SOLO_BOT_ID,
+      row: cell.row,
+      column: cell.column
+    }));
+  };
+  const sessionAfter = (count: number) => {
+    const session = createSoloSession({
+      storage: createStorage({ ...replayFor(), boardSize: "giant", actions: botClaims(count) }),
+      scheduler: createScheduler()
+    });
+    session.start();
+    return session;
+  };
+  const trailingByFour = sessionAfter(4);
+
+  // When the human, four behind, tries to arm the bomb.
+  trailingByFour.toggleBombMode();
+
+  // Then it stays locked, because this board needs a deficit of 14.
+  expect(trailingByFour.getSnapshot().bombArmed).toBe(false);
+
+  // And when the human is 14 behind, the bomb arms.
+  const trailingByFourteen = sessionAfter(14);
+  trailingByFourteen.toggleBombMode();
+  expect(trailingByFourteen.getSnapshot().bombArmed).toBe(true);
 });

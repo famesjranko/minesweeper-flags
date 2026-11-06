@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { BoardCell, MatchState } from "../index.js";
+import type { BoardCell, BoardSize, MatchState } from "../index.js";
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
+  BOARD_SIZE_IDS,
+  BOARD_SIZES,
   createMatchState,
   MIN_BOMB_DEFICIT,
   resignMatch,
@@ -335,5 +337,139 @@ describe("resignMatch", () => {
     expect(resigned.currentTurnPlayerId).toBeNull();
     expect(resigned.winnerPlayerId).toBe("p2");
     expect(resigned.updatedAt).toBe(2);
+  });
+});
+
+describe("board sizes", () => {
+  const createSizedMatch = (boardSize?: BoardSize): MatchState =>
+    createMatchState({
+      roomId: "room-1",
+      players: [
+        { playerId: "p1", displayName: "A" },
+        { playerId: "p2", displayName: "B" }
+      ],
+      seed: 7,
+      createdAt: 1,
+      startingPlayerId: "p1",
+      ...(boardSize ? { boardSize } : {})
+    });
+
+  const findMine = (match: MatchState): BoardCell => {
+    const mine = match.board.cells.flat().find((cell) => cell.hasMine);
+    if (!mine) throw new Error("The board has no mine.");
+    return mine;
+  };
+
+  it("builds the classic board when no size is given", () => {
+    // Given a match created without a board size
+    const match = createSizedMatch();
+
+    // When the board is read
+    const { rows, columns, mineCount } = match.board;
+
+    // Then it is the classic 16×16 board with 51 mines
+    expect({ rows, columns, mineCount }).toEqual({ rows: 16, columns: 16, mineCount: 51 });
+  });
+
+  it.each(BOARD_SIZE_IDS)("builds the %s board with its preset mines", (boardSize) => {
+    // Given a match created with a board size preset
+    const match = createSizedMatch(boardSize);
+
+    // When the mines on the board are counted
+    const placedMines = match.board.cells.flat().filter((cell) => cell.hasMine).length;
+
+    // Then the board has the preset dimensions
+    expect(match.board.cells).toHaveLength(BOARD_SIZES[boardSize].rows);
+    expect(match.board.cells.every((row) => row.length === BOARD_SIZES[boardSize].columns)).toBe(
+      true
+    );
+    // And it holds exactly the preset number of mines
+    expect(placedMines).toBe(BOARD_SIZES[boardSize].mineCount);
+  });
+
+  it("keeps a large-board match live when a player reaches the classic winning score", () => {
+    // Given a large-board match where p1 has 25 mines
+    const match = createSizedMatch("large");
+    match.players[0].score = 25;
+    const mine = findMine(match);
+
+    // When p1 claims a 26th mine
+    const resolution = resolveAction(
+      match,
+      { type: "select", playerId: "p1", row: mine.row, column: mine.column },
+      2
+    );
+
+    // Then the match is still live, because 26 is not a majority of 79 mines
+    expect(resolution.ok && resolution.state.phase).toBe("live");
+  });
+
+  it("finishes a large-board match when a player claims a majority of its mines", () => {
+    // Given a large-board match where p1 has 39 of its 79 mines
+    const match = createSizedMatch("large");
+    match.players[0].score = 39;
+    const mine = findMine(match);
+
+    // When p1 claims a 40th mine
+    const resolution = resolveAction(
+      match,
+      { type: "select", playerId: "p1", row: mine.row, column: mine.column },
+      2
+    );
+
+    // Then the match is finished
+    expect(resolution.ok && resolution.state.phase).toBe("finished");
+    // And p1 wins
+    expect(resolution.ok && resolution.state.winnerPlayerId).toBe("p1");
+  });
+});
+
+describe("board size presets", () => {
+  it.each(BOARD_SIZE_IDS)("gives the %s board an odd mine count so a match cannot tie", (id) => {
+    // Given a board size preset
+    const { rows, columns, mineCount } = BOARD_SIZES[id];
+
+    // When its mine count is checked
+    const isOdd = mineCount % 2 === 1;
+
+    // Then the count is odd
+    expect(isOdd).toBe(true);
+    // And the board has safe cells left over
+    expect(mineCount).toBeLessThan(rows * columns);
+  });
+});
+
+describe("bomb deficit by board size", () => {
+  it.each([
+    ["classic", 4],
+    ["large", 6],
+    ["huge", 9],
+    ["giant", 14]
+  ] as const)("unlocks the %s board's bomb at a deficit of %i", (boardSize, deficit) => {
+    // Given a match on the board size
+    const match = createMatchState({
+      roomId: "room-1",
+      players: [
+        { playerId: "p1", displayName: "A" },
+        { playerId: "p2", displayName: "B" }
+      ],
+      seed: 7,
+      createdAt: 1,
+      startingPlayerId: "p1",
+      boardSize
+    });
+
+    // When p1 bombs one mine short of the deficit, then at the deficit
+    match.players[1].score = deficit - 1;
+    const early = resolveAction(match, { type: "bomb", playerId: "p1", row: 5, column: 5 }, 2);
+    match.players[1].score = deficit;
+    const unlocked = resolveAction(match, { type: "bomb", playerId: "p1", row: 5, column: 5 }, 2);
+
+    // Then the early bomb is rejected with the board's deficit
+    expect(!early.ok && early.error).toBe(
+      `Bombs can only be used while trailing by ${deficit} or more.`
+    );
+    // And the bomb at the deficit is accepted
+    expect(unlocked.ok).toBe(true);
   });
 });

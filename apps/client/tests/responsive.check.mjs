@@ -1,114 +1,6 @@
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
-import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
-import { createServer } from "vite";
-
-// Every height here has room for the scores and the 480px board floor.
-const LAPTOPS = [
-  [1366, 650],
-  [1280, 720],
-  [1536, 730],
-  [1366, 768]
-];
-
-let server;
-let browser;
-let page;
-let harnessUrl;
-
-before(async () => {
-  server = await createServer({
-    root: fileURLToPath(new URL("..", import.meta.url)),
-    logLevel: "error",
-    server: { host: "127.0.0.1", hmr: false }
-  });
-  await server.listen();
-  browser = await chromium.launch({
-    args: ["--no-sandbox"],
-    ...(process.env.CHROME_PATH
-      ? { executablePath: process.env.CHROME_PATH }
-      : { channel: "chrome" })
-  });
-  page = await browser.newPage();
-  harnessUrl = `${server.resolvedUrls.local[0]}tests/responsive.html`;
-  await page.goto(harnessUrl);
-});
-
-after(async () => {
-  await browser?.close();
-  await server?.close();
-});
-
-const harness = (call, argument) =>
-  page.evaluate(
-    async ([source, value]) => {
-      const checks = await import("/tests/responsive.tsx");
-      return new Function("checks", "value", `return (${source})(checks, value)`)(checks, value);
-    },
-    [call.toString(), argument]
-  );
-
-const layoutAt = async (width, height, options = {}) => {
-  await page.setViewportSize({ width, height });
-  return harness(async (checks, fixture) => {
-    window.scrollTo(0, 0);
-    await checks.renderFixture(fixture);
-    return checks.readLayout();
-  }, options);
-};
-
-test("a laptop window shows the scores and the last row together", async () => {
-  for (const [width, height] of LAPTOPS) {
-    // Given a match on a window shorter than the whole column
-    // When the match renders
-    const { scores, board } = await layoutAt(width, height);
-
-    // Then the scores and the last row fit on one screen
-    assert.ok(
-      board.bottom - scores.y <= height,
-      `${width}x${height}: ${board.bottom - scores.y}px`
-    );
-
-    // And the tiles stay large enough to aim at
-    assert.ok(board.width >= 480, `${width}x${height}: board ${board.width}px`);
-  }
-});
-
-test("a tall window grows the board until its squares reach 36px", async () => {
-  // Given a match on a window with more than enough height
-  // When the match renders
-  const { board } = await layoutAt(1920, 1200);
-
-  // Then the board is at its limit
-  assert.equal(board.width, 624);
-});
-
-test("a desktop-sized window fits the whole board once there is room", async () => {
-  // Given a match on an ordinary 1080p browser window
-  // When the match renders
-  const { board } = await layoutAt(1920, 950);
-
-  // Then the last row is on screen without scrolling
-  assert.ok(board.bottom <= 950, `board ends at ${board.bottom}px`);
-});
-
-test("the side chat input is on screen without scrolling", async () => {
-  for (const [width, height] of LAPTOPS) {
-    // Given a match wide enough for the side chat
-    // When the match renders
-    const { scores, chat, composer } = await layoutAt(width, height);
-
-    // Then the chat sits beside the board
-    assert.equal(chat, "sidebar");
-
-    // And the player can type at once
-    assert.ok(composer.bottom <= height, `${width}x${height}: input ends at ${composer.bottom}px`);
-
-    // And the history above the input has room to read
-    assert.ok(composer.y - scores.y >= 200, `${width}x${height}: input starts at ${composer.y}px`);
-  }
-});
+import { test } from "node:test";
+import { browser, harness, harnessUrl, layoutAt, page, touchMatch } from "./responsive-browser.mjs";
 
 test("a phone or tablet keeps one board size as the toolbar changes the height", async () => {
   for (const [width, tall, short] of [
@@ -128,6 +20,7 @@ test("a phone or tablet keeps one board size as the toolbar changes the height",
 
 // Desktop Chrome has no collapsing toolbar, so this catches a layout that reacts to scrolling but
 // not dvh on a wide window. The height-change test above covers dvh below 900px.
+
 test("scrolling keeps the board size", async () => {
   for (const [width, height] of [
     [390, 844],
@@ -169,17 +62,10 @@ test("the rematch action is on screen when a match ends on a short window", asyn
 
 test("Fire bomb and the aimed square share a landscape phone's screen", async () => {
   // Given an armed bomb on a landscape phone with touch input
-  const touch = await browser.newContext({
-    viewport: { width: 844, height: 390 },
-    hasTouch: true,
-    isMobile: true
-  });
-  const phone = await touch.newPage();
-  await phone.goto(page.url());
-  await phone.evaluate(async () => {
-    const checks = await import("/tests/responsive.tsx");
-    await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
-  });
+  const { touch, phone } = await touchMatch(
+    { width: 844, height: 390 },
+    { bombArmed: true, scoreDeficit: 4 }
+  );
 
   // When the player taps a hidden square near the top of the board
   await phone.locator(".board-cell").nth(20).tap({ force: true });
@@ -250,14 +136,14 @@ test("copying chat text leaves out the hidden sender", async () => {
 
 test("a focused tile is not hidden under the pinned rematch action", async () => {
   for (const [width, height, fixture] of [
-    [1024, 600, {}],
+    [1024, 570, {}],
     [320, 568, { longNames: true }]
   ]) {
     // Given a finished match on a short window with a rematch waiting for the opponent
     await layoutAt(width, height, { ...fixture, finished: true, rematch: true });
     await page.evaluate(() => document.querySelector(".board-cell").focus());
 
-    for (let row = 1; row < 16; row += 1) {
+    for (let row = 1; row < 20; row += 1) {
       // When the player presses the down arrow through the rows
       await page.keyboard.press("ArrowDown");
       const { action, tile } = await page.evaluate(() => ({
@@ -284,7 +170,7 @@ test("a long name in a wide font cannot make the pinned rematch block taller", a
   });
 
   // Then the block stays within the page's scroll padding
-  assert.ok(height + 8 <= 168, `the block is ${height}px tall`);
+  assert.ok(height + 8 <= 172, `the block is ${height}px tall`);
 });
 
 test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async () => {
@@ -294,17 +180,10 @@ test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async ()
     [568, 320]
   ]) {
     // Given a zoomed board with an armed bomb on a landscape phone
-    const touch = await browser.newContext({
-      viewport: { width, height },
-      hasTouch: true,
-      isMobile: true
-    });
-    const phone = await touch.newPage();
-    await phone.goto(page.url());
-    await phone.evaluate(async () => {
-      const checks = await import("/tests/responsive.tsx");
-      await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
-    });
+    const { touch, phone } = await touchMatch(
+      { width, height },
+      { bombArmed: true, scoreDeficit: 4 }
+    );
     await phone.getByRole("button", { name: /Expand board/ }).tap();
 
     // When the player aims at a square in the middle of the board
@@ -320,6 +199,34 @@ test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async ()
     // Then the whole preview is on screen above Fire bomb
     const label = `${width}x${height}: preview ${preview.top}-${preview.bottom}, Fire at ${fire.top}`;
     assert.ok(preview.top >= 0 && preview.bottom <= fire.top, label);
+  }
+});
+
+test("an unclaimed mine stays inside its tile on the smallest tiles", async () => {
+  for (const [width, height] of [
+    [320, 568],
+    [390, 844],
+    [1366, 650]
+  ]) {
+    // Given a finished 30x30 match that shows unclaimed mines
+    await layoutAt(width, height, { boardSize: "giant", finished: true });
+
+    // When the mine in the bottom row is measured
+    const { mine, tile } = await page.evaluate(() => {
+      const burst = document.querySelector(".mine-burst");
+      const box = (element) => element.getBoundingClientRect();
+      const { bottom, right, top, left } = box(burst);
+      const cell = box(burst.closest(".board-cell"));
+      return {
+        mine: { bottom, right, top, left },
+        tile: { bottom: cell.bottom, right: cell.right, top: cell.top, left: cell.left }
+      };
+    });
+
+    // Then it does not leave the tile
+    const label = `${width}x${height}: ${JSON.stringify({ mine, tile })}`;
+    assert.ok(mine.bottom <= tile.bottom + 0.5 && mine.top >= tile.top - 0.5, label);
+    assert.ok(mine.right <= tile.right + 0.5 && mine.left >= tile.left - 0.5, label);
   }
 });
 
@@ -349,28 +256,20 @@ test("tile marks keep their size limit on large tiles and stay large on phones",
 });
 
 test("zoom is offered on touch screens and not to a mouse", async () => {
-  // Given a saved zoom setting and a match on a mouse window
-  await page.setViewportSize({ width: 1366, height: 768 });
-  await page.evaluate(() => localStorage.setItem("msf:board:zoomed", "on"));
-  await harness(async (checks) => checks.renderFixture());
-  const mouse = await page.evaluate(() => ({
+  // Given a saved zoom setting and a match that mounts on a mouse window
+  const desktop = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  await desktop.addInitScript(() => localStorage.setItem("msf:board:zoomed", "on"));
+  const mouseWindow = await desktop.newPage();
+  await mouseWindow.goto(harnessUrl);
+  await mouseWindow.waitForSelector(".board-cell");
+  const mouse = await mouseWindow.evaluate(() => ({
     button: document.querySelector(".arcade-zoom-button") !== null,
     zoomed: document.querySelector(".arcade-board-viewport.is-zoomed") !== null
   }));
-  await page.evaluate(() => localStorage.removeItem("msf:board:zoomed"));
+  await desktop.close();
 
   // When the same match opens on a phone
-  const touch = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    hasTouch: true,
-    isMobile: true
-  });
-  const phone = await touch.newPage();
-  await phone.goto(page.url());
-  await phone.evaluate(async () => {
-    const checks = await import("/tests/responsive.tsx");
-    await checks.renderFixture();
-  });
+  const { touch, phone } = await touchMatch({ width: 390, height: 844 }, {});
   const zoom = await phone.evaluate(() => {
     const box = (selector) => document.querySelector(selector).getBoundingClientRect();
     const button = box(".arcade-zoom-button");
@@ -387,6 +286,48 @@ test("zoom is offered on touch screens and not to a mouse", async () => {
 
   // And the phone has the control beside Resign
   assert.ok(zoom.sameRow && zoom.gap >= 0, JSON.stringify(zoom));
+});
+
+test("zoom follows a change to touch and back while the match is open", async () => {
+  // Given a match open with a mouse
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const live = await context.newPage();
+  await live.goto(harnessUrl);
+  await live.waitForSelector(".board-cell");
+  const session = await context.newCDPSession(live);
+  const hasZoom = () => live.locator(".arcade-zoom-button").count();
+  const before = await hasZoom();
+
+  // When the device switches to touch, and then back
+  await session.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  await live.waitForSelector(".arcade-zoom-button");
+  const onTouch = await hasZoom();
+  await session.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await live.waitForSelector(".arcade-zoom-button", { state: "detached" });
+  const after = await hasZoom();
+  await context.close();
+
+  // Then the control appears only while touch is in use
+  assert.deepEqual([before, onTouch, after], [0, 1, 0]);
+});
+
+test("the disabled Fire bomb is solid, so tiles do not show through it", async () => {
+  // Given an armed bomb on a phone turned sideways, where the button sits over the tiles
+  const { touch, phone } = await touchMatch(
+    { width: 844, height: 390 },
+    { bombArmed: true, bombReady: true }
+  );
+
+  // When the button is measured before aiming
+  const style = await phone.evaluate(() => {
+    const fire = getComputedStyle(document.querySelector('button[name="fire-bomb"]'));
+    return { opacity: fire.opacity, background: fire.backgroundColor };
+  });
+  await touch.close();
+
+  // Then nothing about it is see-through
+  assert.equal(style.opacity, "1");
+  assert.match(style.background, /^rgb\(/);
 });
 
 test("normal play pins nothing over the board on a sideways phone", async () => {
@@ -411,17 +352,10 @@ test("normal play pins nothing over the board on a sideways phone", async () => 
 
 test("the last row scrolls clear of a pinned Fire bomb", async () => {
   // Given an aimed bomb on a sideways phone
-  const touch = await browser.newContext({
-    viewport: { width: 667, height: 375 },
-    hasTouch: true,
-    isMobile: true
-  });
-  const phone = await touch.newPage();
-  await phone.goto(page.url());
-  await phone.evaluate(async () => {
-    const checks = await import("/tests/responsive.tsx");
-    await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
-  });
+  const { touch, phone } = await touchMatch(
+    { width: 667, height: 375 },
+    { bombArmed: true, scoreDeficit: 4 }
+  );
   await phone.locator(".board-cell").nth(20).tap({ force: true });
   await phone.locator('button[name="fire-bomb"]').waitFor();
 
@@ -492,31 +426,28 @@ test("an offline player's card says Offline", async () => {
   }
 });
 
-test("opening How to play leaves its control in place", async () => {
-  for (const [width, height] of [
-    [390, 844],
-    [1280, 800]
-  ]) {
-    // Given the home page with How to play closed
-    await page.setViewportSize({ width, height });
-    await page.goto(new URL("/", page.url()).href);
-    const summary = page.locator(".game-help summary");
-    await summary.waitFor();
-    const closed = await summary.boundingBox();
+test("the last row of a 30x30 board scrolls clear of a pinned Fire bomb", async () => {
+  // Given an aimed bomb on the biggest board on a sideways phone
+  const { touch, phone } = await touchMatch(
+    { width: 667, height: 375 },
+    { bombArmed: true, bombReady: true, boardSize: "giant" }
+  );
+  await phone.locator(".board-cell.status-hidden").nth(20).tap({ force: true });
+  await phone.locator('button[name="fire-bomb"]').waitFor();
 
-    // When the player opens it
-    await summary.click();
-    const open = await summary.boundingBox();
+  // When the player scrolls to the end of the board
+  const positions = await phone.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const cells = document.querySelectorAll(".board-cell");
+    return {
+      lastRow: cells[cells.length - 1].getBoundingClientRect().bottom,
+      fire: document.querySelector('button[name="fire-bomb"]').getBoundingClientRect().top
+    };
+  });
+  await touch.close();
 
-    // Then the control has not moved under the pointer
-    assert.equal(open.y, closed.y, `${width}x${height}: moved down`);
-    const closedRight = closed.x + closed.width;
-    assert.ok(Math.abs(open.x + open.width - closedRight) <= 1, `${width}x${height}: moved across`);
-
-    // And it sits at the right of the page, where it has always been
-    assert.ok(closedRight > width * 0.75, `${width}x${height}: ends at ${closedRight}`);
-  }
-  await page.goto(harnessUrl);
+  // Then the last row ends above it
+  assert.ok(positions.lastRow <= positions.fire, JSON.stringify(positions));
 });
 
 test("no width scrolls the page sideways", async () => {

@@ -18,7 +18,8 @@ export const createSoloState = (record: SoloReplayRecord): MatchState =>
     ],
     seed: record.seed,
     createdAt: record.createdAt,
-    startingPlayerId: starterId(record.starter)
+    startingPlayerId: starterId(record.starter),
+    boardSize: record.boardSize
   });
 
 // The lobby and session use the same engine replay, without starting bot work or persistence.

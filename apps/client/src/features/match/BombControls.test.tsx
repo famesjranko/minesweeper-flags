@@ -16,7 +16,8 @@ const createMatch = (): MatchStateDto => ({
   board: {
     rows: 2,
     columns: 2,
-    mineCount: 1,
+    // The bomb threshold scales with the mine count; the classic count keeps it at 4.
+    mineCount: 51,
     cells: Array.from({ length: 2 }, (_, row) =>
       Array.from({ length: 2 }, (_, column) => ({
         row,

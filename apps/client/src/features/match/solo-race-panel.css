@@ -1,0 +1,89 @@
+/* Only the layout with a rail beside the board has room for this panel. */
+.solo-race-panel {
+  display: none;
+}
+@media (min-width: 900px) and (min-height: 580px) and (min-aspect-ratio: 3 / 4) {
+  .solo-race-panel {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    overflow: hidden;
+    padding: 20px;
+    border: 1px solid #354562;
+    border-radius: 16px;
+    background: #1b2b45;
+    color: #f3f7ff;
+  }
+}
+.solo-race-panel h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.solo-race-against {
+  margin: 4px 0 14px;
+  color: #b0bed3;
+  font-size: 13px;
+}
+.solo-race-bars {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.solo-race-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 5px;
+  color: #b8c9df;
+  font-size: 13px;
+}
+.solo-race-bar b {
+  color: #f3f7ff;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.solo-race-bar i {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #101e34;
+}
+.solo-race-bar i span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(180deg, #65c5ef, #2a7bb6);
+  transition: width 0.35s ease;
+}
+.solo-race-bar.is-red i span {
+  background: linear-gradient(180deg, #e8836a, #8c4a3f);
+}
+.solo-race-panel dl {
+  display: grid;
+  flex-shrink: 0;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+.solo-race-panel dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ffffff14;
+}
+.solo-race-panel dt {
+  color: #b8c9df;
+}
+.solo-race-panel dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .solo-race-bar i span {
+    transition: none;
+  }
+}

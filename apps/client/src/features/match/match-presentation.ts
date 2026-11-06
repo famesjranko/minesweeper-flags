@@ -1,4 +1,5 @@
-import { type MatchStateDto, MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { getBombDeficit } from "@minesweeper-flags/game-engine";
+import type { MatchStateDto } from "@minesweeper-flags/shared";
 import type { MatchViewProps } from "./match-view.types.js";
 import { getPlayerSlots } from "./PlayerPanel.js";
 
@@ -45,8 +46,9 @@ export const getMatchPresentation = ({
   // reads isOwnTurn. Otherwise each move would flicker, because a reply can keep the turn.
   const canAct = isOwnTurn && !movePending;
   const scoreDeficit = selfSlot && opponent ? opponent.score - selfSlot.player.score : 0;
+  const bombDeficit = getBombDeficit(match.board.mineCount);
   const canBomb = Boolean(
-    selfSlot && opponent && selfSlot.player.bombsRemaining === 1 && scoreDeficit >= MIN_BOMB_DEFICIT
+    selfSlot && opponent && selfSlot.player.bombsRemaining === 1 && scoreDeficit >= bombDeficit
   );
   const [bluePlayer, redPlayer] = match.players;
   const playerTones: Record<string, "blue" | "red"> = {

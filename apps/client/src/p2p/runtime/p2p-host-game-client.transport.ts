@@ -2,6 +2,7 @@ import {
   CLIENT_EVENT_NAMES,
   type ClientEvent,
   clientEventSchema,
+  encodeServerEvent,
   type ServerEvent
 } from "@minesweeper-flags/shared";
 import type { ConnectionStatus } from "../../app/providers/game-client.store.js";
@@ -69,7 +70,9 @@ export class P2PHostGameClientTransport implements GameClientTransport {
   send = (event: ClientEvent): void => {
     switch (event.type) {
       case CLIENT_EVENT_NAMES.roomCreate:
-        this.emitSteps(this.orchestrator.createRoom(event.payload.displayName).steps);
+        this.emitSteps(
+          this.orchestrator.createRoom(event.payload.displayName, event.payload.boardSize).steps
+        );
         return;
       case CLIENT_EVENT_NAMES.chatSend:
         this.emitSteps(this.orchestrator.sendHostChat(event.payload.text).steps);
@@ -174,7 +177,7 @@ export class P2PHostGameClientTransport implements GameClientTransport {
     emitP2PHostFanout(steps, {
       deliverToHostLocal: this.emitServerEvent,
       deliverToGuest: (event) => {
-        this.peer.send(JSON.stringify(event));
+        this.peer.send(JSON.stringify(encodeServerEvent(event)));
       }
     });
   }

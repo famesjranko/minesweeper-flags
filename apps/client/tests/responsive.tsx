@@ -2,7 +2,7 @@ import { nextPaint, renderFixture } from "./responsive-fixture.js";
 
 export { renderFixture } from "./responsive-fixture.js";
 
-// Run by responsive.check.mjs (make test-layout), or open /tests/responsive.html on the client dev
+// Run by the *.check.mjs files (make test-layout), or open /tests/responsive.html on the client dev
 // server. These checks use real components without joining game rooms.
 const box = (selector: string) => {
   const element = document.querySelector<HTMLElement>(selector);
@@ -26,7 +26,7 @@ export const readLayout = () => {
     cell: box(".board-cell"),
     header: box(".arcade-header"),
     scores: box(".arcade-match-scores"),
-    composer: box(".arcade-chat-region .chat-composer"),
+    composer: dialog ? box(".arcade-chat-region .chat-composer") : null,
     chat: dialog?.open ? (dialog.matches(":modal") ? "sheet" : "sidebar") : "preview",
     horizontalOverflow: document.documentElement.scrollWidth > innerWidth
   };

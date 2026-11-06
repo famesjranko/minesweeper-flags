@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import {
   type actionSchema,
   type ChatMessageDto,
@@ -49,6 +50,7 @@ export class GameCommandService {
 
   async createRoom(
     displayName: string,
+    boardSize: BoardSize,
     previousSession?: PlayerSession
   ): Promise<CommandExecution> {
     const { roomService, playerSessionService, maxConcurrentRooms, deleteRoomState } =
@@ -56,7 +58,11 @@ export class GameCommandService {
     if (previousSession && deleteRoomState) {
       await this.cancelEligibleWaitingRoom(previousSession, deleteRoomState, false);
     }
-    const { room, player } = await roomService.createRoom(displayName, maxConcurrentRooms);
+    const { room, player } = await roomService.createRoom(
+      displayName,
+      boardSize,
+      maxConcurrentRooms
+    );
 
     if (!room.inviteToken) {
       throw new Error("Created rooms must include an invite token.");
@@ -67,7 +73,8 @@ export class GameCommandService {
     logger.info("room.created", {
       roomId: room.roomId,
       roomCode: room.roomCode,
-      playerId: session.playerId
+      playerId: session.playerId,
+      boardSize: room.boardSize
     });
 
     return {

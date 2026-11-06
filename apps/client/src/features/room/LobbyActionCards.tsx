@@ -1,12 +1,21 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import { useEffect, useRef, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
+import { BoardSizeSelect } from "../../shared-ui/BoardSizeSelect.js";
 
 interface CreateActionProps {
   canCreateRoom: boolean;
   onCreateRoom: () => void;
+  boardSize: BoardSize;
+  onBoardSizeChange: (boardSize: BoardSize) => void;
 }
 
-export const DirectMatchActionCards = ({ canCreateRoom, onCreateRoom }: CreateActionProps) => (
+export const DirectMatchActionCards = ({
+  canCreateRoom,
+  onCreateRoom,
+  boardSize,
+  onBoardSizeChange
+}: CreateActionProps) => (
   <>
     <form
       className="lobby-action-card is-create"
@@ -20,13 +29,16 @@ export const DirectMatchActionCards = ({ canCreateRoom, onCreateRoom }: CreateAc
         <span>Create a browser-to-browser match and share one direct link.</span>
       </div>
 
-      <button
-        type="submit"
-        className="lobby-action-button lobby-create-button"
-        disabled={!canCreateRoom}
-      >
-        Host direct match
-      </button>
+      <div className="board-size-row">
+        <BoardSizeSelect value={boardSize} onChange={onBoardSizeChange} />
+        <button
+          type="submit"
+          className="lobby-action-button lobby-create-button"
+          disabled={!canCreateRoom}
+        >
+          Host direct match
+        </button>
+      </div>
     </form>
 
     <div className="lobby-action-card is-join">
@@ -114,6 +126,8 @@ interface ServerMatchActionCardsProps extends CreateActionProps {
 export const ServerMatchActionCards = ({
   canCreateRoom,
   onCreateRoom,
+  boardSize,
+  onBoardSizeChange,
   slotsFull,
   inviteValue,
   onInviteValueChange,
@@ -132,13 +146,16 @@ export const ServerMatchActionCards = ({
     >
       <h2 className="arcade-create-heading">Create a Match</h2>
 
-      <button
-        type="submit"
-        className="lobby-action-button lobby-create-button"
-        disabled={!canCreateRoom}
-      >
-        Create room
-      </button>
+      <div className="board-size-row">
+        <BoardSizeSelect value={boardSize} onChange={onBoardSizeChange} />
+        <button
+          type="submit"
+          className="lobby-action-button lobby-create-button"
+          disabled={!canCreateRoom}
+        >
+          Create room
+        </button>
+      </div>
       <p className="lobby-create-description">
         {slotsFull ? "All room slots are in use." : "Share an invite link with a friend."}
       </p>

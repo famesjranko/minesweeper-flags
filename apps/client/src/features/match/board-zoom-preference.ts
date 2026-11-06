@@ -11,10 +11,19 @@ const getPreferenceStorage = (): Pick<Storage, "getItem" | "setItem"> | null => 
   }
 };
 
+const coarsePointer = () =>
+  typeof window === "undefined" ? undefined : window.matchMedia?.("(pointer: coarse)");
+
 // A mouse can aim at small squares, so only touch screens get zoom. A setting saved on a touch
 // screen must not leave a mouse player stuck zoomed with no control to undo it.
-export const canZoomBoard = (): boolean =>
-  typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true;
+export const canZoomBoard = (): boolean => coarsePointer()?.matches === true;
+
+// A hybrid laptop or a browser's device mode can change the input while a match is open.
+export const subscribeCanZoomBoard = (onChange: () => void) => {
+  const query = coarsePointer();
+  query?.addEventListener?.("change", onChange);
+  return () => query?.removeEventListener?.("change", onChange);
+};
 
 export const readBoardZoomed = (): boolean => {
   try {

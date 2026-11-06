@@ -118,7 +118,7 @@ export const P2PJoinPage = () => {
           <button type="submit" className="arcade-primary" disabled={!canJoin}>
             {getJoinLabel(guestSetup?.stage)}
           </button>
-          <p className="arcade-flow-note">Shared 16×16 board · First to 26 wins</p>
+          <p className="arcade-flow-note">Shared board · Most mines wins</p>
           {[guestSetup?.error, error].filter(Boolean).map((problem) => (
             <p key={problem} className="arcade-flow-error" role="alert">
               {problem}

@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import type { GuestAnswerPayload, HostOfferPayload } from "@minesweeper-flags/shared";
 import { toMatchStateDto } from "@minesweeper-flags/shared";
 import { P2PHostOrchestrator } from "../host/p2p-host-orchestrator.js";
@@ -26,7 +27,7 @@ const HOST_RECONNECT_RETRY_DELAY_MS = 1_000;
 export class P2PHostRuntime {
   constructor(private readonly context: P2PRuntimeContext) {}
 
-  startSetup(displayName: string): void {
+  startSetup(displayName: string, boardSize?: BoardSize): void {
     const context = this.context;
 
     context.hostSetupAbortController = new AbortController();
@@ -43,7 +44,7 @@ export class P2PHostRuntime {
     this.subscribeToPeer(peer);
     controller.start();
     context.setup.controller.startHostOfferCreation(displayName);
-    controller.createRoom(displayName);
+    controller.createRoom(displayName, boardSize);
 
     void peer
       .createHostOffer()

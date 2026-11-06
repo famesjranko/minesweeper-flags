@@ -173,7 +173,7 @@ test-shared: ## Run the shared package test suite
 
 test-layout: ## Check match layouts in Chrome; set CHROME_PATH if it is not installed as a channel
 	$(NPM) run build -w $(ENGINE_WORKSPACE) -w $(SHARED_WORKSPACE)
-	node --test apps/client/tests/responsive.check.mjs
+	node --test --test-concurrency=1 apps/client/tests/*.check.mjs
 
 test-engine: ## Run the game engine test suite
 	$(NPM) run test -w $(ENGINE_WORKSPACE)

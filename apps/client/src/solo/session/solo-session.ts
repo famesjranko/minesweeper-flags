@@ -1,8 +1,15 @@
-import { type MatchState, resignMatch, resolveAction } from "@minesweeper-flags/game-engine";
+import {
+  type BoardSize,
+  DEFAULT_BOARD_SIZE,
+  getBombDeficit,
+  isOfferedBoardSize,
+  type MatchState,
+  resignMatch,
+  resolveAction
+} from "@minesweeper-flags/game-engine";
 import { toMatchStateDto } from "@minesweeper-flags/shared";
 import { DEFAULT_SOLO_DIFFICULTY, type SoloDifficulty } from "../bot/bot-profiles.js";
 import { chooseSoloAction } from "../bot/solo-bot.js";
-import { SOLO_DIFFICULTY_COPY } from "../solo-difficulty-options.js";
 import { createBrowserSoloStorage, type SoloStorage } from "../storage/solo-storage.js";
 import { createSoloState, replaySoloRecord } from "./solo-replay.js";
 import {
@@ -40,6 +47,8 @@ export interface SoloSessionOptions {
    * Play again). A resumed live match keeps the level it was saved with.
    */
   preferredDifficulty?: () => SoloDifficulty;
+  /** The player's board size choice, read at the same moments as the level. */
+  preferredBoardSize?: () => BoardSize;
   chooseAction?: (
     match: SoloSnapshot["match"],
     botPlayerId: string,
@@ -61,27 +70,22 @@ export interface SoloSession {
   dispose: () => void;
 }
 
-// A resumed live match keeps its level; say so when the player has since picked another.
-const levelNotice = (
-  state: MatchState | null,
-  saved: SoloDifficulty,
-  preferred: SoloDifficulty
-): string | null =>
-  state?.phase === "live" && saved !== preferred
-    ? `Resumed your ${SOLO_DIFFICULTY_COPY[saved].label} match. ${SOLO_DIFFICULTY_COPY[preferred].label} starts with your next match.`
-    : null;
+interface SoloSetup {
+  difficulty: SoloDifficulty;
+  boardSize: BoardSize;
+}
 
 const freshRecord = (
   seed: number,
   createdAt: number,
   starter: "human" | "bot",
-  difficulty: SoloDifficulty
+  setup: SoloSetup
 ): SoloReplayRecord => ({
   version: 1,
   seed,
   createdAt,
   starter,
-  difficulty,
+  ...setup,
   actions: []
 });
 
@@ -112,6 +116,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   let starter: "human" | "bot" = "human";
   const preferredDifficulty = options.preferredDifficulty ?? (() => DEFAULT_SOLO_DIFFICULTY);
   let difficulty = preferredDifficulty();
+  const preferredBoardSize = options.preferredBoardSize ?? (() => DEFAULT_BOARD_SIZE);
   let botTimer: unknown = null;
   let generation = 0;
   let started = false;
@@ -222,11 +227,18 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     });
   };
 
-  const beginFresh = (nextStarter: "human" | "bot", notice: string | null): void => {
+  const beginFresh = (
+    nextStarter: "human" | "bot",
+    notice: string | null,
+    kept: { difficulty: SoloDifficulty; boardSize: BoardSize | undefined } | null = null
+  ): void => {
     cancelBot();
     starter = nextStarter;
-    difficulty = preferredDifficulty();
-    record = freshRecord(nextSeed() >>> 0, now(), starter, difficulty);
+    difficulty = kept?.difficulty ?? preferredDifficulty();
+    record = freshRecord(nextSeed() >>> 0, now(), starter, {
+      difficulty,
+      boardSize: kept?.boardSize ?? preferredBoardSize()
+    });
     state = createSoloState(record);
     bombArmed = false;
     error = null;
@@ -248,7 +260,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       record = { ...recovered.record, actions: [...recovered.record.actions] };
       starter = recovered.record.starter;
       difficulty = recovered.record.difficulty;
-      recoveryNotice = recovered.notice ?? levelNotice(state, difficulty, preferredDifficulty());
+      recoveryNotice = recovered.notice;
       scheduleBot();
       notify();
       return;
@@ -310,7 +322,12 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       }
       const human = state.players.find((player) => player.playerId === SOLO_HUMAN_ID);
       const bot = state.players.find((player) => player.playerId === SOLO_BOT_ID);
-      if (!human || !bot || human.bombsRemaining === 0 || bot.score - human.score < 4) {
+      if (
+        !human ||
+        !bot ||
+        human.bombsRemaining === 0 ||
+        bot.score - human.score < getBombDeficit(state.board.mineCount)
+      ) {
         return;
       }
       bombArmed = !bombArmed;
@@ -335,7 +352,9 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     },
     rematch: () => {
       if (!disposed) {
-        beginFresh(starter === "human" ? "bot" : "human", null);
+        // Play again means the same game again, unless its board is no longer offered.
+        const boardSize = isOfferedBoardSize(record?.boardSize) ? record?.boardSize : undefined;
+        beginFresh(starter === "human" ? "bot" : "human", null, { difficulty, boardSize });
       }
     },
     dispose: () => {

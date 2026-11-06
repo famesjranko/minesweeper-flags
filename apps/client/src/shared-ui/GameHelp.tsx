@@ -1,22 +1,27 @@
 import "./game-help.css";
 
-import { MIN_BOMB_DEFICIT } from "@minesweeper-flags/shared";
+import { getBombDeficit, getWinningScore } from "@minesweeper-flags/game-engine";
 
-export const GameHelp = () => (
+/** Inside a match the rules can name that board's numbers. Before one, they stay general. */
+export const GameHelp = ({ mineCount }: { mineCount?: number }) => (
   <details className="game-help">
     <summary>How to play</summary>
     <div className="game-help-content">
       <p>
-        First to 26 mines wins. Choose a hidden square. A mine scores a point and keeps your turn. A
-        safe square ends your turn. Empty areas open automatically.
+        {mineCount ? `First to ${getWinningScore(mineCount)} mines wins.` : "Most mines wins."}{" "}
+        Choose a hidden square. A mine scores a point and keeps your turn. A safe square ends your
+        turn. Empty areas open automatically.
       </p>
       <p>
         A digit counts mines in the eight surrounding squares, including mines already claimed by
         either player. Use these clues to find the remaining mines.
       </p>
       <p>
-        Each player has one comeback bomb. It unlocks when you trail by {MIN_BOMB_DEFICIT} or more.
-        It reveals a 5 × 5 area, claims its hidden mines for you, and ends your turn. The preview
+        Each player has one comeback bomb. It unlocks{" "}
+        {mineCount
+          ? `when you trail by ${getBombDeficit(mineCount)} or more`
+          : "when you fall far enough behind"}
+        . It reveals a 5 × 5 area, claims its hidden mines for you, and ends your turn. The preview
         shifts inward at board edges to keep the full area on the board.
       </p>
       <p>

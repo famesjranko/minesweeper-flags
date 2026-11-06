@@ -17,7 +17,7 @@ const createMatch = (overrides: Partial<MatchStateDto> = {}): MatchStateDto => (
   board: {
     rows: 2,
     columns: 2,
-    mineCount: 1,
+    mineCount: 51,
     cells: [0, 1].map((row) =>
       [0, 1].map((column) => ({
         row,

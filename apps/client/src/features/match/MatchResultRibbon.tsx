@@ -1,3 +1,4 @@
+import { getWinningScore } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import { describeOfflineOpponent } from "./match-presentation.js";
 
@@ -19,8 +20,8 @@ export const getResultTitle = (match: MatchStateDto, currentPlayerId: string): s
   return winner.playerId === currentPlayerId ? "You won" : `${winner.displayName} won`;
 };
 
-// The winner's score comes first. A natural win always leaves the winner ahead, so a winner
-// who is not ahead won because the other player resigned.
+// The winner's score comes first. A natural win always reaches the board's winning score, so a
+// winner short of it won because the other player resigned, even when ahead.
 const getScoreLine = (match: MatchStateDto): string => {
   const winner = match.players.find((player) => player.playerId === match.winnerPlayerId);
   const other = match.players.find((player) => player.playerId !== match.winnerPlayerId);
@@ -30,7 +31,7 @@ const getScoreLine = (match: MatchStateDto): string => {
   }
 
   const line = `${winner.score} – ${other.score}`;
-  return winner.score > other.score ? line : `${line} by resignation`;
+  return winner.score >= getWinningScore(match.board.mineCount) ? line : `${line} by resignation`;
 };
 
 const getRematchState = (currentPlayer: Player, opponent: Player | null) => {

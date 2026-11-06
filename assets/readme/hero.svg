@@ -239,5 +239,5 @@
 <rect x="1027" y="354" width="30" height="30" rx="2" fill="url(#hid)"/><path d="M1028 383 V355 H1056" stroke="#fff" stroke-opacity=".4" fill="none"/>
 <rect x="1061" y="354" width="30" height="30" rx="2" fill="url(#hid)"/><path d="M1062 383 V355 H1090" stroke="#fff" stroke-opacity=".4" fill="none"/>
 <rect x="1095" y="354" width="30" height="30" rx="2" fill="url(#hid)"/><path d="M1096 383 V355 H1124" stroke="#fff" stroke-opacity=".4" fill="none"/>
-<text x="600" y="444" text-anchor="middle" font-family="Tahoma, Verdana, 'Segoe UI', sans-serif" font-size="22" fill="#e6ecf8">Two players, one 16×16 board. Claim mines to score. First to 26 wins.</text>
+<text x="600" y="444" text-anchor="middle" font-family="Tahoma, Verdana, 'Segoe UI', sans-serif" font-size="22" fill="#e6ecf8">Two players, one shared board. Claim mines to score. Most mines wins.</text>
 </svg>

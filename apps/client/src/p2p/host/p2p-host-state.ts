@@ -1,4 +1,4 @@
-import type { MatchState } from "@minesweeper-flags/game-engine";
+import type { BoardSize, MatchState } from "@minesweeper-flags/game-engine";
 import type { ChatMessageDto } from "@minesweeper-flags/shared";
 import type { P2PGuestSessionRecord, P2PHostSessionRecord } from "./p2p-host-session.js";
 
@@ -13,6 +13,7 @@ export interface P2PHostRoomRecord {
   inviteToken: string | null;
   players: P2PRoomPlayerRecord[];
   nextStarterIndex: 0 | 1;
+  boardSize: BoardSize;
   createdAt: number;
   updatedAt: number;
 }

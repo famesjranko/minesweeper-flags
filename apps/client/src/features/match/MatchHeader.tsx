@@ -74,7 +74,7 @@ export const MatchHeader = ({
           <p className="arcade-options-room">
             Room {roomCode} · Turn {match.turnNumber}
           </p>
-          <GameHelp />
+          <GameHelp mineCount={match.board.mineCount} />
           <div className="arcade-options-bombs">
             <span>
               Blue · {match.players[0].bombsRemaining}{" "}

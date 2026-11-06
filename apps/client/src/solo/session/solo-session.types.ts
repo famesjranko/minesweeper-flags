@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import type { MatchStateDto } from "@minesweeper-flags/shared";
 import type { SoloDifficulty } from "../bot/bot-profiles.js";
 
@@ -31,6 +32,7 @@ export interface SoloReplayRecord {
   createdAt: number;
   starter: "human" | "bot";
   difficulty: SoloDifficulty;
+  boardSize: BoardSize;
   actions: SoloReplayAction[];
   resignedBy?: "human" | "bot";
 }

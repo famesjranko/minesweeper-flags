@@ -1,5 +1,7 @@
+import { DEFAULT_BOARD_SIZE } from "@minesweeper-flags/game-engine";
 import { z } from "zod";
 import {
+  boardSizeSchema,
   coordinateSchema,
   displayNameSchema,
   inviteTokenSchema,
@@ -24,7 +26,9 @@ export const actionSchema = z.discriminatedUnion("type", [
 export const roomCreateEventSchema = z.object({
   type: z.literal(CLIENT_EVENT_NAMES.roomCreate),
   payload: z.object({
-    displayName: displayNameSchema
+    displayName: displayNameSchema,
+    // A client built before board sizes sends none; it gets the classic room it expects.
+    boardSize: boardSizeSchema.default(DEFAULT_BOARD_SIZE)
   })
 });
 

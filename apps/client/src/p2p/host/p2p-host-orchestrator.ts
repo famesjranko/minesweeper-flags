@@ -1,4 +1,5 @@
 import {
+  type BoardSize,
   createMatchState,
   type MatchAction,
   type MatchState,
@@ -119,7 +120,7 @@ export class P2PHostOrchestrator {
     this.state = restored;
   }
 
-  createRoom(displayName: string): P2PHostCommandResult {
+  createRoom(displayName: string, boardSize: BoardSize): P2PHostCommandResult {
     if (this.state.room) {
       throw new Error("A direct match room is already active.");
     }
@@ -132,6 +133,7 @@ export class P2PHostOrchestrator {
       inviteToken: this.identityFactory.createInviteToken(),
       players: [hostPlayer],
       nextStarterIndex: 0,
+      boardSize,
       createdAt: now,
       updatedAt: now
     };
@@ -517,7 +519,8 @@ export class P2PHostOrchestrator {
       players: [firstPlayer, secondPlayer],
       seed: startedAt,
       createdAt: startedAt,
-      startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId
+      startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId,
+      boardSize: room.boardSize
     });
   }
 

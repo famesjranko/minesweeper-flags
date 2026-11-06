@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="Minesweeper Flags: the word FLAGS dug out of a blue Minesweeper board. Two players, one 16×16 board, first to 26 mines wins.">
+  <img src="./assets/readme/hero.svg" width="100%" alt="Minesweeper Flags: the word FLAGS dug out of a blue Minesweeper board. Two players, one shared board, most mines wins.">
 </p>
 
 <div align="center">
@@ -20,21 +20,21 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 ## How to play
 
 - On the home page, choose **Solo** for a local match or **With a friend** to create or join a room.
-- A solo match is you against the bot on a 16×16 board. The bot uses revealed clues and claimed mines to make certain claims where it can, then ranks likely mines. Its bounded heuristic can make estimated moves instead of fully solving every position.
+- A solo match is you against the bot on the board size you choose. The bot uses revealed clues and claimed mines to make certain claims where it can, then ranks likely mines. Its bounded heuristic can make estimated moves instead of fully solving every position.
 - Pick the bot's level before you start: Easy reads each clue on its own, Normal reads every clue it can see, and Hard works out the odds across the whole board. The browser remembers your last pick.
 - Solo matches run in the browser. They need no API, model download, or game backend. Progress is kept in `sessionStorage`, so it can survive a reload in the same tab. A saved record that cannot be restored starts a fresh match. If the browser cannot save progress, the current match continues without reload recovery. Closing the tab ends that session.
 - One player creates a friend room or hosts a direct match.
 - The other player joins with an invite link, an invite code, or a direct-match join URL.
-- Both players share a 16×16 board with 51 mines and take turns.
-- Find a mine and you claim it. The first player to 26 mines wins.
-- Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 4 or more.
+- The host chooses the board: 20×20 with 79 mines, 24×24 with 115, or 30×30 with 179.
+- Both players share the board and take turns. Find a mine and you claim it. The first player to claim more than half the mines wins: 40, 58, or 90.
+- Each player gets one 5×5 bomb as a comeback move. It unlocks only while that player trails by 6, 9, or 14, depending on the board.
 - Chat stays with the room through reconnects and rematches.
 - Sound effects play for reveals, flags, bombs, your turn, chat messages, resigning and the result, and the speaker button in the header mutes them (the browser remembers the choice). On your turn, the tile under the cursor lights up.
 
 A static frontend still needs its first download.
 
 <p align="center">
-  <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with create and join options, beside a live match with a red and blue score sidebar, a half-cleared board, and room chat.">
+  <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with the board size dropdown beside Create room, next to a live match with the board on the left and the scores and room chat beside it.">
 </p>
 
 ## Server and direct-match deployments

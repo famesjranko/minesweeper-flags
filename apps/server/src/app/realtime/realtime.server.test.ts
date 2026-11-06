@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   CLIENT_EVENT_NAMES,
   SERVER_EVENT_NAMES,
+  serverEventSchema,
   WEBSOCKET_CLOSE_CODES,
   WEBSOCKET_CLOSE_REASONS
 } from "@minesweeper-flags/shared";
@@ -115,7 +116,7 @@ const emitRawMessage = async (socket: FakeSocket, message: Buffer) => {
 };
 
 const readSentEvents = (socket: FakeSocket): SentEvent[] =>
-  socket.sentMessages.map((message) => JSON.parse(message) as SentEvent);
+  socket.sentMessages.map((message) => serverEventSchema.parse(JSON.parse(message)));
 
 describe("realtime server", () => {
   let activeServer: TestRealtimeServer | undefined;
@@ -443,6 +444,36 @@ describe("realtime server", () => {
       roomCreatedEvent.payload.self.sessionToken
     );
     expect(roomAfterPong?.updatedAt).toBeGreaterThan(roomBeforePong.updatedAt);
+  });
+
+  it("starts the match on the board size the host chose", async () => {
+    // Given a host who creates a room with a huge board
+    activeServer = await createRealtimeServer({ websocketPath: "/ws" });
+    activeServer.markReady();
+    const hostSocket = connectSocket(activeServer);
+    await emitClientEvent(hostSocket, {
+      type: CLIENT_EVENT_NAMES.roomCreate,
+      payload: { displayName: "Host", boardSize: "huge" }
+    });
+    const inviteToken = readSentEvents(hostSocket)[0]?.payload.inviteToken;
+    const guestSocket = connectSocket(activeServer);
+
+    // When a guest joins with the invite
+    await emitClientEvent(guestSocket, {
+      type: CLIENT_EVENT_NAMES.roomJoin,
+      payload: { inviteToken, displayName: "Guest" }
+    });
+
+    // Then the guest's match starts on a 24×24 board with 115 mines
+    const matchStarted = readSentEvents(guestSocket).find(
+      (event) => event.type === SERVER_EVENT_NAMES.matchStarted
+    );
+    expect(matchStarted?.payload.match.board).toMatchObject({
+      rows: 24,
+      columns: 24,
+      mineCount: 115
+    });
+    expect(matchStarted?.payload.match.board.cells).toHaveLength(24);
   });
 
   it("returns chat history on room create, join, and reconnect", async () => {

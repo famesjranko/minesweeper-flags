@@ -13,6 +13,7 @@ const record = {
   createdAt: 7,
   starter: "human" as const,
   difficulty: "normal" as const,
+  boardSize: "classic" as const,
   actions: []
 };
 
@@ -218,8 +219,12 @@ it.each([
 });
 
 it("reserves safe timestamps for all actions and a resignation", () => {
-  // Given the maximum timestamp that leaves room for 256 actions and one resignation.
-  const boundary = { ...record, createdAt: Number.MAX_SAFE_INTEGER - 257, seed: 0xffffffff };
+  // Given the maximum timestamp that leaves room for the largest board's actions and a resignation.
+  const boundary = {
+    ...record,
+    createdAt: Number.MAX_SAFE_INTEGER - SOLO_STORAGE_MAX_ACTIONS - 1,
+    seed: 0xffffffff
+  };
 
   // When the boundary, its successor, and nonfinite timestamps are validated.
   const valid = validateSoloReplay(boundary);
@@ -246,14 +251,17 @@ it("distinguishes a missing record from malformed JSON", () => {
 
 it("restores a record saved before bot levels existed at the normal level", () => {
   // Given a saved replay from an earlier release, with no level field.
-  const { difficulty: _omitted, ...oldRecord } = record;
+  const { difficulty: _omitted, boardSize: _alsoNew, ...oldRecord } = record;
   installRaw(JSON.stringify(oldRecord));
 
   // When the record is restored.
   const result = createBrowserSoloStorage().read();
 
   // Then the replay is kept and plays at the normal level.
-  expect(result).toEqual({ record: { ...oldRecord, difficulty: "normal" }, notice: null });
+  expect(result).toEqual({
+    record: { ...oldRecord, difficulty: "normal", boardSize: "classic" },
+    notice: null
+  });
 });
 
 it("keeps the saved level of a current record", () => {
@@ -265,4 +273,52 @@ it("keeps the saved level of a current record", () => {
 
   // Then the hard level is restored with it.
   expect(result.record?.difficulty).toBe("hard");
+});
+
+it("accepts moves anywhere on the record's own board size", () => {
+  // Given a move on the bottom-right square of a 30×30 board.
+  const corner = { type: "select", playerId: "solo-human", row: 29, column: 29 };
+
+  // When the move is validated on a 30×30 record, a classic record, and an unknown size.
+  const giant = validateSoloReplay({ ...record, boardSize: "giant", actions: [corner] });
+  const classic = validateSoloReplay({ ...record, boardSize: "classic", actions: [corner] });
+  const unknown = validateSoloReplay({ ...record, boardSize: "mega", actions: [] });
+
+  // Then only the 30×30 record keeps it.
+  expect(giant?.actions).toEqual([corner]);
+  expect(classic).toBeNull();
+  expect(unknown).toBeNull();
+});
+
+it("saves and restores the longest possible 30×30 match", () => {
+  // Given a 30×30 record with one move per square, each with the longest field values.
+  const longest = {
+    ...record,
+    boardSize: "giant" as const,
+    actions: Array.from({ length: 900 }, () => ({
+      type: "select" as const,
+      playerId: "solo-human" as const,
+      row: 29,
+      column: 29
+    }))
+  };
+  let savedValue: string | null = null;
+  vi.stubGlobal("window", {
+    sessionStorage: {
+      getItem: () => savedValue,
+      setItem: (_key: string, value: string) => {
+        savedValue = value;
+      },
+      removeItem: vi.fn()
+    }
+  });
+  const storage = createBrowserSoloStorage();
+
+  // When it is saved and restored.
+  const notice = storage.write(longest);
+  const restored = storage.read();
+
+  // Then it fits under the size cap and restores unchanged.
+  expect(notice).toBeNull();
+  expect(restored.record).toEqual(longest);
 });

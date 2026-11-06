@@ -4,7 +4,7 @@ import { createMatchState } from "@minesweeper-flags/game-engine";
 import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
-import { SOLO_DIFFICULTY_KEY } from "../solo/storage/solo-difficulty-preference.js";
+import { SOLO_DIFFICULTY_KEY } from "../solo/storage/solo-preferences.js";
 import { SOLO_STORAGE_KEY } from "../solo/storage/solo-storage.js";
 import { HomePage } from "./HomePage.js";
 import { SoloPage } from "./SoloPage.js";

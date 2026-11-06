@@ -66,7 +66,7 @@ it("moves keyboard focus and visible content between both game mode tabs", () =>
     expect(soloPanel?.hidden).toBe(false);
     expect(friendPanel?.hidden).toBe(true);
     expect(
-      container.querySelector<HTMLAnchorElement>("a[href='/solo?difficulty=normal']")
+      container.querySelector<HTMLAnchorElement>("a[href='/solo?difficulty=normal&size=large']")
     ).not.toBeNull();
   } finally {
     act(() => root.unmount());
@@ -311,8 +311,8 @@ describe("saved solo entry actions", () => {
         );
         expect(actions.map((action) => action.getAttribute("href"))).toEqual(
           kind === "live"
-            ? ["/solo?difficulty=hard", "/solo?difficulty=hard&new=1"]
-            : ["/solo?difficulty=hard"]
+            ? ["/solo?difficulty=hard&size=large", "/solo?difficulty=hard&size=large&new=1"]
+            : ["/solo?difficulty=hard&size=large"]
         );
         if (kind === "live") expect(savedBefore(SOLO_STORAGE_KEY)).toBe(before);
         expect(network).not.toHaveBeenCalled();
@@ -322,4 +322,99 @@ describe("saved solo entry actions", () => {
       }
     }
   );
+});
+
+describe("solo board size", () => {
+  afterEach(() => window.localStorage.clear());
+
+  const renderHome = () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() =>
+      root.render(
+        <HomePage connectionStatus="connected" onFriendSelected={vi.fn()} friendContent={null} />
+      )
+    );
+    const panel = container.querySelector<HTMLElement>("#solo-panel")!;
+    const dispose = () => {
+      act(() => root.unmount());
+      container.remove();
+    };
+    return { panel, dispose };
+  };
+
+  it("offers 20×20 as the smallest size and selects it first", () => {
+    // Given a first visit to the home page
+    const { panel, dispose } = renderHome();
+
+    // When the Solo tab renders
+    const select = panel.querySelector<HTMLSelectElement>("select")!;
+    const sizes = [...select.options].map((option) => option.textContent);
+
+    // Then the offered sizes start at 20×20, with no 16×16
+    expect(sizes).toEqual(["20×20", "24×24", "30×30"]);
+
+    // And 20×20 is selected
+    expect(select.selectedOptions[0]?.textContent).toBe("20×20");
+    dispose();
+  });
+
+  it("starts on the chosen size and remembers it for the next visit", () => {
+    // Given a first visit to the home page
+    const first = renderHome();
+
+    // When the player chooses 30×30
+    const select = first.panel.querySelector<HTMLSelectElement>("select")!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(
+        select,
+        "giant"
+      );
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    // Then the start link asks for that size
+    expect(first.panel.querySelector(".solo-entry-primary")?.getAttribute("href")).toBe(
+      "/solo?difficulty=normal&size=giant"
+    );
+    first.dispose();
+
+    // And it is still selected on the next visit
+    const second = renderHome();
+    expect(second.panel.querySelector<HTMLSelectElement>("select")?.value).toBe("giant");
+    second.dispose();
+  });
+
+  it("falls back to 20×20 when a saved choice is the size no longer offered", () => {
+    // Given a saved preference for the old 16×16 board
+    window.localStorage.setItem("msf:solo:board-size", "classic");
+
+    // When the home page renders
+    const { panel, dispose } = renderHome();
+
+    // Then 20×20 is selected
+    expect(panel.querySelector<HTMLSelectElement>("select")?.value).toBe("large");
+    dispose();
+  });
+});
+
+it("introduces the game without naming a fixed board", () => {
+  // Given the home page
+  const container = document.createElement("div");
+  const root = createRoot(container);
+
+  // When it renders
+  act(() =>
+    root.render(
+      <HomePage connectionStatus="connected" onFriendSelected={vi.fn()} friendContent={null} />
+    )
+  );
+
+  // Then the intro line is the chosen one, and no old rule text remains
+  expect(container.querySelector(".solo-home-intro p")?.textContent).toBe(
+    "Two-player classic Minesweeper!"
+  );
+  expect(container.textContent).not.toMatch(/16×16|First to 26|trail by 4/);
+  act(() => root.unmount());
 });

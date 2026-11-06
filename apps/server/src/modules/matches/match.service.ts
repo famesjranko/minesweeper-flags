@@ -38,7 +38,8 @@ export class MatchService {
         players: [firstPlayer, secondPlayer],
         seed: startedAt,
         createdAt: startedAt,
-        startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId
+        startingPlayerId: room.players[room.nextStarterIndex]?.playerId ?? firstPlayer.playerId,
+        boardSize: room.boardSize
       });
 
       await this.matchRepository.save(matchState);

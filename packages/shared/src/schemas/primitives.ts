@@ -1,3 +1,4 @@
+import { BOARD_SIZE_IDS } from "@minesweeper-flags/game-engine";
 import { z } from "zod";
 import { INVITE_TOKEN_LENGTH } from "../constants/game.constants.js";
 
@@ -18,3 +19,4 @@ export const coordinateSchema = z.object({
   row: z.number().int().min(0),
   column: z.number().int().min(0)
 });
+export const boardSizeSchema = z.enum(BOARD_SIZE_IDS);
