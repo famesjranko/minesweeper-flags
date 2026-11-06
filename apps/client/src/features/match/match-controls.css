@@ -4,79 +4,20 @@
 .arcade-match.is-solo .arcade-match-main {
   grid-template-columns: minmax(0, 1fr);
 }
-.arcade-match-status {
-  display: grid;
-  /* The hint takes the spare width; the bomb cancel and zoom controls size to content. */
-  grid-template-columns: minmax(0, 1fr);
-  grid-auto-columns: auto;
-  grid-auto-flow: column;
-  align-items: center;
-  gap: 4px;
-  min-height: 52px;
-  flex-shrink: 0;
-  padding: 0 4px 0 12px;
-  border-radius: 10px;
-  background: #182d47;
-  color: #b7d8f2;
-}
-.arcade-turn-hint {
-  padding: 6px 0;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  overflow-wrap: anywhere;
-}
-.arcade-match-status:not(.is-result) .arcade-turn-hint {
-  font-size: 16px;
-  font-weight: 700;
-}
-/* The strip fills with the colour of the player whose turn it is. */
-.arcade-match-status:not(.is-result).is-blue {
-  background: linear-gradient(#2a7bb6, #22689c);
-  color: #fff;
-}
-.arcade-match-status:not(.is-result).is-red {
-  background: linear-gradient(#8c4a3f, #6d382f);
-  color: #ffe4dc;
-}
-.arcade-match-status:not(.is-result) .arcade-zoom-button {
-  color: inherit;
-}
-.arcade-match-status.is-result {
-  color: #dcedff;
-  background: #1b3859;
-}
-.arcade-match-status:has(.match-result-summary.is-red) {
-  color: #ffd0b8;
-  background: #442e32;
-}
 .arcade-zoom-button {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
   padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  background: #243c59;
   color: #dbeeff;
 }
-.arcade-bomb-cancel {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid #526888;
-  border-radius: 8px;
-  background: #243c59;
-  color: #dfedff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 650;
-}
-.arcade-bomb-cancel:hover {
-  background: #2d4a6c;
-}
 .arcade-zoom-button:hover {
-  background: #ffffff0b;
+  background: #2d4a6c;
 }
 .arcade-match .sidebar-player-panel {
   --team: #67b8e8;
@@ -173,11 +114,22 @@
   font-weight: 400;
   line-height: 14px;
   letter-spacing: 0;
-  white-space: nowrap;
+  /* It shares a row with the score and bomb, and phones have different fonts, so it wraps by need
+     and not at a set width. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #b2d6ed;
 }
 .arcade-match .sidebar-player-panel-red .sidebar-player-header {
   color: #efb9ac;
+}
+.sidebar-player-header .is-offline {
+  color: #ffb4a2;
+  font-weight: 700;
+}
+/* Offline is one word, so the dot drops to the next line before the word has to break. */
+.arcade-match .sidebar-player-header:has(.is-offline) {
+  flex-wrap: wrap;
 }
 .arcade-player-presence {
   flex-shrink: 0;
@@ -275,7 +227,29 @@ button.inline-bomb.is-armed::after {
   outline-offset: 2px;
 }
 .match-action-slot {
-  display: contents;
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.match-action-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.match-action-main {
+  flex: 1;
+  min-width: 0;
+}
+.match-result-line {
+  margin: 0;
+  padding: 0 4px;
+  color: #dcedff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.match-result-line:has(.match-result-summary.is-red) {
+  color: #ffd0b8;
 }
 .match-primary-action,
 .match-resign-action {
@@ -353,17 +327,4 @@ button.inline-bomb.is-armed::after {
 }
 .arcade-match .inline-bomb .sidebar-bomb-icon {
   opacity: 1;
-}
-@media (max-width: 350px) {
-  /* The label shares its row with the score and bomb, so on the narrowest phones it wraps. */
-  .arcade-match .sidebar-player-header {
-    gap: 2px;
-    white-space: normal;
-  }
-  /* A longer message, such as a locked bomb's reason, must not push Resign off the screen. */
-  .arcade-match-status:not(.is-result) .arcade-turn-hint {
-    padding-block: 3px;
-    font-size: 14px;
-    line-height: 18px;
-  }
 }

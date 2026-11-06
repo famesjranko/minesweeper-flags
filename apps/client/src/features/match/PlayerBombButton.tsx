@@ -9,8 +9,6 @@ interface PlayerBombButtonProps {
   canBomb: boolean;
   finished: boolean;
   onToggleBomb: () => void;
-  /** Touch has no tooltip, so tapping an unavailable bomb puts its reason in the status strip. */
-  onExplainBomb: (reason: string) => void;
 }
 
 const STATES = {
@@ -58,7 +56,7 @@ export const PlayerBombButton = (props: PlayerBombButtonProps) => {
       aria-pressed={status === "armed"}
       aria-disabled={available ? undefined : true}
       className={`inline-bomb is-${status}`}
-      onClick={available ? props.onToggleBomb : () => props.onExplainBomb(hint)}
+      onClick={available ? props.onToggleBomb : undefined}
       title={hint}
     >
       {icon}

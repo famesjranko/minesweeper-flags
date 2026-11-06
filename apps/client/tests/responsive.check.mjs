@@ -4,8 +4,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
 
-// Every height here has room for the turn band and the 480px board floor. Shorter windows rely on
-// the sticky band, which has its own test.
+// Every height here has room for the scores and the 480px board floor.
 const LAPTOPS = [
   [1366, 650],
   [1280, 720],
@@ -59,27 +58,30 @@ const layoutAt = async (width, height, options = {}) => {
   }, options);
 };
 
-test("a laptop window shows the turn band and the last row together", async () => {
+test("a laptop window shows the scores and the last row together", async () => {
   for (const [width, height] of LAPTOPS) {
     // Given a match on a window shorter than the whole column
     // When the match renders
-    const { band, board } = await layoutAt(width, height);
+    const { scores, board } = await layoutAt(width, height);
 
-    // Then the band and the last row fit on one screen
-    assert.ok(board.bottom - band.y <= height, `${width}x${height}: ${board.bottom - band.y}px`);
+    // Then the scores and the last row fit on one screen
+    assert.ok(
+      board.bottom - scores.y <= height,
+      `${width}x${height}: ${board.bottom - scores.y}px`
+    );
 
     // And the tiles stay large enough to aim at
     assert.ok(board.width >= 480, `${width}x${height}: board ${board.width}px`);
   }
 });
 
-test("a tall window grows the board to its 720px limit", async () => {
+test("a tall window grows the board until its squares reach 36px", async () => {
   // Given a match on a window with more than enough height
   // When the match renders
   const { board } = await layoutAt(1920, 1200);
 
   // Then the board is at its limit
-  assert.equal(board.width, 720);
+  assert.equal(board.width, 624);
 });
 
 test("a desktop-sized window fits the whole board once there is room", async () => {
@@ -95,7 +97,7 @@ test("the side chat input is on screen without scrolling", async () => {
   for (const [width, height] of LAPTOPS) {
     // Given a match wide enough for the side chat
     // When the match renders
-    const { band, chat, composer } = await layoutAt(width, height);
+    const { scores, chat, composer } = await layoutAt(width, height);
 
     // Then the chat sits beside the board
     assert.equal(chat, "sidebar");
@@ -104,31 +106,7 @@ test("the side chat input is on screen without scrolling", async () => {
     assert.ok(composer.bottom <= height, `${width}x${height}: input ends at ${composer.bottom}px`);
 
     // And the history above the input has room to read
-    assert.ok(composer.y - band.y >= 200, `${width}x${height}: input starts at ${composer.y}px`);
-  }
-});
-
-test("the turn band stays on screen after scrolling to the last row", async () => {
-  for (const [width, height] of [
-    [683, 650],
-    [768, 600],
-    [899, 600],
-    [844, 390],
-    [1024, 600],
-    [1366, 650]
-  ]) {
-    // Given a match on a window too short for the whole column
-    await layoutAt(width, height);
-
-    // When the player scrolls to the bottom
-    const band = await harness(async (checks) => {
-      window.scrollTo(0, document.documentElement.scrollHeight);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      return checks.readLayout().band;
-    });
-
-    // Then the band is still visible
-    assert.ok(band.y >= 0 && band.bottom <= height, `${width}x${height}: band at ${band.y}px`);
+    assert.ok(composer.y - scores.y >= 200, `${width}x${height}: input starts at ${composer.y}px`);
   }
 });
 
@@ -301,11 +279,12 @@ test("a long name in a wide font cannot make the pinned rematch block taller", a
   // When the status text is much wider than usual, as on a machine with different fonts
   const height = await page.evaluate(() => {
     document.querySelector(".match-rematch-action p").style.letterSpacing = "3px";
-    return document.querySelector(".match-rematch-action").getBoundingClientRect().height;
+    document.querySelector(".match-result-line").style.letterSpacing = "3px";
+    return document.querySelector(".match-action-slot").getBoundingClientRect().height;
   });
 
   // Then the block stays within the page's scroll padding
-  assert.ok(height + 8 <= 124, `the block is ${height}px tall`);
+  assert.ok(height + 8 <= 168, `the block is ${height}px tall`);
 });
 
 test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async () => {
@@ -332,20 +311,13 @@ test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async ()
     await phone.locator(".board-cell").nth(102).tap({ force: true });
     await phone.locator('button[name="fire-bomb"]').waitFor();
     await phone.waitForTimeout(100);
-    const { band, fire, preview } = await phone.evaluate(() => {
+    const { fire, preview } = await phone.evaluate(() => {
       const box = (selector) => document.querySelector(selector).getBoundingClientRect();
-      return {
-        band: box(".arcade-match-status"),
-        fire: box('button[name="fire-bomb"]'),
-        preview: box(".board-bomb-preview")
-      };
+      return { fire: box('button[name="fire-bomb"]'), preview: box(".board-bomb-preview") };
     });
     await touch.close();
 
-    // Then the turn band does not cover the preview
-    assert.ok(band.bottom <= preview.top, `${width}x${height}: band ends at ${band.bottom}`);
-
-    // And the whole preview is on screen above Fire bomb
+    // Then the whole preview is on screen above Fire bomb
     const label = `${width}x${height}: preview ${preview.top}-${preview.bottom}, Fire at ${fire.top}`;
     assert.ok(preview.top >= 0 && preview.bottom <= fire.top, label);
   }
@@ -376,23 +348,148 @@ test("tile marks keep their size limit on large tiles and stay large on phones",
   }
 });
 
-test("a focused tile is not hidden under the turn band", async () => {
-  // Given a short window scrolled to the bottom, with focus on the second row
-  await layoutAt(1024, 600);
-  await page.evaluate(() => {
-    window.scrollTo(0, document.documentElement.scrollHeight);
-    document.querySelectorAll(".board-cell")[16].focus();
-  });
-
-  // When the player presses the up arrow to reach the top row
-  await page.keyboard.press("ArrowUp");
-  const { band, tile } = await page.evaluate(() => ({
-    band: document.querySelector(".arcade-match-status").getBoundingClientRect().bottom,
-    tile: document.activeElement.getBoundingClientRect().top
+test("zoom is offered on touch screens and not to a mouse", async () => {
+  // Given a saved zoom setting and a match on a mouse window
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.evaluate(() => localStorage.setItem("msf:board:zoomed", "on"));
+  await harness(async (checks) => checks.renderFixture());
+  const mouse = await page.evaluate(() => ({
+    button: document.querySelector(".arcade-zoom-button") !== null,
+    zoomed: document.querySelector(".arcade-board-viewport.is-zoomed") !== null
   }));
+  await page.evaluate(() => localStorage.removeItem("msf:board:zoomed"));
 
-  // Then the whole tile is below the band
-  assert.ok(tile >= band, `tile starts at ${tile}px, band ends at ${band}px`);
+  // When the same match opens on a phone
+  const touch = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true
+  });
+  const phone = await touch.newPage();
+  await phone.goto(page.url());
+  await phone.evaluate(async () => {
+    const checks = await import("/tests/responsive.tsx");
+    await checks.renderFixture();
+  });
+  const zoom = await phone.evaluate(() => {
+    const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const button = box(".arcade-zoom-button");
+    const resign = box(".match-resign-action");
+    return {
+      sameRow: Math.abs(button.bottom - resign.bottom) < 1,
+      gap: button.left - resign.right
+    };
+  });
+  await touch.close();
+
+  // Then the mouse has no zoom control and is not stuck zoomed
+  assert.deepEqual(mouse, { button: false, zoomed: false });
+
+  // And the phone has the control beside Resign
+  assert.ok(zoom.sameRow && zoom.gap >= 0, JSON.stringify(zoom));
+});
+
+test("normal play pins nothing over the board on a sideways phone", async () => {
+  for (const [width, height] of [
+    [568, 320],
+    [667, 375],
+    [844, 390],
+    [932, 430]
+  ]) {
+    // Given a live match on a phone turned sideways
+    // When the match renders at the top of the page
+    await layoutAt(width, height);
+    const overlap = await page.evaluate(() => {
+      const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+      return box(".arcade-board-stage").bottom - box(".match-action-slot").top;
+    });
+
+    // Then the actions sit below the board, not over it
+    assert.ok(overlap <= 0, `${width}x${height}: actions overlap the board by ${overlap}px`);
+  }
+});
+
+test("the last row scrolls clear of a pinned Fire bomb", async () => {
+  // Given an aimed bomb on a sideways phone
+  const touch = await browser.newContext({
+    viewport: { width: 667, height: 375 },
+    hasTouch: true,
+    isMobile: true
+  });
+  const phone = await touch.newPage();
+  await phone.goto(page.url());
+  await phone.evaluate(async () => {
+    const checks = await import("/tests/responsive.tsx");
+    await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
+  });
+  await phone.locator(".board-cell").nth(20).tap({ force: true });
+  await phone.locator('button[name="fire-bomb"]').waitFor();
+
+  // When the player scrolls to the end of the board
+  const positions = await phone.evaluate(() => {
+    const top = document.querySelector('button[name="fire-bomb"]').getBoundingClientRect();
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const cells = document.querySelectorAll(".board-cell");
+    return {
+      pinned: top.bottom <= innerHeight,
+      lastRow: cells[cells.length - 1].getBoundingClientRect().bottom,
+      fire: document.querySelector('button[name="fire-bomb"]').getBoundingClientRect().top
+    };
+  });
+  await touch.close();
+
+  // Then Fire bomb was on screen before scrolling
+  assert.ok(positions.pinned, "Fire bomb was off screen");
+
+  // And the last row ends above it
+  assert.ok(positions.lastRow <= positions.fire, JSON.stringify(positions));
+});
+
+test("a score card label stays clear of the score in any font", async () => {
+  for (const width of [320, 340, 350, 360, 374, 375, 390, 430]) {
+    for (const widerBy of ["0px", "0.6px", "1.2px"]) {
+      for (const fixture of [{}, { offline: true }]) {
+        // Given a phone whose font sets the labels wider than the fonts here
+        await layoutAt(width, 700, fixture);
+
+        // When the cards render
+        const overlaps = await page.evaluate((spacing) => {
+          const labels = document.querySelectorAll(".sidebar-player-header span");
+          for (const label of labels) label.style.letterSpacing = spacing;
+          const measured = [...document.querySelectorAll(".sidebar-player-panel")].map((card) => {
+            const parts = [...card.querySelector(".sidebar-player-header").children];
+            const right = Math.max(...parts.map((part) => part.getBoundingClientRect().right));
+            return right - card.querySelector(".sidebar-score-pill").getBoundingClientRect().left;
+          });
+          // React keeps these elements, so the spacing would carry into later tests.
+          for (const label of labels) label.style.letterSpacing = "";
+          return measured;
+        }, widerBy);
+
+        // Then every label ends before its score starts
+        const label = `${width}px, ${widerBy} wider, ${JSON.stringify(fixture)}: ${overlaps}`;
+        assert.ok(Math.max(...overlaps) <= 0, label);
+      }
+    }
+  }
+});
+
+test("an offline player's card says Offline", async () => {
+  for (const width of [320, 330, 390, 1366]) {
+    // Given a match with an offline opponent
+    // When the opponent's card renders
+    await layoutAt(width, 800, { offline: true });
+    const label = await page.evaluate(() => {
+      const offline = document.querySelector(".sidebar-player-panel:not(.is-self) .is-offline");
+      return { text: offline.textContent, height: offline.getBoundingClientRect().height };
+    });
+
+    // Then the label reads Offline
+    assert.equal(label.text, "Offline", `${width}px`);
+
+    // And from 330px, where every font tried here has room, the word stays on one line
+    if (width >= 330) assert.equal(label.height, 14, `${width}px`);
+  }
 });
 
 test("opening How to play leaves its control in place", async () => {

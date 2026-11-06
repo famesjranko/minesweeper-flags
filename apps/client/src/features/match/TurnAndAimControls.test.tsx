@@ -59,16 +59,19 @@ let root: Root;
 const onSelect = vi.fn();
 const onResign = vi.fn();
 const onRequestRematch = vi.fn();
+const onToggleBomb = vi.fn();
 const scrollIntoView = vi.fn();
 
 type Connection = "connected" | "connecting" | "disconnected";
 
 const Scene = ({
   match,
-  connection = "connected"
+  connection = "connected",
+  hidePresence = false
 }: {
   match: MatchStateDto;
   connection?: Connection;
+  hidePresence?: boolean;
 }) => {
   const [bombArmed, setBombArmed] = useState(false);
   return (
@@ -79,11 +82,13 @@ const Scene = ({
       view={getMatchPresentation({
         match,
         currentPlayerId: "me",
-        bombArmed,
         connectionStatus: connection
       })}
       lastMove={NO_LAST_MOVE_MARKS}
-      onToggleBomb={() => setBombArmed(!bombArmed)}
+      onToggleBomb={() => {
+        onToggleBomb();
+        setBombArmed(!bombArmed);
+      }}
       onCellSelect={(row, column) => {
         setBombArmed(false);
         onSelect(row, column);
@@ -92,13 +97,24 @@ const Scene = ({
       onCancelRematch={() => {}}
       onResign={onResign}
       resignDisabled={connection !== "connected"}
+      hidePresence={hidePresence}
     />
   );
 };
 
 const render = (match = createMatch(), connection: Connection = "connected") =>
   act(() => root.render(<Scene match={match} connection={connection} />));
-const hint = () => container.querySelector("[role=status]")?.textContent;
+const ownCard = () => container.querySelector(".sidebar-player-panel.is-self")!;
+const opponentCard = () => container.querySelector(".sidebar-player-panel:not(.is-self)")!;
+const cardLabel = (card: Element) => card.querySelector(".sidebar-player-header span")?.textContent;
+const grid = () => container.querySelector(".board-grid")!;
+// Zoom is offered to touch screens only, so a test that zooms must say it has one.
+const stubPointer = (kind: "coarse" | "fine") =>
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: kind === "coarse" && query === "(pointer: coarse)",
+    addEventListener() {},
+    removeEventListener() {}
+  }));
 const bomb = () => container.querySelector<HTMLButtonElement>("button.inline-bomb")!;
 const cell = (row: number, column: number) =>
   container.querySelector<HTMLButtonElement>(`[data-cell="${row}-${column}"]`)!;
@@ -126,159 +142,174 @@ afterEach(() => {
   onSelect.mockClear();
   onResign.mockClear();
   onRequestRematch.mockClear();
+  onToggleBomb.mockClear();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
-describe("status strip wording", () => {
-  it("says the opponent is moving while they are online", () => {
+describe("player cards", () => {
+  it("marks the opponent's card and holds the board while they have the turn", () => {
     // Given the opponent holds the turn and is connected
-    // When the strip renders
+    // When the match renders
     render(createMatch({ currentTurnPlayerId: "them" }));
 
-    // Then it names who is moving
-    expect(hint()).toBe("Bo is moving…");
+    // Then the opponent's card is marked as on turn, and the player's is not
+    expect(opponentCard().classList.contains("is-turn")).toBe(true);
+    expect(ownCard().classList.contains("is-turn")).toBe(false);
+
+    // And the board waits
+    expect(grid().classList.contains("is-waiting")).toBe(true);
   });
 
-  it("says the opponent is offline rather than moving", () => {
+  it("marks the player's own card and leaves the board open on their turn", () => {
+    // Given the player holds the turn
+    // When the match renders
+    render(createMatch({ currentTurnPlayerId: "me" }));
+
+    // Then the player's card is marked as on turn, and the opponent's is not
+    expect(ownCard().classList.contains("is-turn")).toBe(true);
+    expect(opponentCard().classList.contains("is-turn")).toBe(false);
+
+    // And the board is not waiting
+    expect(grid().classList.contains("is-waiting")).toBe(false);
+  });
+
+  it("says Offline on the opponent's card when they have disconnected", () => {
     // Given the opponent holds the turn and has disconnected
     const match = createMatch({ currentTurnPlayerId: "them" });
     match.players[1].connected = false;
 
-    // When the strip renders
+    // When the match renders
     render(match);
 
-    // Then it tells the truth about the wait
-    expect(hint()).toBe("Bo is offline. Waiting for them to return.");
+    // Then their card says Offline in place of their colour
+    expect(cardLabel(opponentCard())).toBe("Offline");
+    expect(opponentCard().querySelector(".is-offline")).not.toBeNull();
+
+    // And the player's own card keeps its label
+    expect(cardLabel(ownCard())).toBe("BLUE · You");
+    expect(ownCard().querySelector(".is-offline")).toBeNull();
   });
 
-  it("blames the absent opponent when a direct-match host cannot move because of them", () => {
-    // Given a direct-match host on its own turn, whose guest has dropped
+  it("keeps the opponent's card label where presence is hidden, as in solo", () => {
+    // Given a match whose opponent reports as disconnected, with presence hidden
     const match = createMatch();
     match.players[1].connected = false;
 
-    // When the host's link reports down, because that link was the guest
-    render(match, "disconnected");
+    // When the match renders
+    act(() => root.render(<Scene match={match} hidePresence />));
 
-    // Then the strip gives the real reason rather than blaming the host's connection
-    expect(hint()).toBe("Bo is offline. Waiting for them to return.");
+    // Then the opponent's card does not say Offline
+    expect(cardLabel(opponentCard())).toBe("RED");
+    expect(opponentCard().querySelector(".is-offline")).toBeNull();
   });
 
-  it("keeps the player's own turn message when only the opponent is offline", () => {
+  it("keeps the player's own turn when only the opponent is offline", () => {
     // Given the player holds the turn while the opponent is away
     const match = createMatch();
     match.players[1].connected = false;
 
-    // When the strip renders
+    // When the match renders
     render(match);
 
     // Then the player can still move
-    expect(hint()).toContain("Your turn");
+    expect(ownCard().classList.contains("is-turn")).toBe(true);
+    expect(grid().classList.contains("is-waiting")).toBe(false);
   });
 
   it.each([
     ["their own turn", "me"],
     ["the opponent's turn", "them"]
-  ])("says reconnecting when the player's connection drops on %s", (_name, currentTurnPlayerId) => {
-    // Given the player has lost the connection
-    // When the strip renders
-    render(createMatch({ currentTurnPlayerId }), "connecting");
+  ])(
+    "says Offline on the player's card when their connection drops on %s",
+    (_name, currentTurnPlayerId) => {
+      // Given the player has lost the connection
+      // When the match renders
+      render(createMatch({ currentTurnPlayerId }), "connecting");
 
-    // Then it blames neither player
-    expect(hint()).toBe("Reconnecting…");
-  });
+      // Then the player's own card says Offline, and the opponent's does not
+      expect(cardLabel(ownCard())).toBe("Offline");
+      expect(ownCard().querySelector(".is-offline")).not.toBeNull();
+      expect(cardLabel(opponentCard())).toBe("RED");
+
+      // And the board waits
+      expect(grid().classList.contains("is-waiting")).toBe(true);
+    }
+  );
 });
 
 describe("telling apart the two kinds of lost link", () => {
-  const hintFor = (connectionStatus: "connecting" | "disconnected") => {
+  const noticeFor = (connectionStatus: "connecting" | "disconnected") => {
     const match = createMatch({ currentTurnPlayerId: "them" });
     match.players[1].connected = false;
     return getMatchPresentation({
       match,
       currentPlayerId: "me",
-      bombArmed: false,
       connectionStatus
-    }).turnHint;
+    }).connectionNotice;
   };
 
   it("reports the player's own outage even when the opponent is already offline", () => {
     // Given an opponent who has left, and a client now retrying its own connection
-    // When the strip is worked out
-    const hint = hintFor("connecting");
+    // When the connection notice is worked out
+    const notice = noticeFor("connecting");
 
     // Then the player learns that the problem is theirs
-    expect(hint).toBe("Reconnecting…");
+    expect(notice).toBe("Reconnecting…");
   });
 
   it("promises no retry when the client has stopped trying", () => {
     // Given a tab displaced by another tab, with the opponent still present
     const match = createMatch();
 
-    // When the strip is worked out
-    const { turnHint, connectionNotice } = getMatchPresentation({
+    // When the connection notice is worked out
+    const { connectionNotice } = getMatchPresentation({
       match,
       currentPlayerId: "me",
-      bombArmed: false,
       connectionStatus: "disconnected"
     });
 
-    // Then it states only what is true, in the strip and on a blocked rematch
-    expect(turnHint).toBe("Connection lost.");
+    // Then it states only what is true
     expect(connectionNotice).toBe("Connection lost.");
   });
 
   it("names the absent opponent when that was the host's only link", () => {
     // Given a direct-match host, which does not retry, whose guest has gone
-    // When the strip is worked out
-    const hint = hintFor("disconnected");
+    // When the connection notice is worked out
+    const notice = noticeFor("disconnected");
 
     // Then the opponent is the reason
-    expect(hint).toBe("Bo is offline. Waiting for them to return.");
+    expect(notice).toBe("Bo is offline. Waiting for them to return.");
   });
 });
 
-describe("explaining an unavailable bomb", () => {
+describe("tapping an unavailable bomb", () => {
   const locked = () => {
     const match = createMatch();
     match.players[1].score = match.players[0].score + 1;
     return match;
   };
 
-  it("puts the locked bomb's reason in the strip when tapped", () => {
+  it("does nothing when a locked bomb is tapped", () => {
     // Given a bomb that has not unlocked
     render(locked());
 
     // When the player taps it
     act(() => bomb().click());
 
-    // Then the strip shows the same text the tooltip gives on desktop
-    expect(hint()).toBe(bomb().getAttribute("aria-label"));
-    expect(hint()).toContain("trailing by 4 or more");
+    // Then the bomb is not toggled and nothing is armed
+    expect(onToggleBomb).not.toHaveBeenCalled();
     expect(bomb().getAttribute("aria-pressed")).toBe("false");
+    expect(named("cancel-bomb")).toBeNull();
   });
 
-  it("drops the reason when the turn moves on", () => {
-    // Given the strip is showing a bomb's reason
+  it("still gives the locked bomb's reason as a tooltip", () => {
+    // Given a bomb that has not unlocked
+    // When the match renders
     render(locked());
-    act(() => bomb().click());
 
-    // When the next turn arrives
-    render({ ...locked(), turnNumber: 4, currentTurnPlayerId: "them" });
-
-    // Then the strip shows the live turn again
-    expect(hint()).toBe("Bo is moving…");
-  });
-
-  it("drops the reason when the player makes a move", () => {
-    // Given the strip is showing a bomb's reason
-    render(locked());
-    act(() => bomb().click());
-
-    // When the player opens a square in the same turn
-    act(() => cell(0, 0).click());
-
-    // Then the strip stops showing it
-    expect(hint()).toContain("Your turn");
-    expect(onSelect).toHaveBeenCalledExactlyOnceWith(0, 0);
+    // Then the tooltip says when the bomb becomes available
+    expect(bomb().title).toContain("trailing by 4 or more");
   });
 });
 
@@ -291,7 +322,7 @@ describe("aiming the bomb with a mouse", () => {
       target.click();
     });
 
-  it("aims on a click instead of firing, and says to click", () => {
+  it("aims on a click instead of firing", () => {
     // Given an armed bomb
     render();
     act(() => bomb().click());
@@ -302,10 +333,9 @@ describe("aiming the bomb with a mouse", () => {
     // Then nothing has fired
     expect(onSelect).not.toHaveBeenCalled();
 
-    // And the player can choose, with wording for a mouse
-    expect(named("fire-bomb")).not.toBeNull();
+    // And the player can choose to fire or cancel
+    expect(named("fire-bomb")?.disabled).toBe(false);
     expect(named("cancel-bomb")).not.toBeNull();
-    expect(hint()).toBe("Bomb aimed. Click another hidden square to move it.");
   });
 
   it("moves the aim on another click and fires only from Fire bomb", () => {
@@ -368,24 +398,49 @@ describe("aiming the bomb on touch", () => {
     tap(cell(1, 1));
   };
 
-  it("swaps Resign for Cancel and Fire bomb once a square is aimed", () => {
+  it("swaps Resign for Cancel and a disabled Fire bomb when the bomb is armed", () => {
+    // Given a live match with Resign showing
+    render();
+    expect(named("resign")).not.toBeNull();
+
+    // When the player arms the bomb
+    act(() => bomb().click());
+
+    // Then Cancel and a Fire bomb that cannot be pressed yet replace Resign
+    expect(named("resign")).toBeNull();
+    expect(named("cancel-bomb")?.textContent).toBe("Cancel");
+    expect(named("fire-bomb")?.textContent).toBe("Fire bomb");
+    expect(named("fire-bomb")?.disabled).toBe(true);
+    expect(container.querySelector(".arcade-bomb-cancel")).toBeNull();
+  });
+
+  it("fires nothing when the disabled Fire bomb is pressed", () => {
+    // Given an armed bomb with no square aimed
+    render();
+    act(() => bomb().click());
+
+    // When the player presses Fire bomb
+    act(() => named("fire-bomb")?.click());
+
+    // Then nothing fires and the bomb stays armed
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(bomb().getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("enables Fire bomb once a square is aimed", () => {
     // Given an armed bomb
     render();
     act(() => bomb().click());
-    expect(hint()).toBe("Bomb armed · choose a square");
-    expect(named("resign")).not.toBeNull();
 
     // When the player taps a square
     tap(cell(1, 1));
 
-    // Then the preview shows, nothing fires, and the confirm buttons replace Resign
+    // Then the preview shows, nothing fires, and Fire bomb can be pressed
     expect(onSelect).not.toHaveBeenCalled();
-    expect(hint()).toBe("Bomb aimed. Tap another hidden square to move it.");
     expect(container.querySelector(".board-bomb-preview")).not.toBeNull();
-    expect(named("resign")).toBeNull();
+    expect(named("fire-bomb")?.disabled).toBe(false);
     expect(named("cancel-bomb")?.textContent).toBe("Cancel");
-    expect(named("fire-bomb")?.textContent).toBe("Fire bomb");
-    expect(container.querySelector(".arcade-bomb-cancel")).toBeNull();
+    expect(named("resign")).toBeNull();
   });
 
   it("moves the aim with another tap", () => {
@@ -426,7 +481,7 @@ describe("aiming the bomb on touch", () => {
 
     // Then nothing fired and the old aim did not come back
     expect(onSelect).not.toHaveBeenCalled();
-    expect(hint()).toBe("Bomb armed · choose a square");
+    expect(named("fire-bomb")?.disabled).toBe(true);
     expect(container.querySelector(".board-bomb-preview")).toBeNull();
   });
 
@@ -439,17 +494,20 @@ describe("aiming the bomb on touch", () => {
 
     // Then nothing can fire
     expect(named("fire-bomb")).toBeNull();
-    expect(hint()).toBe("Reconnecting…");
+
+    // And the player's own card says Offline
+    expect(cardLabel(ownCard())).toBe("Offline");
   });
 });
 
 describe("the board zoom choice", () => {
-  const zoomButton = () => container.querySelector<HTMLButtonElement>(".arcade-zoom-button")!;
+  const zoomButton = () => container.querySelector<HTMLButtonElement>(".arcade-zoom-button");
 
   it("is remembered for the next match on this device", () => {
-    // Given a player who zooms the board
+    // Given a touch screen and a player who zooms the board
+    stubPointer("coarse");
     render();
-    act(() => zoomButton().click());
+    act(() => zoomButton()?.click());
 
     // When the play area mounts again
     act(() => root.unmount());
@@ -471,18 +529,54 @@ describe("the board zoom choice", () => {
   });
 
   it("still zooms when browser storage is blocked", () => {
-    // Given a browser that blocks storage
-    const storage = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    // Given a touch screen on a browser that blocks storage
+    stubPointer("coarse");
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
       throw new Error("Storage blocked");
     });
 
     // When the player zooms the board
     render();
-    act(() => zoomButton().click());
+    act(() => zoomButton()?.click());
 
     // Then it zooms for this visit
     expect(container.querySelector(".arcade-board-viewport.is-zoomed")).not.toBeNull();
-    storage.mockRestore();
+  });
+
+  it("offers a mouse no zoom button", () => {
+    // Given a device whose pointer is a mouse
+    stubPointer("fine");
+
+    // When the match renders
+    render();
+
+    // Then there is no zoom button
+    expect(zoomButton()).toBeNull();
+  });
+
+  it("ignores a saved zoom setting on a mouse, which has no button to undo it", () => {
+    // Given a mouse device with zoom saved as on from a touch screen
+    stubPointer("fine");
+    window.localStorage.setItem(BOARD_ZOOM_KEY, "on");
+
+    // When the match renders
+    render();
+
+    // Then the board is fitted
+    expect(container.querySelector(".arcade-board-viewport.is-zoomed")).toBeNull();
+  });
+
+  it("puts the zoom button in the action row beside the actions on a touch screen", () => {
+    // Given a touch screen
+    stubPointer("coarse");
+
+    // When the match renders
+    render();
+
+    // Then the zoom button sits in the action row, outside the actions' own wrapper
+    const row = container.querySelector(".match-action-row");
+    expect(zoomButton()?.parentElement).toBe(row);
+    expect(row?.querySelector(".match-action-main")).not.toBeNull();
   });
 });
 
@@ -546,6 +640,19 @@ describe("double taps on the action slot", () => {
     // Then the prompt closes without a second try
     expect(named("confirm-resign")).toBeNull();
     expect(named("resign")).not.toBeNull();
+  });
+
+  it("does not delay the next action press after a press on zoom", () => {
+    // Given a touch screen and a live match
+    stubPointer("coarse");
+    render();
+
+    // When the player presses zoom, then Resign a moment later
+    realTap(container.querySelector<HTMLElement>(".arcade-zoom-button"), 1000);
+    realTap(named("resign"), 1100);
+
+    // Then the resign prompt opens at once, as zoom swaps no control
+    expect(named("confirm-resign")).not.toBeNull();
   });
 
   const touchTile = (target: HTMLElement, atMs: number) => {
@@ -829,7 +936,6 @@ describe("a rematch that cannot be sent", () => {
       view={getMatchPresentation({
         match,
         currentPlayerId: "me",
-        bombArmed: false,
         connectionStatus: connection
       })}
       lastMove={NO_LAST_MOVE_MARKS}
@@ -916,7 +1022,8 @@ describe("a rematch that cannot be sent", () => {
 
 describe("zooming while aiming", () => {
   it("brings the aimed area back into view", () => {
-    // Given a square is aimed at on the fitted board
+    // Given a touch screen with a square aimed at on the fitted board
+    stubPointer("coarse");
     render();
     act(() => bomb().click());
     tap(cell(1, 1));
@@ -931,7 +1038,8 @@ describe("zooming while aiming", () => {
   });
 
   it("leaves the scroll position alone when nothing is aimed", () => {
-    // Given no aimed square
+    // Given a touch screen and no aimed square
+    stubPointer("coarse");
     render();
 
     // When the player zooms

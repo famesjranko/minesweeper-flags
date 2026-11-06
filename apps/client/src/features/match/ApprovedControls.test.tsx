@@ -85,7 +85,6 @@ const Scene = ({
       view={getMatchPresentation({
         match,
         currentPlayerId: "red",
-        bombArmed,
         connectionStatus: connected ? "connected" : "disconnected"
       })}
       lastMove={NO_LAST_MOVE_MARKS}
@@ -125,9 +124,7 @@ it("keeps Red as You and routes only the local inline bomb through arm, cancel a
   // When the player arms, cancels and then arms before selecting a square
   act(() => bomb.click());
   expect(bomb.getAttribute("aria-pressed")).toBe("true");
-  expect(container.querySelector("[role=status]")?.textContent).toContain(
-    "Bomb armed · choose a square"
-  );
+  expect(container.querySelector(".match-action-row button[name=cancel-bomb]")).not.toBeNull();
   act(() => bomb.click());
   expect(bomb.getAttribute("aria-pressed")).toBe("false");
   act(() => bomb.click());
@@ -181,10 +178,10 @@ it.each([
   const status = container.querySelector("[role=status]")!;
   const scores = container.querySelector(".arcade-match-scores")!;
 
-  // Then one persistent strip gives the declared winner and winner-first resignation score
+  // Then one persistent result line gives the declared winner and winner-first resignation score
   expect(status.textContent).toContain(`You won · ${redScore} – ${blueScore} by resignation`);
   expect(container.querySelectorAll("[role=status]")).toHaveLength(1);
-  expect(status.compareDocumentPosition(scores) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(scores.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(container.querySelectorAll(".winner-crown")).toHaveLength(1);
   expect(
     container.querySelector(".sidebar-player-panel-red .sidebar-player-name .winner-crown")
@@ -196,7 +193,12 @@ it.each([
 });
 
 it("keeps finished zoom and the single Request, Cancel or Accept rematch action usable", () => {
-  // Given a finished friend match with no rematch request
+  // Given a touch screen and a finished friend match with no rematch request
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(pointer: coarse)",
+    addEventListener() {},
+    removeEventListener() {}
+  }));
   const match = createMatch();
   match.phase = "finished";
   match.turnPhase = "ended";
@@ -237,6 +239,27 @@ it("keeps finished zoom and the single Request, Cancel or Accept rematch action 
   expect(zoom.getAttribute("aria-label")).toBe("Expand board to 150%");
   expect(container.querySelectorAll(".match-primary-action")).toHaveLength(1);
   expect(container.querySelector(".arcade-board-viewport.is-zoomed")).toBeNull();
+});
+
+it("puts the finished result line in the action slot, above the rematch action", () => {
+  // Given a finished friend match
+  const match = createMatch();
+  match.phase = "finished";
+  match.turnPhase = "ended";
+  match.currentTurnPlayerId = null;
+  match.winnerPlayerId = "blue";
+
+  // When the finished controls render
+  render(match);
+  const slot = container.querySelector(".match-action-slot")!;
+  const result = slot.querySelector(".match-result-line");
+  const action = slot.querySelector(".match-primary-action");
+
+  // Then the result line is a status in the slot, before the rematch action
+  expect(result?.getAttribute("role")).toBe("status");
+  expect(result?.textContent).toContain("Full Blue Name won");
+  expect(action).not.toBeNull();
+  expect(result!.compareDocumentPosition(action!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 it("shows opponent availability without an action and preserves both spent bombs after finish", () => {

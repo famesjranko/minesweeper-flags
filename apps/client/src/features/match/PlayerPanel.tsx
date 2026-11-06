@@ -45,7 +45,6 @@ interface PlayerPanelProps {
   bombArmed: boolean;
   canAct: boolean;
   onToggleBomb: () => void;
-  onExplainBomb: (reason: string) => void;
 }
 
 // The key restarts the bump for each point. The first score shown is history, so it stays still.
@@ -58,10 +57,12 @@ const ScoreValue = ({ score }: { score: number }) => {
   );
 };
 
-const describeSlot = (slot: PlayerSlot, note: string | undefined) => {
+const describeSlot = (slot: PlayerSlot, note: string | undefined, hidePresence: boolean) => {
   const tag = slot.isSelf ? "You" : note;
+  const offline = !hidePresence && !slot.player.connected;
   return {
-    header: tag ? `${slot.title} · ${tag}` : slot.title,
+    offline,
+    header: offline ? "Offline" : tag ? `${slot.title} · ${tag}` : slot.title,
     // A solo human is already named "You", so the name would only repeat the role.
     region: [...new Set([slot.title, slot.isSelf ? "You" : "Opponent", slot.player.displayName])]
       .concat(note ?? [])
@@ -79,7 +80,7 @@ export const PlayerPanel = ({
   const opponent = match.players.find((player) => player.playerId !== slot.player.playerId);
   const canBomb = Boolean(opponent && opponent.score - slot.player.score >= MIN_BOMB_DEFICIT);
   const isWinner = match.phase === "finished" && match.winnerPlayerId === slot.player.playerId;
-  const labels = describeSlot(slot, note);
+  const labels = describeSlot(slot, note, hidePresence);
 
   return (
     <section
@@ -101,7 +102,7 @@ export const PlayerPanel = ({
         </span>
       </p>
       <header className="sidebar-player-header">
-        <span>{labels.header}</span>
+        <span className={labels.offline ? "is-offline" : undefined}>{labels.header}</span>
         {!hidePresence ? (
           <span
             className={`arcade-player-presence${slot.player.connected ? " is-online" : ""}`}
