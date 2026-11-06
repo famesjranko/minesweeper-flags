@@ -212,3 +212,37 @@ it("does not treat an invalid new-game value as Start new", () => {
   expect(botLabel()).toBe("RED · Easy");
   expect(saved()).toBe(JSON.stringify(oldReplay));
 });
+
+it("keeps a finished match on screen when the page reloads", () => {
+  // Given a saved match the player has lost, on the solo page with nothing in the address
+  window.sessionStorage.setItem(
+    SOLO_STORAGE_KEY,
+    JSON.stringify({ ...oldReplay, resignedBy: "human" })
+  );
+  window.history.replaceState(null, "", "/solo");
+
+  // When the page loads again, as it does when a phone browser switches to desktop mode
+  render("solo");
+
+  // Then the same match is shown as finished
+  expect(JSON.parse(window.sessionStorage.getItem(SOLO_STORAGE_KEY) ?? "{}").seed).toBe(11);
+  expect(container.querySelector('button[name="rematch"]')).not.toBeNull();
+});
+
+it("starts a new match when the player comes from the home page after a finished one", () => {
+  // Given a saved match the player has lost
+  window.sessionStorage.setItem(
+    SOLO_STORAGE_KEY,
+    JSON.stringify({ ...oldReplay, resignedBy: "human" })
+  );
+
+  // When the player follows the home page's start link
+  window.history.replaceState(null, "", "/solo?difficulty=normal");
+  render("solo");
+
+  // Then a new match is live
+  expect(
+    JSON.parse(window.sessionStorage.getItem(SOLO_STORAGE_KEY) ?? "{}").resignedBy
+  ).toBeUndefined();
+  expect(container.querySelector('button[name="rematch"]')).toBeNull();
+});
