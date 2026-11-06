@@ -15,25 +15,88 @@ test("the board size control adds no height to the home page", async () => {
       await page.waitForSelector("#friend-panel .lobby-create-button");
       await page.click(`#${tab}-tab`);
 
-      // When the control is taken away
-      const heights = await page.evaluate((tab) => {
+      // When the control is measured beside its button, and then taken away
+      const result = await page.evaluate((tab) => {
         const panel = document.querySelector(`#${tab}-panel`);
         const content = [...panel.children];
         const measure = () =>
           Math.max(...content.map((child) => child.getBoundingClientRect().bottom)) -
           panel.getBoundingClientRect().top;
+        const control = panel.querySelector(".board-size-select");
+        const beside = control.parentElement.lastElementChild.getBoundingClientRect();
+        const select = control.getBoundingClientRect();
+        const row = {
+          sameRow: Math.abs(select.top - beside.top) < 1,
+          gap: beside.left - select.right,
+          right: beside.right,
+          overflow: document.documentElement.scrollWidth > innerWidth
+        };
         const withControl = measure();
-        panel.querySelector(".board-size-select").style.display = "none";
-        return { withControl, without: measure() };
+        control.style.display = "none";
+        return { row, withControl, without: measure() };
       }, tab);
       await page.goto(harnessUrl);
+      const label = `${width}x${height} ${tab}`;
 
       // Then the panel is the same height, because the control shares its row
       assert.ok(
-        Math.abs(heights.withControl - heights.without) < 1,
-        `${width}x${height} ${tab}: ${heights.withControl} against ${heights.without}`
+        Math.abs(result.withControl - result.without) < 1,
+        `${label}: ${JSON.stringify(result)}`
       );
+
+      // And the two controls sit side by side on the screen
+      assert.equal(result.row.sameRow, true, label);
+      assert.ok(result.row.gap >= 0, `${label}: the controls overlap by ${-result.row.gap}px`);
+      assert.ok(result.row.right <= width, `${label}: the button ends at ${result.row.right}px`);
+      assert.equal(result.row.overflow, false, `${label}: the page scrolls sideways`);
     }
+  }
+});
+
+test("a saved Solo game offers Return and Start new without breaking the page", async () => {
+  for (const width of [320, 390, 1366]) {
+    // Given a live Solo game saved in this tab
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto(new URL("/lobby", harnessUrl).href);
+    await page.evaluate(() =>
+      sessionStorage.setItem(
+        "msf:solo:v1",
+        JSON.stringify({
+          version: 1,
+          seed: 11,
+          createdAt: 20,
+          starter: "human",
+          difficulty: "normal",
+          boardSize: "large",
+          actions: []
+        })
+      )
+    );
+
+    // When the home page opens on the Solo tab
+    await page.reload();
+    await page.click("#solo-tab");
+    const home = await page.evaluate(() => {
+      const links = [...document.querySelectorAll("#solo-panel .solo-entry-primary")];
+      const select = document
+        .querySelector("#solo-panel .board-size-select")
+        .getBoundingClientRect();
+      const startNew = links[1]?.getBoundingClientRect();
+      return {
+        links: links.map((link) => link.textContent),
+        sameRow: Math.abs(select.top - startNew.top) < 1,
+        overflow: document.documentElement.scrollWidth > innerWidth
+      };
+    });
+    await page.evaluate(() => sessionStorage.clear());
+    await page.goto(harnessUrl);
+
+    // Then Return has its own row, the size sits beside Start new, and nothing overflows
+    assert.deepEqual(
+      home,
+      { links: ["Return to game", "Start new"], sameRow: true, overflow: false },
+      `${width}px`
+    );
   }
 });
 

@@ -200,24 +200,93 @@ test("a window of exactly 3:4 keeps the rail usable", async () => {
       // Given a window exactly on the line between the rail and the upright stack
       // When the match renders
       await layoutAt(width, height, { boardSize: "giant", solo });
-      const result = await page.evaluate(() => {
-        const actions = document.querySelector(".match-action-slot").getBoundingClientRect();
-        const hit = document.elementFromPoint(
-          actions.left + actions.width / 2,
-          actions.top + actions.height / 2
-        );
+      const result = await page.evaluate((solo) => {
+        const reachable = (selector) => {
+          const target = document.querySelector(selector);
+          const box = target.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          return target.contains(hit);
+        };
         return {
           overflow: document.documentElement.scrollWidth > innerWidth,
-          reachable: hit?.closest(".match-action-slot") !== null
+          action: reachable(".match-action-slot .match-resign-action"),
+          scores: reachable(".sidebar-player-panel .sidebar-score-pill"),
+          side: reachable(solo ? ".solo-race-panel" : ".arcade-chat-region .chat-composer input")
         };
-      });
+      }, solo);
 
-      // Then nothing overflows, and the actions are not hidden behind the board
+      // Then nothing overflows, and nothing is hidden behind the board
       assert.deepEqual(
         result,
-        { overflow: false, reachable: true },
+        { overflow: false, action: true, scores: true, side: true },
         `${width}x${height} solo=${solo}`
       );
+    }
+  }
+});
+
+test("the rail is 360px, and 300px with stacked scores on near-square windows", async () => {
+  for (const [width, height, rail, stacked] of [
+    [1366, 650, 360, false],
+    [1920, 935, 360, false],
+    [900, 900, 300, true],
+    [1100, 1000, 300, true]
+  ]) {
+    // Given a match on a window with room for the rail
+    // When the match renders
+    const { scores } = await layoutAt(width, height, { boardSize: "giant" });
+    const isStacked = await page.evaluate(() => {
+      const [first, second] = document.querySelectorAll(".sidebar-player-panel");
+      return second.getBoundingClientRect().top >= first.getBoundingClientRect().bottom;
+    });
+
+    // Then the rail has the chosen width, and the score cards the chosen shape
+    assert.equal(scores.width, rail, `${width}x${height}`);
+    assert.equal(isStacked, stacked, `${width}x${height}`);
+  }
+});
+
+test("the rail starts at 580px tall and shorter windows keep the stack", async () => {
+  for (const [height, beside] of [
+    [579, false],
+    [580, true]
+  ]) {
+    // Given a wide window either side of the line
+    // When the match renders
+    const { board, scores } = await layoutAt(1280, height, { boardSize: "large" });
+
+    // Then the scores sit beside the board only with the rail
+    assert.equal(scores.x >= board.right, beside, `${height}px: scores at ${scores.x}`);
+    assert.equal(scores.bottom <= board.y, !beside, `${height}px: scores end at ${scores.bottom}`);
+  }
+});
+
+test("the main action ends level with the board in every state", async () => {
+  const STATES = [
+    { name: "live" },
+    { name: "armed", bombArmed: true, bombReady: true },
+    { name: "finished", finished: true },
+    { name: "rematch", finished: true, rematch: true }
+  ];
+  for (const [width, height] of [
+    [1280, 600],
+    [1366, 650],
+    [1920, 935]
+  ]) {
+    for (const { name, ...fixture } of STATES) {
+      // Given a match in one state on the rail layout
+      // When the match renders
+      const { board } = await layoutAt(width, height, { boardSize: "giant", ...fixture });
+      const lowest = await page.evaluate(() =>
+        Math.max(
+          ...[...document.querySelectorAll(".match-action-main button")].map(
+            (button) => button.getBoundingClientRect().bottom
+          )
+        )
+      );
+
+      // Then the lowest button lines up with the bottom of the board
+      assert.ok(Math.abs(lowest - board.bottom) <= 1, `${width}x${height} ${name}: ${lowest}`);
     }
   }
 });

@@ -658,6 +658,22 @@ describe("waiting for a move reply", () => {
     expect(container.querySelector(".board-grid.is-waiting")).not.toBeNull();
   });
 
+  it("shows no message while a slow move is on its way", () => {
+    // Given the player's turn
+    vi.useFakeTimers();
+
+    // When a move stays pending for much longer than usual
+    render(createMatch(), [], "connected", { movePending: true });
+    act(() => vi.advanceTimersByTime(5000));
+    const text = container.textContent;
+    const hasCard = container.querySelector(".arcade-match-status") !== null;
+    vi.useRealTimers();
+
+    // Then no notice or turn card explains it
+    expect(text).not.toMatch(/Sending move|is moving/);
+    expect(hasCard).toBe(false);
+  });
+
   it("greys the tiles when the connection drops during a pending move", () => {
     // Given the player's turn
     // When the connection drops with a move still pending

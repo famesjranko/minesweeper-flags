@@ -200,6 +200,12 @@
   font-size: calc(var(--board-cell-size) * 0.8);
 }
 
+/* A burst keeps its size on large tiles, and must not spill out of the small tiles on a big board. */
+.arcade-match .mine-burst {
+  font-size: min(1rem, calc(var(--board-cell-size) * 0.8));
+  line-height: 1;
+}
+
 /* Portrait phones need the large marks on their small tiles. Bigger tiles do not, so marks hold
    about 20px until tiles reach 36px, then keep the same share of the tile. */
 @media (min-width: 601px) {

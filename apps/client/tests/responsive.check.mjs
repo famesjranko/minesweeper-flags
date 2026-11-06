@@ -202,6 +202,34 @@ test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async ()
   }
 });
 
+test("an unclaimed mine stays inside its tile on the smallest tiles", async () => {
+  for (const [width, height] of [
+    [320, 568],
+    [390, 844],
+    [1366, 650]
+  ]) {
+    // Given a finished 30x30 match that shows unclaimed mines
+    await layoutAt(width, height, { boardSize: "giant", finished: true });
+
+    // When the mine in the bottom row is measured
+    const { mine, tile } = await page.evaluate(() => {
+      const burst = document.querySelector(".mine-burst");
+      const box = (element) => element.getBoundingClientRect();
+      const { bottom, right, top, left } = box(burst);
+      const cell = box(burst.closest(".board-cell"));
+      return {
+        mine: { bottom, right, top, left },
+        tile: { bottom: cell.bottom, right: cell.right, top: cell.top, left: cell.left }
+      };
+    });
+
+    // Then it does not leave the tile
+    const label = `${width}x${height}: ${JSON.stringify({ mine, tile })}`;
+    assert.ok(mine.bottom <= tile.bottom + 0.5 && mine.top >= tile.top - 0.5, label);
+    assert.ok(mine.right <= tile.right + 0.5 && mine.left >= tile.left - 0.5, label);
+  }
+});
+
 test("tile marks keep their size limit on large tiles and stay large on phones", async () => {
   for (const [width, height, ratio, limit] of [
     [390, 844, 0.8, 18],
@@ -258,6 +286,29 @@ test("zoom is offered on touch screens and not to a mouse", async () => {
 
   // And the phone has the control beside Resign
   assert.ok(zoom.sameRow && zoom.gap >= 0, JSON.stringify(zoom));
+});
+
+test("zoom follows a change to touch and back while the match is open", async () => {
+  // Given a match open with a mouse
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const live = await context.newPage();
+  await live.goto(harnessUrl);
+  await live.waitForSelector(".board-cell");
+  const session = await context.newCDPSession(live);
+  const hasZoom = () => live.locator(".arcade-zoom-button").count();
+  const before = await hasZoom();
+
+  // When the device switches to touch, and then back
+  await session.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  await live.waitForSelector(".arcade-zoom-button");
+  const onTouch = await hasZoom();
+  await session.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await live.waitForSelector(".arcade-zoom-button", { state: "detached" });
+  const after = await hasZoom();
+  await context.close();
+
+  // Then the control appears only while touch is in use
+  assert.deepEqual([before, onTouch, after], [0, 1, 0]);
 });
 
 test("normal play pins nothing over the board on a sideways phone", async () => {

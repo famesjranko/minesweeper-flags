@@ -129,6 +129,11 @@ const createFixtureMatch = (options: FixtureOptions): MatchStateDto => {
   numbered.adjacentMines = 2;
   if (options.rematch) match.players[0].rematchRequested = true;
   if (options.finished) {
+    // A finished match shows the mines nobody claimed.
+    const unclaimed = match.board.cells[last]![0]!;
+    unclaimed.status = "mine-revealed";
+  }
+  if (options.finished) {
     match.phase = "finished";
     match.turnPhase = "ended";
     match.winnerPlayerId = "guest";
