@@ -311,6 +311,25 @@ test("zoom follows a change to touch and back while the match is open", async ()
   assert.deepEqual([before, onTouch, after], [0, 1, 0]);
 });
 
+test("the disabled Fire bomb is solid, so tiles do not show through it", async () => {
+  // Given an armed bomb on a phone turned sideways, where the button sits over the tiles
+  const { touch, phone } = await touchMatch(
+    { width: 844, height: 390 },
+    { bombArmed: true, bombReady: true }
+  );
+
+  // When the button is measured before aiming
+  const style = await phone.evaluate(() => {
+    const fire = getComputedStyle(document.querySelector('button[name="fire-bomb"]'));
+    return { opacity: fire.opacity, background: fire.backgroundColor };
+  });
+  await touch.close();
+
+  // Then nothing about it is see-through
+  assert.equal(style.opacity, "1");
+  assert.match(style.background, /^rgb\(/);
+});
+
 test("normal play pins nothing over the board on a sideways phone", async () => {
   for (const [width, height] of [
     [568, 320],

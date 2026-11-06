@@ -161,7 +161,7 @@ export const renderFixture = async (options: FixtureOptions = {}) => {
       </ArcadeHeader>
       {options.soloNotice ? (
         <p className="solo-notice" role="status">
-          Resumed your 16×16 match. 20×20 starts with your next match.
+          Solo progress cannot be saved in this browser.
         </p>
       ) : null}
       <MatchView {...shared} presentation="solo" botLevel="Normal" onRematch={noop} />

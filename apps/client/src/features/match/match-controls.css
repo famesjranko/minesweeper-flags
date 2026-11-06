@@ -278,6 +278,13 @@ button.inline-bomb.is-armed::after {
   color: #231a02;
   font-weight: 750;
 }
+/* Solid, because this button can sit pinned over the tiles while the player aims. */
+.match-resign-action.is-fire:disabled {
+  border-color: #7a6a33;
+  background: #5c5026;
+  color: #d8cfa6;
+  opacity: 1;
+}
 .match-resign-action.is-danger {
   border-color: #b8695d;
   background: #4a2c31;

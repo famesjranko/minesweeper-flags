@@ -1,3 +1,4 @@
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import { createMatchState } from "@minesweeper-flags/game-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chooseSoloAction } from "../bot/solo-bot.js";
@@ -755,16 +756,13 @@ it("resumes a saved match at its own level and says the new level comes next", (
   expect(session.getSnapshot().difficulty).toBe("easy");
   expect(chooseAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), SOLO_BOT_ID, "easy");
 
-  // And the player is told that hard starts with the next match.
-  expect(session.getSnapshot().recoveryNotice).toBe(
-    "Resumed your Easy match. Hard starts with your next match."
-  );
+  // And no notice talks about the level.
+  expect(session.getSnapshot().recoveryNotice).toBeNull();
 
   // When the player then chooses Play again.
   session.rematch();
 
-  // Then the notice is gone and the new match is at the hard level.
-  expect(session.getSnapshot().recoveryNotice).toBeNull();
+  // Then the new match is at the hard level.
   expect(session.getSnapshot().difficulty).toBe("hard");
 });
 
@@ -841,10 +839,47 @@ it("resumes a saved match on its own board size and says the new size comes next
   // Then the restored match stays on the classic board.
   expect(session.getSnapshot().match.board.columns).toBe(16);
 
-  // And the player is told that the 30×30 board starts with the next match.
-  expect(session.getSnapshot().recoveryNotice).toBe(
-    "Resumed your 16×16 match. 30×30 starts with your next match."
-  );
+  // And no notice talks about the board.
+  expect(session.getSnapshot().recoveryNotice).toBeNull();
+});
+
+it("plays again on the same board when the home page has since picked another", () => {
+  // Given a 20×20 match started when that was the choice, and a later choice of 30×30
+  let choice: BoardSize = "large";
+  const session = createSoloSession({
+    storage: createStorage(),
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal",
+    preferredBoardSize: () => choice
+  });
+  session.start();
+  choice = "giant";
+
+  // When the player resigns and chooses Play again
+  session.resign();
+  session.rematch();
+
+  // Then the new match is on the 20×20 board
+  expect(session.getSnapshot().match.board.columns).toBe(20);
+});
+
+it("moves a saved 16×16 match up to the current choice on Play again", () => {
+  // Given a saved 16×16 match, a size that is no longer offered
+  const session = createSoloSession({
+    storage: createStorage(replayFor("human")),
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal",
+    preferredBoardSize: () => "large"
+  });
+  session.start();
+  expect(session.getSnapshot().match.board.columns).toBe(16);
+
+  // When the player resigns and chooses Play again
+  session.resign();
+  session.rematch();
+
+  // Then the new match is on the current choice
+  expect(session.getSnapshot().match.board.columns).toBe(20);
 });
 
 it("keeps the bomb locked on a 30×30 board until the human trails by that board's threshold", () => {

@@ -105,6 +105,26 @@ describe("MatchResultRibbon", () => {
     expect(html).toContain("25 – 26 by resignation");
   });
 
+  it.each([
+    [
+      "names a resignation when the winner is ahead but short of the winning score",
+      17,
+      12,
+      "17 – 12 by resignation"
+    ],
+    ["shows a natural win plainly when the winner reaches the winning score", 90, 84, "90 – 84"]
+  ])("%s", (_name, winnerScore, loserScore, expected) => {
+    // Given a finished 30×30 match that needs 90 to win
+    const finished = createFinishedMatch([{ score: winnerScore }, { score: loserScore }]);
+    const match = { ...finished, board: { ...finished.board, mineCount: 179 } };
+
+    // When the ribbon renders
+    const html = render(match, "player-1");
+
+    // Then the score line reads as expected, with nothing added
+    expect(html).toContain(`${expected}</span>`);
+  });
+
   it("shows a tie as a draw in a neutral colour", () => {
     // Given a finished match with no winner
     const match = { ...createFinishedMatch([{ score: 25 }]), winnerPlayerId: null };

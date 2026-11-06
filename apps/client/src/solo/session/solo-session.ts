@@ -1,8 +1,8 @@
 import {
-  BOARD_SIZES,
   type BoardSize,
   DEFAULT_BOARD_SIZE,
   getBombDeficit,
+  isOfferedBoardSize,
   type MatchState,
   resignMatch,
   resolveAction
@@ -10,7 +10,6 @@ import {
 import { toMatchStateDto } from "@minesweeper-flags/shared";
 import { DEFAULT_SOLO_DIFFICULTY, type SoloDifficulty } from "../bot/bot-profiles.js";
 import { chooseSoloAction } from "../bot/solo-bot.js";
-import { SOLO_DIFFICULTY_COPY } from "../solo-difficulty-options.js";
 import { createBrowserSoloStorage, type SoloStorage } from "../storage/solo-storage.js";
 import { createSoloState, replaySoloRecord } from "./solo-replay.js";
 import {
@@ -75,33 +74,6 @@ interface SoloSetup {
   difficulty: SoloDifficulty;
   boardSize: BoardSize;
 }
-
-// Names only the settings that differ, so a level-only change reads "Normal", not "Normal 16×16".
-const describeSetup = (setup: SoloSetup, differs: Record<keyof SoloSetup, boolean>): string => {
-  const { rows, columns } = BOARD_SIZES[setup.boardSize];
-  return [
-    differs.difficulty ? SOLO_DIFFICULTY_COPY[setup.difficulty].label : null,
-    differs.boardSize ? `${rows}×${columns}` : null
-  ]
-    .filter(Boolean)
-    .join(" ");
-};
-
-// A resumed live match keeps its setup; say so when the player has since picked another.
-const setupNotice = (
-  state: MatchState | null,
-  saved: SoloSetup,
-  preferred: SoloSetup
-): string | null => {
-  const differs = {
-    difficulty: saved.difficulty !== preferred.difficulty,
-    boardSize: saved.boardSize !== preferred.boardSize
-  };
-  if (state?.phase !== "live" || (!differs.difficulty && !differs.boardSize)) {
-    return null;
-  }
-  return `Resumed your ${describeSetup(saved, differs)} match. ${describeSetup(preferred, differs)} starts with your next match.`;
-};
 
 const freshRecord = (
   seed: number,
@@ -255,13 +227,17 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     });
   };
 
-  const beginFresh = (nextStarter: "human" | "bot", notice: string | null): void => {
+  const beginFresh = (
+    nextStarter: "human" | "bot",
+    notice: string | null,
+    boardSize: BoardSize = preferredBoardSize()
+  ): void => {
     cancelBot();
     starter = nextStarter;
     difficulty = preferredDifficulty();
     record = freshRecord(nextSeed() >>> 0, now(), starter, {
       difficulty,
-      boardSize: preferredBoardSize()
+      boardSize
     });
     state = createSoloState(record);
     bombArmed = false;
@@ -284,13 +260,7 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
       record = { ...recovered.record, actions: [...recovered.record.actions] };
       starter = recovered.record.starter;
       difficulty = recovered.record.difficulty;
-      recoveryNotice =
-        recovered.notice ??
-        setupNotice(
-          state,
-          { difficulty, boardSize: recovered.record.boardSize },
-          { difficulty: preferredDifficulty(), boardSize: preferredBoardSize() }
-        );
+      recoveryNotice = recovered.notice;
       scheduleBot();
       notify();
       return;
@@ -382,7 +352,9 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     },
     rematch: () => {
       if (!disposed) {
-        beginFresh(starter === "human" ? "bot" : "human", null);
+        // Play again means this board again, unless it is a size that is no longer offered.
+        const playedSize = isOfferedBoardSize(record?.boardSize) ? record?.boardSize : undefined;
+        beginFresh(starter === "human" ? "bot" : "human", null, playedSize);
       }
     },
     dispose: () => {

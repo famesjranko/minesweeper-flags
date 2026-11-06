@@ -106,13 +106,13 @@ test("every window with room keeps the whole match on one screen beside a rail",
   }
 });
 
-test("a notice above a Solo match does not push the actions off the screen", async () => {
+test("a save warning above a Solo match does not push the actions off the screen", async () => {
   for (const [width, height] of [
     [1280, 600],
     [1366, 650],
     [1920, 935]
   ]) {
-    // Given a resumed Solo match with a notice above it
+    // Given a Solo match with a save warning above it
     // When the match renders
     await layoutAt(width, height, { boardSize: "large", solo: true, soloNotice: true });
     const screen = await page.evaluate(() => ({
