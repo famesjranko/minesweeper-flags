@@ -114,7 +114,10 @@
   font-weight: 400;
   line-height: 14px;
   letter-spacing: 0;
-  white-space: nowrap;
+  /* It shares a row with the score and bomb, and phones have different fonts, so it wraps by need
+     and not at a set width. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #b2d6ed;
 }
 .arcade-match .sidebar-player-panel-red .sidebar-player-header {
@@ -320,11 +323,4 @@ button.inline-bomb.is-armed::after {
 }
 .arcade-match .inline-bomb .sidebar-bomb-icon {
   opacity: 1;
-}
-@media (max-width: 374px) {
-  /* The label shares its row with the score and bomb, so on narrow phones it wraps. */
-  .arcade-match .sidebar-player-header {
-    gap: 2px;
-    white-space: normal;
-  }
 }

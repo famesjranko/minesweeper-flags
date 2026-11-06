@@ -445,46 +445,44 @@ test("the last row scrolls clear of a pinned Fire bomb", async () => {
   assert.ok(positions.lastRow <= positions.fire, JSON.stringify(positions));
 });
 
-test("a score card label stays clear of the score on every phone width", async () => {
+test("a score card label stays clear of the score in any font", async () => {
   for (const width of [320, 340, 350, 360, 374, 375, 390, 430]) {
-    // Given a match on a phone, with the longest label on the player's card
-    await layoutAt(width, 700);
+    for (const widerBy of ["0px", "0.6px", "1.2px"]) {
+      for (const fixture of [{}, { offline: true }]) {
+        // Given a phone whose font sets the labels wider than the fonts here
+        await layoutAt(width, 700, fixture);
 
-    // When the card renders
-    const overlap = await page.evaluate(() => {
-      const card = document.querySelector(".sidebar-player-panel.is-self");
-      const label = card.querySelector(".sidebar-player-header");
-      const parts = [...label.children].map((part) => part.getBoundingClientRect().right);
-      return (
-        Math.max(...parts) - card.querySelector(".sidebar-score-pill").getBoundingClientRect().left
-      );
-    });
+        // When the cards render
+        const overlaps = await page.evaluate((spacing) => {
+          for (const label of document.querySelectorAll(".sidebar-player-header span")) {
+            label.style.letterSpacing = spacing;
+          }
+          return [...document.querySelectorAll(".sidebar-player-panel")].map((card) => {
+            const parts = [...card.querySelector(".sidebar-player-header").children];
+            const right = Math.max(...parts.map((part) => part.getBoundingClientRect().right));
+            return right - card.querySelector(".sidebar-score-pill").getBoundingClientRect().left;
+          });
+        }, widerBy);
 
-    // Then the label ends before the score starts
-    assert.ok(overlap <= 0, `${width}px: label overlaps the score by ${overlap}px`);
+        // Then every label ends before its score starts
+        const label = `${width}px, ${widerBy} wider, ${JSON.stringify(fixture)}: ${overlaps}`;
+        assert.ok(Math.max(...overlaps) <= 0, label);
+      }
+    }
   }
 });
 
-test("an offline player's card says so without touching the score", async () => {
-  for (const width of [320, 360, 390, 1366]) {
+test("an offline player's card says Offline", async () => {
+  for (const width of [320, 390, 1366]) {
     // Given a match with an offline opponent
-    await layoutAt(width, 800, { offline: true });
-
     // When the opponent's card renders
-    const card = await page.evaluate(() => {
-      const panel = document.querySelector(".sidebar-player-panel:not(.is-self)");
-      const label = panel.querySelector(".is-offline");
-      return {
-        text: label.textContent,
-        gap:
-          panel.querySelector(".sidebar-score-pill").getBoundingClientRect().left -
-          label.getBoundingClientRect().right
-      };
-    });
+    await layoutAt(width, 800, { offline: true });
+    const text = await page.evaluate(
+      () => document.querySelector(".sidebar-player-panel:not(.is-self) .is-offline").textContent
+    );
 
-    // Then the label reads Offline and clears the score
-    assert.equal(card.text, "Offline");
-    assert.ok(card.gap >= 0, `${width}px: label overlaps the score by ${-card.gap}px`);
+    // Then the label reads Offline
+    assert.equal(text, "Offline", `${width}px`);
   }
 });
 
