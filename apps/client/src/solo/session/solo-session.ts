@@ -230,14 +230,14 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
   const beginFresh = (
     nextStarter: "human" | "bot",
     notice: string | null,
-    boardSize: BoardSize = preferredBoardSize()
+    kept: { difficulty: SoloDifficulty; boardSize: BoardSize | undefined } | null = null
   ): void => {
     cancelBot();
     starter = nextStarter;
-    difficulty = preferredDifficulty();
+    difficulty = kept?.difficulty ?? preferredDifficulty();
     record = freshRecord(nextSeed() >>> 0, now(), starter, {
       difficulty,
-      boardSize
+      boardSize: kept?.boardSize ?? preferredBoardSize()
     });
     state = createSoloState(record);
     bombArmed = false;
@@ -352,9 +352,9 @@ export const createSoloSession = (options: SoloSessionOptions = {}): SoloSession
     },
     rematch: () => {
       if (!disposed) {
-        // Play again means this board again, unless it is a size that is no longer offered.
-        const playedSize = isOfferedBoardSize(record?.boardSize) ? record?.boardSize : undefined;
-        beginFresh(starter === "human" ? "bot" : "human", null, playedSize);
+        // Play again means the same game again, unless its board is no longer offered.
+        const boardSize = isOfferedBoardSize(record?.boardSize) ? record?.boardSize : undefined;
+        beginFresh(starter === "human" ? "bot" : "human", null, { difficulty, boardSize });
       }
     },
     dispose: () => {
