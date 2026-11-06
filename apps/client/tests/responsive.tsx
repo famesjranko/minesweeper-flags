@@ -26,7 +26,7 @@ export const readLayout = () => {
     cell: box(".board-cell"),
     header: box(".arcade-header"),
     scores: box(".arcade-match-scores"),
-    composer: box(".arcade-chat-region .chat-composer"),
+    composer: dialog ? box(".arcade-chat-region .chat-composer") : null,
     chat: dialog?.open ? (dialog.matches(":modal") ? "sheet" : "sidebar") : "preview",
     horizontalOverflow: document.documentElement.scrollWidth > innerWidth
   };

@@ -1,5 +1,6 @@
 import "./room-lobby.css";
 
+import { type BoardSize, DEFAULT_OFFERED_BOARD_SIZE } from "@minesweeper-flags/game-engine";
 import { useEffect, useId, useState } from "react";
 import type { SlotAvailability } from "../../app/providers/GameClientProvider.js";
 import type { DeploymentMode } from "../../lib/config/env.js";
@@ -20,7 +21,7 @@ interface RoomLobbyProps {
   slotAvailability?: SlotAvailability | null;
   serverUnreachable?: boolean;
   onRefreshSlots?: () => void;
-  onCreateRoom: (displayName: string) => void;
+  onCreateRoom: (displayName: string, boardSize: BoardSize) => void;
   onJoinRoom: (displayName: string, inviteToken: string) => void;
 }
 
@@ -37,6 +38,7 @@ export const RoomLobby = ({
 }: RoomLobbyProps) => {
   const displayNameId = useId();
   const [editedName, setEditedName] = useState<string | null>(null);
+  const [boardSize, setBoardSize] = useState<BoardSize>(DEFAULT_OFFERED_BOARD_SIZE);
   const [inviteValue, setInviteValue] = useState(initialInviteValue);
   const [inviteChecked, setInviteChecked] = useState(false);
   const inviteToken = extractInviteToken(inviteValue);
@@ -60,7 +62,7 @@ export const RoomLobby = ({
       return;
     }
 
-    onCreateRoom(trimmedDisplayName);
+    onCreateRoom(trimmedDisplayName, boardSize);
     onRefreshSlots?.();
   };
 
@@ -115,11 +117,18 @@ export const RoomLobby = ({
 
       <div className="lobby-action-cards">
         {isP2PDeployment ? (
-          <DirectMatchActionCards canCreateRoom={canCreateRoom} onCreateRoom={handleCreateRoom} />
+          <DirectMatchActionCards
+            canCreateRoom={canCreateRoom}
+            onCreateRoom={handleCreateRoom}
+            boardSize={boardSize}
+            onBoardSizeChange={setBoardSize}
+          />
         ) : (
           <ServerMatchActionCards
             canCreateRoom={canCreateRoom}
             onCreateRoom={handleCreateRoom}
+            boardSize={boardSize}
+            onBoardSizeChange={setBoardSize}
             slotsFull={slotsFull}
             inviteValue={inviteValue}
             onInviteValueChange={(value) => {

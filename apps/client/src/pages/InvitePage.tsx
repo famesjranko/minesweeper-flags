@@ -131,7 +131,7 @@ export const InvitePage = () => {
           <button type="submit" className="arcade-primary" disabled={!canJoin}>
             Join game
           </button>
-          <p className="arcade-flow-note">Shared 16×16 board · First to 26 wins</p>
+          <p className="arcade-flow-note">Shared board · Most mines wins</p>
           {error ? (
             <p className="arcade-flow-error" role="alert">
               {error}

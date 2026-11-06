@@ -1,9 +1,3 @@
-.arcade-match.is-solo {
-  max-width: 720px;
-}
-.arcade-match.is-solo .arcade-match-main {
-  grid-template-columns: minmax(0, 1fr);
-}
 .arcade-zoom-button {
   display: grid;
   place-items: center;
@@ -239,7 +233,6 @@ button.inline-bomb.is-armed::after {
   color: #dcedff;
   font-size: 15px;
   font-weight: 600;
-  line-height: 20px;
 }
 .match-result-line:has(.match-result-summary.is-red) {
   color: #ffd0b8;

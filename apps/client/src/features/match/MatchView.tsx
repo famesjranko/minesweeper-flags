@@ -2,7 +2,7 @@ import "./match-view.css";
 import "./match-controls.css";
 import "./match-motion.css";
 
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import {
   advanceLastMoveTrail,
   getLastMoveMarks,
@@ -16,6 +16,7 @@ import { MatchHeader } from "./MatchHeader.js";
 import { MatchPlayArea } from "./MatchPlayArea.js";
 import { getMatchPresentation } from "./match-presentation.js";
 import type { MatchViewProps } from "./match-view.types.js";
+import { SoloRacePanel } from "./SoloRacePanel.js";
 import { useMatchChat } from "./useMatchChat.js";
 import { useMatchTitle } from "./useMatchTitle.js";
 import { useUnreadChat } from "./useUnreadChat.js";
@@ -49,7 +50,10 @@ export const MatchView = (props: MatchViewProps) => {
       : undefined;
 
   return (
-    <div className={`arcade-match${isSolo ? " is-solo" : ""}`}>
+    <div
+      className={`arcade-match${isSolo ? " is-solo" : ""}`}
+      style={{ "--board-columns": match.board.columns } as CSSProperties}
+    >
       <h1 className="visually-hidden">Minesweeper Flags match</h1>
       {!isSolo ? (
         <MatchHeader
@@ -87,7 +91,9 @@ export const MatchView = (props: MatchViewProps) => {
           hidePresence={isSolo}
           celebrateTone={celebrateTone}
         />
-        {!isSolo ? (
+        {isSolo ? (
+          <SoloRacePanel match={match} botLevel={props.botLevel} slots={view.playerSlots} />
+        ) : (
           <MatchChat
             props={props}
             playerTones={view.playerTones}
@@ -95,7 +101,7 @@ export const MatchView = (props: MatchViewProps) => {
             chatRef={chatRef}
             onChatSeen={chat.markRead}
           />
-        ) : null}
+        )}
       </div>
       {celebrateTone ? <WinBurst tone={celebrateTone} /> : null}
     </div>

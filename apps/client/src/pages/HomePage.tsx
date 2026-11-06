@@ -1,6 +1,8 @@
 import "../shared-ui/game-mode.css";
 
+import type { BoardSize } from "@minesweeper-flags/game-engine";
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
+import { BoardSizeSelect } from "../shared-ui/BoardSizeSelect.js";
 import { GameHelp } from "../shared-ui/GameHelp.js";
 import { LobbyLayout } from "../shared-ui/LobbyLayout.js";
 import type { SoloDifficulty } from "../solo/bot/bot-profiles.js";
@@ -8,9 +10,11 @@ import { SoloDifficultyPicker } from "../solo/SoloDifficultyPicker.js";
 import { replaySoloRecord } from "../solo/session/solo-replay.js";
 import { soloEntryHref } from "../solo/solo-entry-intent.js";
 import {
+  readSoloBoardSize,
   readSoloDifficulty,
+  writeSoloBoardSize,
   writeSoloDifficulty
-} from "../solo/storage/solo-difficulty-preference.js";
+} from "../solo/storage/solo-preferences.js";
 import { createBrowserSoloStorage } from "../solo/storage/solo-storage.js";
 
 export type Mode = "solo" | "friend";
@@ -34,26 +38,42 @@ const SoloEntry = () => {
     return record !== null && replaySoloRecord(record)?.phase === "live";
   });
   const [difficulty, setDifficulty] = useState(readSoloDifficulty);
+  const [boardSize, setBoardSize] = useState(readSoloBoardSize);
   const selectDifficulty = (nextDifficulty: SoloDifficulty) => {
     setDifficulty(nextDifficulty);
     writeSoloDifficulty(nextDifficulty);
   };
+  const selectBoardSize = (nextBoardSize: BoardSize) => {
+    setBoardSize(nextBoardSize);
+    writeSoloBoardSize(nextBoardSize);
+  };
+  const sizeSelect = <BoardSizeSelect value={boardSize} onChange={selectBoardSize} />;
   return (
     <>
       <SoloDifficultyPicker value={difficulty} onChange={selectDifficulty} />
       {hasLiveGame ? (
-        <div className="solo-entry-actions">
-          <a className="solo-entry-primary" href={soloEntryHref(difficulty)}>
+        <div className="solo-entry-saved">
+          <a className="solo-entry-primary" href={soloEntryHref(difficulty, boardSize)}>
             Return to game
           </a>
-          <a className="solo-entry-primary solo-entry-new" href={soloEntryHref(difficulty, true)}>
-            Start new
-          </a>
+          {/* The chosen size only applies to a new match, so it sits beside Start new. */}
+          <div className="board-size-row">
+            {sizeSelect}
+            <a
+              className="solo-entry-primary solo-entry-new"
+              href={soloEntryHref(difficulty, boardSize, true)}
+            >
+              Start new
+            </a>
+          </div>
         </div>
       ) : (
-        <a className="solo-entry-primary" href={soloEntryHref(difficulty)}>
-          Start solo match
-        </a>
+        <div className="board-size-row">
+          {sizeSelect}
+          <a className="solo-entry-primary" href={soloEntryHref(difficulty, boardSize)}>
+            Start solo match
+          </a>
+        </div>
       )}
     </>
   );

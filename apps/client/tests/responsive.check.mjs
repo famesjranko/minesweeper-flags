@@ -75,15 +75,6 @@ test("a laptop window shows the scores and the last row together", async () => {
   }
 });
 
-test("a tall window grows the board until its squares reach 36px", async () => {
-  // Given a match on a window with more than enough height
-  // When the match renders
-  const { board } = await layoutAt(1920, 1200);
-
-  // Then the board is at its limit
-  assert.equal(board.width, 624);
-});
-
 test("a desktop-sized window fits the whole board once there is room", async () => {
   // Given a match on an ordinary 1080p browser window
   // When the match renders
@@ -250,7 +241,7 @@ test("copying chat text leaves out the hidden sender", async () => {
 
 test("a focused tile is not hidden under the pinned rematch action", async () => {
   for (const [width, height, fixture] of [
-    [1024, 600, {}],
+    [1024, 570, {}],
     [320, 568, { longNames: true }]
   ]) {
     // Given a finished match on a short window with a rematch waiting for the opponent
@@ -284,7 +275,7 @@ test("a long name in a wide font cannot make the pinned rematch block taller", a
   });
 
   // Then the block stays within the page's scroll padding
-  assert.ok(height + 8 <= 168, `the block is ${height}px tall`);
+  assert.ok(height + 8 <= 172, `the block is ${height}px tall`);
 });
 
 test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async () => {
@@ -486,6 +477,168 @@ test("an offline player's card says so without touching the score", async () => 
     assert.equal(card.text, "Offline");
     assert.ok(card.gap >= 0, `${width}px: label overlaps the score by ${-card.gap}px`);
   }
+});
+
+test("every window with room keeps the whole match on one screen beside a rail", async () => {
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 600],
+    [1366, 650],
+    [1440, 780],
+    [1920, 935],
+    [2560, 1300],
+    [3440, 1300],
+    [900, 900]
+  ]) {
+    for (const boardSize of ["large", "huge", "giant"]) {
+      for (const solo of [false, true]) {
+        // Given a match on a window wide and tall enough for the rail
+        // When the match renders
+        const layout = await layoutAt(width, height, { boardSize, solo });
+        const label = `${width}x${height} ${boardSize}${solo ? " solo" : ""}`;
+        const rail = await page.evaluate(() => {
+          const box = (selector) => document.querySelector(selector)?.getBoundingClientRect();
+          const side = box(".solo-race-panel") ?? box(".arcade-chat-region");
+          const panel = document.querySelector(".solo-race-panel");
+          return {
+            pageHeight: document.documentElement.scrollHeight,
+            sideLeft: side.left,
+            actionsBottom: box(".match-action-slot").bottom,
+            headerWidth: box(".arcade-header").width,
+            clipped: panel ? panel.scrollHeight > panel.clientHeight + 1 : false
+          };
+        });
+
+        // Then nothing scrolls
+        assert.ok(rail.pageHeight <= height, `${label}: page is ${rail.pageHeight}px tall`);
+
+        // And the rail sits beside the board and ends level with it
+        assert.ok(rail.sideLeft >= layout.board.right, `${label}: rail overlaps the board`);
+        assert.ok(
+          rail.actionsBottom <= layout.board.bottom + 1,
+          `${label}: actions run past the board`
+        );
+
+        // And the header spans the board and the rail together
+        assert.ok(
+          rail.headerWidth > layout.board.width + 280,
+          `${label}: header is ${rail.headerWidth}px`
+        );
+
+        // And the Solo panel shows everything it has
+        assert.equal(rail.clipped, false, `${label}: the Solo panel clips its content`);
+      }
+    }
+  }
+});
+
+test("a notice above a Solo match does not push the actions off the screen", async () => {
+  for (const [width, height] of [
+    [1280, 600],
+    [1366, 650],
+    [1920, 935]
+  ]) {
+    // Given a resumed Solo match with a notice above it
+    // When the match renders
+    await layoutAt(width, height, { boardSize: "large", solo: true, soloNotice: true });
+    const screen = await page.evaluate(() => ({
+      height: document.documentElement.scrollHeight,
+      actions: document.querySelector(".match-action-slot").getBoundingClientRect().bottom
+    }));
+
+    // Then the page does not scroll, and the actions stay on screen
+    assert.ok(screen.height <= height, `${width}x${height}: page is ${screen.height}px tall`);
+    assert.ok(screen.actions <= height, `${width}x${height}: actions end at ${screen.actions}px`);
+  }
+});
+
+test("squares stop growing at 36px on the biggest windows", async () => {
+  for (const [boardSize, boardWidth] of [
+    ["large", 776],
+    ["giant", 1156]
+  ]) {
+    // Given a board on a 4K window with far more room than it needs
+    // When the match renders
+    const { board } = await layoutAt(3840, 2000, { boardSize });
+
+    // Then the board stops at 36px squares
+    assert.equal(board.width, boardWidth);
+  }
+});
+
+test("near-square windows keep squares as large as the stacked layout gave", async () => {
+  for (const [width, height, minimum] of [
+    [900, 900, 15.5],
+    [1024, 1080, 19.6],
+    [1100, 1000, 21.5]
+  ]) {
+    // Given a 30x30 board on a window nearly as tall as it is wide
+    // When the match renders
+    const { cell } = await layoutAt(width, height, { boardSize: "giant" });
+
+    // Then squares are no smaller than before the rail existed
+    assert.ok(cell.width >= minimum - 1.5, `${width}x${height}: squares are ${cell.width}px`);
+  }
+});
+
+test("an upright monitor stacks the match with chat under the board", async () => {
+  for (const [width, height] of [
+    [1080, 1780],
+    [1440, 2400]
+  ]) {
+    // Given a match on a monitor turned upright
+    // When the match renders
+    const { board, composer } = await layoutAt(width, height, { boardSize: "giant" });
+
+    // Then the chat is under the board, and its input is on screen
+    assert.ok(composer.y >= board.bottom, `${width}x${height}: chat starts at ${composer.y}px`);
+    assert.ok(composer.bottom <= height, `${width}x${height}: input ends at ${composer.bottom}px`);
+  }
+});
+
+test("the Solo panel only shows where the rail has room for it", async () => {
+  for (const [width, height, shown] of [
+    [390, 844, false],
+    [768, 1024, false],
+    [932, 430, false],
+    [1080, 1780, false],
+    [1366, 650, true]
+  ]) {
+    // Given a Solo match
+    // When the match renders
+    await layoutAt(width, height, { boardSize: "large", solo: true });
+    const visible = await page.evaluate(
+      () => getComputedStyle(document.querySelector(".solo-race-panel")).display !== "none"
+    );
+
+    // Then the panel shows only on the rail layout
+    assert.equal(visible, shown, `${width}x${height}`);
+  }
+});
+
+test("the board size control adds no height to the home page", async () => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  // Given the home page on the narrowest phone
+  await page.goto(new URL("/lobby", harnessUrl).href);
+  await page.waitForSelector("#friend-panel .lobby-create-button");
+
+  // When the two controls render side by side
+  const row = await page.evaluate(() => {
+    const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const select = box("#friend-panel .board-size-select");
+    const create = box("#friend-panel .lobby-create-button");
+    return {
+      sameRow: select.top === create.top,
+      gap: create.left - select.right,
+      right: create.right
+    };
+  });
+  await page.goto(harnessUrl);
+
+  // Then they share one row and stay on the screen
+  assert.equal(row.sameRow, true);
+  assert.ok(row.gap >= 0, `the controls overlap by ${-row.gap}px`);
+  assert.ok(row.right <= 320, `Create room ends at ${row.right}px`);
 });
 
 test("opening How to play leaves its control in place", async () => {

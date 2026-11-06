@@ -258,16 +258,24 @@
   display: none;
 }
 
+/* Before the layouts below, which replace these on windows with room for a rail. */
+.arcade-match.is-solo {
+  max-width: 720px;
+}
+
+.arcade-match.is-solo .arcade-match-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Windows too short for a board beside the rail keep the stack. They scroll, so the floor keeps
+   tiles large enough to aim at. */
 @media (min-width: 900px) {
   .page-shell.arcade-page-shell.arcade-match-page {
-    /* The board also fits the height left after the header 65px, scores 80px, resign control 46px,
-       and two 12px gaps. svh ignores toolbars, so scrolling cannot resize it. The floor keeps tiles
-       large enough to aim at on short windows, which then scroll. The limit holds tiles at 36px. */
-    --match-board-fit: clamp(480px, calc(100svh - 2 * var(--match-page-padding) - 215px), 624px);
+    --match-board-fit: 480px;
   }
 
   .arcade-match {
-    max-width: min(1032px, calc(var(--match-board-fit) + 312px));
+    max-width: calc(var(--match-board-fit) + 312px);
   }
 
   .arcade-chat-region {
@@ -281,18 +289,135 @@
   }
 }
 
+/* The header stays across the top, and everything else sits in a rail beside the board. The board
+   is what fits the window, with squares stopping at 36px. Its gaps, padding and border add 18px
+   plus 2px a column. */
+@media (min-width: 900px) and (min-height: 580px) and (min-aspect-ratio: 3 / 4) {
+  .page-shell.arcade-page-shell.arcade-match-page {
+    --match-page-padding: 12px;
+    --match-rail: 360px;
+  }
+
+  .arcade-match {
+    --match-board-limit: calc(var(--board-columns) * 38px + 16px);
+    --match-board-fit: min(
+      calc(100vw - 2 * var(--match-page-padding) - var(--match-rail) - 20px),
+      calc(100svh - 2 * var(--match-page-padding) - 65px - var(--match-notice-height, 0px)),
+      var(--match-board-limit)
+    );
+    width: calc(var(--match-board-fit) + var(--match-rail) + 20px);
+    max-width: none;
+  }
+
+  .arcade-match.is-solo {
+    width: calc(var(--match-board-fit) + var(--match-rail) + 20px);
+    max-width: none;
+  }
+
+  .arcade-match .arcade-match-main,
+  .arcade-match.is-solo .arcade-match-main {
+    grid-template-columns: var(--match-board-fit) var(--match-rail);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 12px 20px;
+  }
+
+  .arcade-play-area {
+    display: contents;
+  }
+
+  .arcade-board-stage {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: var(--match-board-fit);
+  }
+
+  .arcade-match-scores {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .arcade-chat-region {
+    grid-column: 2;
+    grid-row: 2;
+    position: static;
+    align-self: stretch;
+    width: auto;
+    height: auto;
+  }
+
+  .match-action-slot {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}
+
+/* Near-square windows have height to spare and little width, so a narrower rail and stacked scores
+   keep the squares at least as large as the stacked layout would. */
+@media (min-width: 900px) and (min-height: 580px) and (min-aspect-ratio: 3 / 4) and (
+    max-aspect-ratio: 5 / 4
+  ) {
+  .page-shell.arcade-page-shell.arcade-match-page {
+    --match-rail: 300px;
+  }
+
+  .arcade-match-scores {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+/* Upright monitors: width is the short side, so everything stacks with chat under the board. The
+   header, scores and actions take 215px, and chat keeps at least 240px with spare room below it. */
+@media (min-width: 900px) and (max-aspect-ratio: 3 / 4) {
+  .page-shell.arcade-page-shell.arcade-match-page {
+    --match-page-padding: 12px;
+  }
+
+  .arcade-match {
+    --match-board-limit: calc(var(--board-columns) * 38px + 16px);
+    --match-board-fit: min(
+      calc(100vw - 2 * var(--match-page-padding)),
+      calc(100svh - 2 * var(--match-page-padding) - 215px - 240px),
+      var(--match-board-limit)
+    );
+    width: var(--match-board-fit);
+    max-width: none;
+  }
+
+  .arcade-match.is-solo {
+    width: var(--match-board-fit);
+    max-width: none;
+  }
+
+  .arcade-match .arcade-match-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .arcade-chat-region {
+    contain: none;
+    position: static;
+    width: auto;
+    height: min(
+      420px,
+      calc(100svh - 2 * var(--match-page-padding) - 279px - 12px - var(--match-board-fit))
+    );
+  }
+}
+
 /* Windows too short for the column pin the action the player must reach. Resign and zoom stay in
    place: they are rarely wanted, and pinning them would cover a row of tiles. A result also has
    status text, so it needs more clearance and its own background over the tiles. */
 @media (max-height: 500px), (min-width: 601px) and (max-width: 899px) and (max-height: 950px),
-  (min-width: 900px) and (max-height: 950px), (max-width: 600px) and (max-height: 730px),
+  (min-width: 900px) and (max-height: 579px), (max-width: 600px) and (max-height: 730px),
   (min-width: 431px) and (max-width: 600px) and (max-height: 900px) {
   :root:has(.arcade-match-scores) {
     scroll-padding-bottom: 62px;
   }
 
   :root:has(.match-result-line) {
-    scroll-padding-bottom: 168px;
+    scroll-padding-bottom: 172px;
   }
 
   .match-action-slot:has(button[name="fire-bomb"], .match-result-line) {

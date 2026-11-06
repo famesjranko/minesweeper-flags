@@ -72,6 +72,7 @@ describe("solo session", () => {
       createdAt: 1,
       starter: "bot",
       difficulty: "normal",
+      boardSize: "classic",
       actions: []
     };
 
@@ -101,6 +102,7 @@ describe("solo session", () => {
       createdAt: 1,
       starter: "bot",
       difficulty: "normal",
+      boardSize: "classic",
       actions: []
     });
     const session = createSoloSession({
@@ -138,6 +140,7 @@ describe("solo session", () => {
         createdAt: 1,
         starter: "bot",
         difficulty: "normal",
+        boardSize: "classic",
         actions: []
       })
     });
@@ -155,6 +158,7 @@ describe("solo session", () => {
       createdAt: 1,
       starter: "bot" as const,
       difficulty: "normal" as const,
+      boardSize: "classic" as const,
       actions: []
     };
     const session = createSoloSession({
@@ -277,6 +281,7 @@ describe("solo session", () => {
         createdAt: 99,
         starter: "human",
         difficulty: "hard",
+        boardSize: "classic",
         actions: []
       });
     }
@@ -355,6 +360,7 @@ const replayFor = (starter: "human" | "bot" = "bot"): SoloReplayRecord => ({
   createdAt: 20,
   starter,
   difficulty: "normal",
+  boardSize: "classic",
   actions: []
 });
 
@@ -773,6 +779,7 @@ it("lets the default bot reason at the match's level", () => {
       createdAt: 1,
       starter: "bot",
       difficulty: "hard",
+      boardSize: "classic",
       actions: [
         { type: "select", playerId: SOLO_BOT_ID, row: 8, column: 0 },
         { type: "select", playerId: SOLO_HUMAN_ID, row: 0, column: 0 }
@@ -795,4 +802,92 @@ it("lets the default bot reason at the match's level", () => {
   expect({ type: lastAction?.type, row: lastAction?.row, column: lastAction?.column }).toEqual(
     hardMove
   );
+});
+
+it("plays a fresh match on the chosen board size, including Play again", () => {
+  // Given a fresh session whose player has chosen the 30×30 board.
+  const storage = createStorage();
+  const session = createSoloSession({
+    storage,
+    scheduler: createScheduler(),
+    preferredBoardSize: () => "giant"
+  });
+
+  // When the match starts.
+  session.start();
+
+  // Then the board and the saved replay use the 30×30 board.
+  const { board } = session.getSnapshot().match;
+  expect([board.rows, board.columns, board.mineCount]).toEqual([30, 30, 179]);
+  expect(storage.saved?.boardSize).toBe("giant");
+
+  // And when the player chooses Play again, the next match uses it too.
+  session.rematch();
+  expect(session.getSnapshot().match.board.columns).toBe(30);
+});
+
+it("resumes a saved match on its own board size and says the new size comes next", () => {
+  // Given a saved classic match and a player who has since picked the 30×30 board.
+  const session = createSoloSession({
+    storage: createStorage(replayFor("human")),
+    scheduler: createScheduler(),
+    preferredDifficulty: () => "normal",
+    preferredBoardSize: () => "giant"
+  });
+
+  // When the session restores the replay.
+  session.start();
+
+  // Then the restored match stays on the classic board.
+  expect(session.getSnapshot().match.board.columns).toBe(16);
+
+  // And the player is told that the 30×30 board starts with the next match.
+  expect(session.getSnapshot().recoveryNotice).toBe(
+    "Resumed your 16×16 match. 30×30 starts with your next match."
+  );
+});
+
+it("keeps the bomb locked on a 30×30 board until the human trails by that board's threshold", () => {
+  // Given a saved 30×30 match where the bot claimed four mines and then revealed a safe square.
+  const cells = createMatchState({
+    roomId: "solo-local",
+    players: [
+      { playerId: SOLO_HUMAN_ID, displayName: "You" },
+      { playerId: SOLO_BOT_ID, displayName: "Bot" }
+    ],
+    seed: 11,
+    createdAt: 20,
+    startingPlayerId: SOLO_BOT_ID,
+    boardSize: "giant"
+  }).board.cells.flat();
+  const botClaims = (count: number) => {
+    const mines = cells.filter((cell) => cell.hasMine).slice(0, count);
+    const safe = cells.find((cell) => !cell.hasMine)!;
+    return [...mines, safe].map((cell) => ({
+      type: "select" as const,
+      playerId: SOLO_BOT_ID,
+      row: cell.row,
+      column: cell.column
+    }));
+  };
+  const sessionAfter = (count: number) => {
+    const session = createSoloSession({
+      storage: createStorage({ ...replayFor(), boardSize: "giant", actions: botClaims(count) }),
+      scheduler: createScheduler()
+    });
+    session.start();
+    return session;
+  };
+  const trailingByFour = sessionAfter(4);
+
+  // When the human, four behind, tries to arm the bomb.
+  trailingByFour.toggleBombMode();
+
+  // Then it stays locked, because this board needs a deficit of 14.
+  expect(trailingByFour.getSnapshot().bombArmed).toBe(false);
+
+  // And when the human is 14 behind, the bomb arms.
+  const trailingByFourteen = sessionAfter(14);
+  trailingByFourteen.toggleBombMode();
+  expect(trailingByFourteen.getSnapshot().bombArmed).toBe(true);
 });

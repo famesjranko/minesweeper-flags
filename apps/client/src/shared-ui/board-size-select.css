@@ -1,0 +1,37 @@
+.board-size-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+.board-size-row > * {
+  min-width: 0;
+}
+.board-size-select {
+  min-height: 46px;
+  padding: 0 30px 0 12px;
+  border: 1px solid #526888;
+  border-radius: 10px;
+  background: #10203a
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23b8c9df' stroke-width='2'/%3E%3C/svg%3E")
+    no-repeat right 10px center;
+  color: #f3f7ff;
+  font: inherit;
+  /* Below 16px, phones zoom the page in when the control takes focus. */
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  appearance: none;
+  cursor: pointer;
+}
+.board-size-select option {
+  background: #10203a;
+  color: #f3f7ff;
+}
+.board-size-select:focus-visible {
+  outline: 2px solid #9bdcff;
+  outline-offset: 2px;
+}
+.solo-entry-saved {
+  display: grid;
+  gap: 8px;
+}

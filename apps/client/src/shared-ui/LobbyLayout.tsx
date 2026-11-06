@@ -29,7 +29,7 @@ export const LobbyLayout = ({
             <h1>
               Find mines. <span>Win flags.</span>
             </h1>
-            <p>16×16 board · First to 26 wins</p>
+            <p>Two-player classic Minesweeper!</p>
           </div>
           <LobbyBoardHero size="compact" />
         </div>

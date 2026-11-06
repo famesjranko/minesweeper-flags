@@ -21,6 +21,18 @@ export const BOARD_SIZE_IDS = [
 
 export const DEFAULT_BOARD_SIZE: BoardSize = "classic";
 
+/** What players can choose. Classic stays above so saved games and old rooms still load. */
+export const OFFERED_BOARD_SIZES = [
+  "large",
+  "huge",
+  "giant"
+] as const satisfies readonly BoardSize[];
+
+export const DEFAULT_OFFERED_BOARD_SIZE: BoardSize = "large";
+
+export const isOfferedBoardSize = (value: unknown): value is BoardSize =>
+  (OFFERED_BOARD_SIZES as readonly unknown[]).includes(value);
+
 export const BOARD_ROWS = BOARD_SIZES[DEFAULT_BOARD_SIZE].rows;
 export const BOARD_COLUMNS = BOARD_SIZES[DEFAULT_BOARD_SIZE].columns;
 export const TOTAL_MINES = BOARD_SIZES[DEFAULT_BOARD_SIZE].mineCount;

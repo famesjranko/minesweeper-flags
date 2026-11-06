@@ -1,9 +1,15 @@
+import { BOARD_SIZES, type BoardSize, DEFAULT_BOARD_SIZE } from "@minesweeper-flags/game-engine";
 import { BOT_PROFILES, DEFAULT_SOLO_DIFFICULTY, type SoloDifficulty } from "../bot/bot-profiles.js";
 import type { SoloReplayRecord } from "../session/solo-session.types.js";
 
 export const SOLO_STORAGE_KEY = "msf:solo:v1";
-export const SOLO_STORAGE_MAX_BYTES = 32 * 1024;
-export const SOLO_STORAGE_MAX_ACTIONS = 256;
+// Every move reveals or claims at least one square, so a match has at most one move per square.
+// The largest board sets both limits; one saved move is about 60 bytes of JSON.
+const LARGEST_BOARD_CELLS = Math.max(
+  ...Object.values(BOARD_SIZES).map(({ rows, columns }) => rows * columns)
+);
+export const SOLO_STORAGE_MAX_ACTIONS = LARGEST_BOARD_CELLS;
+export const SOLO_STORAGE_MAX_BYTES = 80 * LARGEST_BOARD_CELLS;
 
 export interface SoloStorage {
   read: () => { record: SoloReplayRecord | null; notice: string | null };
@@ -19,13 +25,15 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 const isInteger = (value: unknown, minimum: number, maximum: number): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= minimum && value <= maximum;
 
-const isAction = (value: unknown): boolean =>
-  isPlainObject(value) &&
-  (value.type === "select" || value.type === "bomb") &&
-  (value.playerId === "solo-human" || value.playerId === "solo-bot") &&
-  isInteger(value.row, 0, 15) &&
-  isInteger(value.column, 0, 15) &&
-  Object.keys(value).length === 4;
+const isActionOn =
+  (boardSize: BoardSize) =>
+  (value: unknown): boolean =>
+    isPlainObject(value) &&
+    (value.type === "select" || value.type === "bomb") &&
+    (value.playerId === "solo-human" || value.playerId === "solo-bot") &&
+    isInteger(value.row, 0, BOARD_SIZES[boardSize].rows - 1) &&
+    isInteger(value.column, 0, BOARD_SIZES[boardSize].columns - 1) &&
+    Object.keys(value).length === 4;
 
 const hasControlCharacter = (value: string): boolean => {
   for (const character of value) {
@@ -40,12 +48,16 @@ const hasControlCharacter = (value: string): boolean => {
 export const isSoloDifficulty = (value: unknown): value is SoloDifficulty =>
   typeof value === "string" && Object.hasOwn(BOT_PROFILES, value);
 
+export const isBoardSize = (value: unknown): value is BoardSize =>
+  typeof value === "string" && Object.hasOwn(BOARD_SIZES, value);
+
 const RECORD_KEYS = [
   "version",
   "seed",
   "createdAt",
   "starter",
   "difficulty",
+  "boardSize",
   "actions",
   "resignedBy"
 ];
@@ -55,14 +67,20 @@ export const validateSoloReplay = (value: unknown): SoloReplayRecord | null => {
   if (!isPlainObject(value) || Object.keys(value).some((key) => !RECORD_KEYS.includes(key))) {
     return null;
   }
+  // Records saved before board sizes existed were all played on the classic board.
+  const boardSize = value.boardSize ?? DEFAULT_BOARD_SIZE;
+  if (!isBoardSize(boardSize)) {
+    return null;
+  }
+  const { rows, columns } = BOARD_SIZES[boardSize];
   if (
     value.version !== 1 ||
     !isInteger(value.seed, 0, 0xffffffff) ||
     !isInteger(value.createdAt, 0, Number.MAX_SAFE_INTEGER - SOLO_STORAGE_MAX_ACTIONS - 1) ||
     (value.starter !== "human" && value.starter !== "bot") ||
     !Array.isArray(value.actions) ||
-    value.actions.length > SOLO_STORAGE_MAX_ACTIONS ||
-    !value.actions.every(isAction) ||
+    value.actions.length > rows * columns ||
+    !value.actions.every(isActionOn(boardSize)) ||
     (value.resignedBy !== undefined &&
       value.resignedBy !== "human" &&
       value.resignedBy !== "bot") ||
@@ -71,7 +89,11 @@ export const validateSoloReplay = (value: unknown): SoloReplayRecord | null => {
     return null;
   }
   // Records saved before levels existed were all played at the default level.
-  return { difficulty: DEFAULT_SOLO_DIFFICULTY, ...value } as unknown as SoloReplayRecord;
+  return {
+    difficulty: DEFAULT_SOLO_DIFFICULTY,
+    ...value,
+    boardSize
+  } as unknown as SoloReplayRecord;
 };
 
 const getBrowserStorage = (): BrowserStorage | null => {
