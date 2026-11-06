@@ -127,6 +127,10 @@
   color: #ffb4a2;
   font-weight: 700;
 }
+/* Offline is one word, so the dot drops to the next line before the word has to break. */
+.arcade-match .sidebar-player-header:has(.is-offline) {
+  flex-wrap: wrap;
+}
 .arcade-player-presence {
   flex-shrink: 0;
   width: 5px;

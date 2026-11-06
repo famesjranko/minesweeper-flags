@@ -454,14 +454,16 @@ test("a score card label stays clear of the score in any font", async () => {
 
         // When the cards render
         const overlaps = await page.evaluate((spacing) => {
-          for (const label of document.querySelectorAll(".sidebar-player-header span")) {
-            label.style.letterSpacing = spacing;
-          }
-          return [...document.querySelectorAll(".sidebar-player-panel")].map((card) => {
+          const labels = document.querySelectorAll(".sidebar-player-header span");
+          for (const label of labels) label.style.letterSpacing = spacing;
+          const measured = [...document.querySelectorAll(".sidebar-player-panel")].map((card) => {
             const parts = [...card.querySelector(".sidebar-player-header").children];
             const right = Math.max(...parts.map((part) => part.getBoundingClientRect().right));
             return right - card.querySelector(".sidebar-score-pill").getBoundingClientRect().left;
           });
+          // React keeps these elements, so the spacing would carry into later tests.
+          for (const label of labels) label.style.letterSpacing = "";
+          return measured;
         }, widerBy);
 
         // Then every label ends before its score starts
@@ -473,16 +475,20 @@ test("a score card label stays clear of the score in any font", async () => {
 });
 
 test("an offline player's card says Offline", async () => {
-  for (const width of [320, 390, 1366]) {
+  for (const width of [320, 330, 390, 1366]) {
     // Given a match with an offline opponent
     // When the opponent's card renders
     await layoutAt(width, 800, { offline: true });
-    const text = await page.evaluate(
-      () => document.querySelector(".sidebar-player-panel:not(.is-self) .is-offline").textContent
-    );
+    const label = await page.evaluate(() => {
+      const offline = document.querySelector(".sidebar-player-panel:not(.is-self) .is-offline");
+      return { text: offline.textContent, height: offline.getBoundingClientRect().height };
+    });
 
     // Then the label reads Offline
-    assert.equal(text, "Offline", `${width}px`);
+    assert.equal(label.text, "Offline", `${width}px`);
+
+    // And from 330px, where every font tried here has room, the word stays on one line
+    if (width >= 330) assert.equal(label.height, 14, `${width}px`);
   }
 });
 
