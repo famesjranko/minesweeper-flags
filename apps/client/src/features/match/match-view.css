@@ -369,40 +369,44 @@
 
 /* Upright monitors: width is the short side, so everything stacks with chat under the board. The
    header, scores and actions take 215px, and chat keeps at least 240px with spare room below it. */
-@media (min-width: 900px) and (max-aspect-ratio: 3 / 4) {
-  .page-shell.arcade-page-shell.arcade-match-page {
-    --match-page-padding: 12px;
-  }
+@media (min-width: 900px) {
+  /* "not" leaves exactly 3:4 to the rail above. Both rules would match it, and the two layouts
+     together hide the rail behind the board. */
+  @media not all and (min-aspect-ratio: 3 / 4) {
+    .page-shell.arcade-page-shell.arcade-match-page {
+      --match-page-padding: 12px;
+    }
 
-  .arcade-match {
-    --match-board-limit: calc(var(--board-columns) * 38px + 16px);
-    --match-board-fit: min(
-      calc(100vw - 2 * var(--match-page-padding)),
-      calc(100svh - 2 * var(--match-page-padding) - 215px - 240px),
-      var(--match-board-limit)
-    );
-    width: var(--match-board-fit);
-    max-width: none;
-  }
+    .arcade-match {
+      --match-board-limit: calc(var(--board-columns) * 38px + 16px);
+      --match-board-fit: min(
+        calc(100vw - 2 * var(--match-page-padding)),
+        calc(100svh - 2 * var(--match-page-padding) - 215px - 240px),
+        var(--match-board-limit)
+      );
+      width: var(--match-board-fit);
+      max-width: none;
+    }
 
-  .arcade-match.is-solo {
-    width: var(--match-board-fit);
-    max-width: none;
-  }
+    .arcade-match.is-solo {
+      width: var(--match-board-fit);
+      max-width: none;
+    }
 
-  .arcade-match .arcade-match-main {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
+    .arcade-match .arcade-match-main {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
 
-  .arcade-chat-region {
-    contain: none;
-    position: static;
-    width: auto;
-    height: min(
-      420px,
-      calc(100svh - 2 * var(--match-page-padding) - 279px - 12px - var(--match-board-fit))
-    );
+    .arcade-chat-region {
+      contain: none;
+      position: static;
+      width: auto;
+      height: min(
+        420px,
+        calc(100svh - 2 * var(--match-page-padding) - 279px - 12px - var(--match-board-fit))
+      );
+    }
   }
 }
 

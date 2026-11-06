@@ -4,14 +4,20 @@ import {
   type RefObject,
   useEffect,
   useRef,
-  useState
+  useState,
+  useSyncExternalStore
 } from "react";
 import { BoardGrid } from "../../entities/board/BoardGrid.js";
 import type { LastMoveMarks } from "../../entities/board/last-move.js";
 import type { AimedCell } from "../../entities/board/useBoardInput.js";
 import { isUsingKeyboard } from "../../lib/browser/last-input.js";
 import { ZoomIcon } from "../../shared-ui/ZoomIcon.js";
-import { canZoomBoard, readBoardZoomed, writeBoardZoomed } from "./board-zoom-preference.js";
+import {
+  canZoomBoard,
+  readBoardZoomed,
+  subscribeCanZoomBoard,
+  writeBoardZoomed
+} from "./board-zoom-preference.js";
 import { MatchRematchAction, MatchResultRibbon } from "./MatchResultRibbon.js";
 import { describeLastAction } from "./match-announcement.js";
 import type { MatchPresentation } from "./match-presentation.js";
@@ -221,11 +227,12 @@ const useFocusAcrossPhases = (phase: string, playArea: RefObject<HTMLElement | n
 };
 
 const useBoardZoom = () => {
-  const [canZoom] = useState(canZoomBoard);
-  const [zoomed, setZoomed] = useState(() => canZoom && readBoardZoomed());
+  const canZoom = useSyncExternalStore(subscribeCanZoomBoard, canZoomBoard, () => false);
+  const [saved, setSaved] = useState(readBoardZoomed);
+  const zoomed = canZoom && saved;
   const toggleZoom = () => {
     writeBoardZoomed(!zoomed);
-    setZoomed(!zoomed);
+    setSaved(!zoomed);
   };
   return { canZoom, zoomed, toggleZoom };
 };

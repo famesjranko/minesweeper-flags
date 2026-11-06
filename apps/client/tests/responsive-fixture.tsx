@@ -99,7 +99,7 @@ export const nextPaint = () =>
   );
 
 const createFixtureMatch = (options: FixtureOptions): MatchStateDto => {
-  const size = options.boardSize ?? "classic";
+  const size = options.boardSize ?? "large";
   const match = createMatch(size);
   if (options.longNames) {
     match.players[0].displayName = "Captain McSweeperman";

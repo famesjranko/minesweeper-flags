@@ -1,105 +1,6 @@
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
-import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
-import { createServer } from "vite";
-
-// Every height here has room for the scores and the 480px board floor.
-const LAPTOPS = [
-  [1366, 650],
-  [1280, 720],
-  [1536, 730],
-  [1366, 768]
-];
-
-let server;
-let browser;
-let page;
-let harnessUrl;
-
-before(async () => {
-  server = await createServer({
-    root: fileURLToPath(new URL("..", import.meta.url)),
-    logLevel: "error",
-    server: { host: "127.0.0.1", hmr: false }
-  });
-  await server.listen();
-  browser = await chromium.launch({
-    args: ["--no-sandbox"],
-    ...(process.env.CHROME_PATH
-      ? { executablePath: process.env.CHROME_PATH }
-      : { channel: "chrome" })
-  });
-  page = await browser.newPage();
-  harnessUrl = `${server.resolvedUrls.local[0]}tests/responsive.html`;
-  await page.goto(harnessUrl);
-});
-
-after(async () => {
-  await browser?.close();
-  await server?.close();
-});
-
-const harness = (call, argument) =>
-  page.evaluate(
-    async ([source, value]) => {
-      const checks = await import("/tests/responsive.tsx");
-      return new Function("checks", "value", `return (${source})(checks, value)`)(checks, value);
-    },
-    [call.toString(), argument]
-  );
-
-const layoutAt = async (width, height, options = {}) => {
-  await page.setViewportSize({ width, height });
-  return harness(async (checks, fixture) => {
-    window.scrollTo(0, 0);
-    await checks.renderFixture(fixture);
-    return checks.readLayout();
-  }, options);
-};
-
-test("a laptop window shows the scores and the last row together", async () => {
-  for (const [width, height] of LAPTOPS) {
-    // Given a match on a window shorter than the whole column
-    // When the match renders
-    const { scores, board } = await layoutAt(width, height);
-
-    // Then the scores and the last row fit on one screen
-    assert.ok(
-      board.bottom - scores.y <= height,
-      `${width}x${height}: ${board.bottom - scores.y}px`
-    );
-
-    // And the tiles stay large enough to aim at
-    assert.ok(board.width >= 480, `${width}x${height}: board ${board.width}px`);
-  }
-});
-
-test("a desktop-sized window fits the whole board once there is room", async () => {
-  // Given a match on an ordinary 1080p browser window
-  // When the match renders
-  const { board } = await layoutAt(1920, 950);
-
-  // Then the last row is on screen without scrolling
-  assert.ok(board.bottom <= 950, `board ends at ${board.bottom}px`);
-});
-
-test("the side chat input is on screen without scrolling", async () => {
-  for (const [width, height] of LAPTOPS) {
-    // Given a match wide enough for the side chat
-    // When the match renders
-    const { scores, chat, composer } = await layoutAt(width, height);
-
-    // Then the chat sits beside the board
-    assert.equal(chat, "sidebar");
-
-    // And the player can type at once
-    assert.ok(composer.bottom <= height, `${width}x${height}: input ends at ${composer.bottom}px`);
-
-    // And the history above the input has room to read
-    assert.ok(composer.y - scores.y >= 200, `${width}x${height}: input starts at ${composer.y}px`);
-  }
-});
+import { test } from "node:test";
+import { browser, harness, harnessUrl, layoutAt, page, touchMatch } from "./responsive-browser.mjs";
 
 test("a phone or tablet keeps one board size as the toolbar changes the height", async () => {
   for (const [width, tall, short] of [
@@ -119,6 +20,7 @@ test("a phone or tablet keeps one board size as the toolbar changes the height",
 
 // Desktop Chrome has no collapsing toolbar, so this catches a layout that reacts to scrolling but
 // not dvh on a wide window. The height-change test above covers dvh below 900px.
+
 test("scrolling keeps the board size", async () => {
   for (const [width, height] of [
     [390, 844],
@@ -160,17 +62,10 @@ test("the rematch action is on screen when a match ends on a short window", asyn
 
 test("Fire bomb and the aimed square share a landscape phone's screen", async () => {
   // Given an armed bomb on a landscape phone with touch input
-  const touch = await browser.newContext({
-    viewport: { width: 844, height: 390 },
-    hasTouch: true,
-    isMobile: true
-  });
-  const phone = await touch.newPage();
-  await phone.goto(page.url());
-  await phone.evaluate(async () => {
-    const checks = await import("/tests/responsive.tsx");
-    await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
-  });
+  const { touch, phone } = await touchMatch(
+    { width: 844, height: 390 },
+    { bombArmed: true, scoreDeficit: 4 }
+  );
 
   // When the player taps a hidden square near the top of the board
   await phone.locator(".board-cell").nth(20).tap({ force: true });
@@ -248,7 +143,7 @@ test("a focused tile is not hidden under the pinned rematch action", async () =>
     await layoutAt(width, height, { ...fixture, finished: true, rematch: true });
     await page.evaluate(() => document.querySelector(".board-cell").focus());
 
-    for (let row = 1; row < 16; row += 1) {
+    for (let row = 1; row < 20; row += 1) {
       // When the player presses the down arrow through the rows
       await page.keyboard.press("ArrowDown");
       const { action, tile } = await page.evaluate(() => ({
@@ -285,17 +180,10 @@ test("a zoomed bomb preview fits above Fire bomb on a landscape phone", async ()
     [568, 320]
   ]) {
     // Given a zoomed board with an armed bomb on a landscape phone
-    const touch = await browser.newContext({
-      viewport: { width, height },
-      hasTouch: true,
-      isMobile: true
-    });
-    const phone = await touch.newPage();
-    await phone.goto(page.url());
-    await phone.evaluate(async () => {
-      const checks = await import("/tests/responsive.tsx");
-      await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
-    });
+    const { touch, phone } = await touchMatch(
+      { width, height },
+      { bombArmed: true, scoreDeficit: 4 }
+    );
     await phone.getByRole("button", { name: /Expand board/ }).tap();
 
     // When the player aims at a square in the middle of the board
@@ -340,28 +228,20 @@ test("tile marks keep their size limit on large tiles and stay large on phones",
 });
 
 test("zoom is offered on touch screens and not to a mouse", async () => {
-  // Given a saved zoom setting and a match on a mouse window
-  await page.setViewportSize({ width: 1366, height: 768 });
-  await page.evaluate(() => localStorage.setItem("msf:board:zoomed", "on"));
-  await harness(async (checks) => checks.renderFixture());
-  const mouse = await page.evaluate(() => ({
+  // Given a saved zoom setting and a match that mounts on a mouse window
+  const desktop = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  await desktop.addInitScript(() => localStorage.setItem("msf:board:zoomed", "on"));
+  const mouseWindow = await desktop.newPage();
+  await mouseWindow.goto(harnessUrl);
+  await mouseWindow.waitForSelector(".board-cell");
+  const mouse = await mouseWindow.evaluate(() => ({
     button: document.querySelector(".arcade-zoom-button") !== null,
     zoomed: document.querySelector(".arcade-board-viewport.is-zoomed") !== null
   }));
-  await page.evaluate(() => localStorage.removeItem("msf:board:zoomed"));
+  await desktop.close();
 
   // When the same match opens on a phone
-  const touch = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    hasTouch: true,
-    isMobile: true
-  });
-  const phone = await touch.newPage();
-  await phone.goto(page.url());
-  await phone.evaluate(async () => {
-    const checks = await import("/tests/responsive.tsx");
-    await checks.renderFixture();
-  });
+  const { touch, phone } = await touchMatch({ width: 390, height: 844 }, {});
   const zoom = await phone.evaluate(() => {
     const box = (selector) => document.querySelector(selector).getBoundingClientRect();
     const button = box(".arcade-zoom-button");
@@ -402,17 +282,10 @@ test("normal play pins nothing over the board on a sideways phone", async () => 
 
 test("the last row scrolls clear of a pinned Fire bomb", async () => {
   // Given an aimed bomb on a sideways phone
-  const touch = await browser.newContext({
-    viewport: { width: 667, height: 375 },
-    hasTouch: true,
-    isMobile: true
-  });
-  const phone = await touch.newPage();
-  await phone.goto(page.url());
-  await phone.evaluate(async () => {
-    const checks = await import("/tests/responsive.tsx");
-    await checks.renderFixture({ bombArmed: true, scoreDeficit: 4 });
-  });
+  const { touch, phone } = await touchMatch(
+    { width: 667, height: 375 },
+    { bombArmed: true, scoreDeficit: 4 }
+  );
   await phone.locator(".board-cell").nth(20).tap({ force: true });
   await phone.locator('button[name="fire-bomb"]').waitFor();
 
@@ -479,193 +352,28 @@ test("an offline player's card says so without touching the score", async () => 
   }
 });
 
-test("every window with room keeps the whole match on one screen beside a rail", async () => {
-  for (const [width, height] of [
-    [1024, 768],
-    [1280, 600],
-    [1366, 650],
-    [1440, 780],
-    [1920, 935],
-    [2560, 1300],
-    [3440, 1300],
-    [900, 900]
-  ]) {
-    for (const boardSize of ["large", "huge", "giant"]) {
-      for (const solo of [false, true]) {
-        // Given a match on a window wide and tall enough for the rail
-        // When the match renders
-        const layout = await layoutAt(width, height, { boardSize, solo });
-        const label = `${width}x${height} ${boardSize}${solo ? " solo" : ""}`;
-        const rail = await page.evaluate(() => {
-          const box = (selector) => document.querySelector(selector)?.getBoundingClientRect();
-          const side = box(".solo-race-panel") ?? box(".arcade-chat-region");
-          const panel = document.querySelector(".solo-race-panel");
-          return {
-            pageHeight: document.documentElement.scrollHeight,
-            sideLeft: side.left,
-            actionsBottom: box(".match-action-slot").bottom,
-            headerWidth: box(".arcade-header").width,
-            clipped: panel ? panel.scrollHeight > panel.clientHeight + 1 : false
-          };
-        });
+test("the last row of a 30x30 board scrolls clear of a pinned Fire bomb", async () => {
+  // Given an aimed bomb on the biggest board on a sideways phone
+  const { touch, phone } = await touchMatch(
+    { width: 667, height: 375 },
+    { bombArmed: true, bombReady: true, boardSize: "giant" }
+  );
+  await phone.locator(".board-cell.status-hidden").nth(20).tap({ force: true });
+  await phone.locator('button[name="fire-bomb"]').waitFor();
 
-        // Then nothing scrolls
-        assert.ok(rail.pageHeight <= height, `${label}: page is ${rail.pageHeight}px tall`);
-
-        // And the rail sits beside the board and ends level with it
-        assert.ok(rail.sideLeft >= layout.board.right, `${label}: rail overlaps the board`);
-        assert.ok(
-          rail.actionsBottom <= layout.board.bottom + 1,
-          `${label}: actions run past the board`
-        );
-
-        // And the header spans the board and the rail together
-        assert.ok(
-          rail.headerWidth > layout.board.width + 280,
-          `${label}: header is ${rail.headerWidth}px`
-        );
-
-        // And the Solo panel shows everything it has
-        assert.equal(rail.clipped, false, `${label}: the Solo panel clips its content`);
-      }
-    }
-  }
-});
-
-test("a notice above a Solo match does not push the actions off the screen", async () => {
-  for (const [width, height] of [
-    [1280, 600],
-    [1366, 650],
-    [1920, 935]
-  ]) {
-    // Given a resumed Solo match with a notice above it
-    // When the match renders
-    await layoutAt(width, height, { boardSize: "large", solo: true, soloNotice: true });
-    const screen = await page.evaluate(() => ({
-      height: document.documentElement.scrollHeight,
-      actions: document.querySelector(".match-action-slot").getBoundingClientRect().bottom
-    }));
-
-    // Then the page does not scroll, and the actions stay on screen
-    assert.ok(screen.height <= height, `${width}x${height}: page is ${screen.height}px tall`);
-    assert.ok(screen.actions <= height, `${width}x${height}: actions end at ${screen.actions}px`);
-  }
-});
-
-test("squares stop growing at 36px on the biggest windows", async () => {
-  for (const [boardSize, boardWidth] of [
-    ["large", 776],
-    ["giant", 1156]
-  ]) {
-    // Given a board on a 4K window with far more room than it needs
-    // When the match renders
-    const { board } = await layoutAt(3840, 2000, { boardSize });
-
-    // Then the board stops at 36px squares
-    assert.equal(board.width, boardWidth);
-  }
-});
-
-test("near-square windows keep squares as large as the stacked layout gave", async () => {
-  for (const [width, height, minimum] of [
-    [900, 900, 15.5],
-    [1024, 1080, 19.6],
-    [1100, 1000, 21.5]
-  ]) {
-    // Given a 30x30 board on a window nearly as tall as it is wide
-    // When the match renders
-    const { cell } = await layoutAt(width, height, { boardSize: "giant" });
-
-    // Then squares are no smaller than before the rail existed
-    assert.ok(cell.width >= minimum - 1.5, `${width}x${height}: squares are ${cell.width}px`);
-  }
-});
-
-test("an upright monitor stacks the match with chat under the board", async () => {
-  for (const [width, height] of [
-    [1080, 1780],
-    [1440, 2400]
-  ]) {
-    // Given a match on a monitor turned upright
-    // When the match renders
-    const { board, composer } = await layoutAt(width, height, { boardSize: "giant" });
-
-    // Then the chat is under the board, and its input is on screen
-    assert.ok(composer.y >= board.bottom, `${width}x${height}: chat starts at ${composer.y}px`);
-    assert.ok(composer.bottom <= height, `${width}x${height}: input ends at ${composer.bottom}px`);
-  }
-});
-
-test("the Solo panel only shows where the rail has room for it", async () => {
-  for (const [width, height, shown] of [
-    [390, 844, false],
-    [768, 1024, false],
-    [932, 430, false],
-    [1080, 1780, false],
-    [1366, 650, true]
-  ]) {
-    // Given a Solo match
-    // When the match renders
-    await layoutAt(width, height, { boardSize: "large", solo: true });
-    const visible = await page.evaluate(
-      () => getComputedStyle(document.querySelector(".solo-race-panel")).display !== "none"
-    );
-
-    // Then the panel shows only on the rail layout
-    assert.equal(visible, shown, `${width}x${height}`);
-  }
-});
-
-test("the board size control adds no height to the home page", async () => {
-  await page.setViewportSize({ width: 320, height: 568 });
-  // Given the home page on the narrowest phone
-  await page.goto(new URL("/lobby", harnessUrl).href);
-  await page.waitForSelector("#friend-panel .lobby-create-button");
-
-  // When the two controls render side by side
-  const row = await page.evaluate(() => {
-    const box = (selector) => document.querySelector(selector).getBoundingClientRect();
-    const select = box("#friend-panel .board-size-select");
-    const create = box("#friend-panel .lobby-create-button");
+  // When the player scrolls to the end of the board
+  const positions = await phone.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const cells = document.querySelectorAll(".board-cell");
     return {
-      sameRow: select.top === create.top,
-      gap: create.left - select.right,
-      right: create.right
+      lastRow: cells[cells.length - 1].getBoundingClientRect().bottom,
+      fire: document.querySelector('button[name="fire-bomb"]').getBoundingClientRect().top
     };
   });
-  await page.goto(harnessUrl);
+  await touch.close();
 
-  // Then they share one row and stay on the screen
-  assert.equal(row.sameRow, true);
-  assert.ok(row.gap >= 0, `the controls overlap by ${-row.gap}px`);
-  assert.ok(row.right <= 320, `Create room ends at ${row.right}px`);
-});
-
-test("opening How to play leaves its control in place", async () => {
-  for (const [width, height] of [
-    [390, 844],
-    [1280, 800]
-  ]) {
-    // Given the home page with How to play closed
-    await page.setViewportSize({ width, height });
-    await page.goto(new URL("/", page.url()).href);
-    const summary = page.locator(".game-help summary");
-    await summary.waitFor();
-    const closed = await summary.boundingBox();
-
-    // When the player opens it
-    await summary.click();
-    const open = await summary.boundingBox();
-
-    // Then the control has not moved under the pointer
-    assert.equal(open.y, closed.y, `${width}x${height}: moved down`);
-    const closedRight = closed.x + closed.width;
-    assert.ok(Math.abs(open.x + open.width - closedRight) <= 1, `${width}x${height}: moved across`);
-
-    // And it sits at the right of the page, where it has always been
-    assert.ok(closedRight > width * 0.75, `${width}x${height}: ends at ${closedRight}`);
-  }
-  await page.goto(harnessUrl);
+  // Then the last row ends above it
+  assert.ok(positions.lastRow <= positions.fire, JSON.stringify(positions));
 });
 
 test("no width scrolls the page sideways", async () => {

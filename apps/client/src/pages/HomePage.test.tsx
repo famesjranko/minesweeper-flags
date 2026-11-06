@@ -398,3 +398,23 @@ describe("solo board size", () => {
     dispose();
   });
 });
+
+it("introduces the game without naming a fixed board", () => {
+  // Given the home page
+  const container = document.createElement("div");
+  const root = createRoot(container);
+
+  // When it renders
+  act(() =>
+    root.render(
+      <HomePage connectionStatus="connected" onFriendSelected={vi.fn()} friendContent={null} />
+    )
+  );
+
+  // Then the intro line is the chosen one, and no old rule text remains
+  expect(container.querySelector(".solo-home-intro p")?.textContent).toBe(
+    "Two-player classic Minesweeper!"
+  );
+  expect(container.textContent).not.toMatch(/16×16|First to 26|trail by 4/);
+  act(() => root.unmount());
+});

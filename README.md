@@ -34,7 +34,7 @@ This is an homage to the MSN Messenger game I used to play with friends back in 
 A static frontend still needs its first download.
 
 <p align="center">
-  <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with create and join options, beside a live match with a red and blue score sidebar, a half-cleared board, and room chat.">
+  <img src="./assets/readme/showcase.png" width="100%" alt="The lobby with the board size dropdown beside Create room, next to a live match with the board on the left and the scores and room chat beside it.">
 </p>
 
 ## Server and direct-match deployments

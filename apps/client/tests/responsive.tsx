@@ -2,7 +2,7 @@ import { nextPaint, renderFixture } from "./responsive-fixture.js";
 
 export { renderFixture } from "./responsive-fixture.js";
 
-// Run by responsive.check.mjs (make test-layout), or open /tests/responsive.html on the client dev
+// Run by the *.check.mjs files (make test-layout), or open /tests/responsive.html on the client dev
 // server. These checks use real components without joining game rooms.
 const box = (selector: string) => {
   const element = document.querySelector<HTMLElement>(selector);
