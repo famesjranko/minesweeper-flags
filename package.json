@@ -25,12 +25,12 @@
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
+    "@biomejs/biome": "2.6.4",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/ws": "^8.18.2",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.2.1",
     "concurrently": "^10.0.6",
     "husky": "9.1.7",
     "jsdom": "^30.1.3",
@@ -38,8 +38,8 @@
     "playwright-core": "^1.64.1",
     "tsx": "^4.20.5",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4",
-    "vitest": "^5.0.5",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0",
     "yaml": "2.9.1"
   },
   "license": "MIT"
