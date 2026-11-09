@@ -6,9 +6,11 @@ import { createSeededRandom, seeds } from "./bot-test-support.js";
 import { chooseSoloAction } from "./solo-bot.js";
 
 // Game counts and margins come from measured win rates. Over 1000 games hard
-// beats normal about 62% of the time and normal beats easy about 78%. One game
+// beats normal about 62% of the time and normal beats easy about 95%. One game
 // is noisy, so the closer pair needs more games for its margin to mean anything.
-const EASY_NORMAL_SEEDS = seeds(50);
+// On these seeds normal wins 95.5% against easy and 83.5% against easy's values
+// before tuning, so the easy margin also catches a lost tuning.
+const EASY_NORMAL_SEEDS = seeds(100);
 const NORMAL_HARD_SEEDS = seeds(150);
 
 const playGame = (seed: number, blue: SoloDifficulty, red: SoloDifficulty): SoloDifficulty => {
@@ -59,14 +61,14 @@ const winShare = (
 // parallel, so the default 5 s timeout would fail on load rather than on strength.
 describe("solo bot strength", { timeout: 30_000 }, () => {
   it("lets normal beat easy by a clear margin over seeded games", () => {
-    // Given normal and easy bots on 100 seeded games with sides swapped
+    // Given normal and easy bots on 200 seeded games with sides swapped
     const gameSeeds = EASY_NORMAL_SEEDS;
 
     // When every game is played to the end
     const share = winShare(gameSeeds, "normal", "easy");
 
-    // Then normal wins at least 70 percent of them
-    expect(share).toBeGreaterThanOrEqual(0.7);
+    // Then normal wins at least 90 percent of them
+    expect(share).toBeGreaterThanOrEqual(0.9);
   });
 
   it("lets hard beat normal by a clear margin over seeded games", () => {

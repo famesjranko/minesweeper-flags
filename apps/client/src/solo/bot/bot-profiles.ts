@@ -11,39 +11,59 @@ export type Deduction = "direct" | "single" | "pairs" | "exact";
 
 export interface BotProfile {
   deduction: Deduction;
-  /** Softmax temperature over cell scores; 0 always takes the best score. */
-  temperature: number;
-  /** Only the best `topK` cells by score are ever drawn. */
-  topK: number;
+  /**
+   * Choice spread, part one: how many cells the bot weighs for a pick. The best-scored
+   * cell always counts; the others are the next best plausible cells, those next to a
+   * revealed clue or a claimed mine. 1 always takes the best cell.
+   */
+  choicePool: number;
+  /**
+   * Choice spread, part two: softmax temperature over the pool's scores. 0 always takes
+   * the best cell; a higher value takes a less-than-best plausible cell more often.
+   */
+  choiceTemperature: number;
+  /**
+   * Attention: the bot notices only cells, certain mines included, within this many
+   * steps (Chebyshev distance) of the most recent action, and reads only the clues
+   * bordering them. When nothing plausible is in reach it doubles the radius until
+   * something is. Infinity notices the whole board.
+   */
+  attentionRadius: number;
   /** Score bonus for a cell next to the focus point, scaled by 1 / distance. */
   localityWeight: number;
   /** A bomb is drawn uniformly from this many best expected-yield centres. */
   bombCandidates: number;
 }
 
-// The levels differ in how much they deduce. Temperature and topK are kept small:
-// they only vary the choice between cells the bot already rates as close, so a
-// weaker level plays plausible moves rather than deliberate blunders. Normal
-// reasons exactly like the original bot.
+// The levels differ in how much they deduce. Normal and Hard notice the whole board
+// and keep the choice spread small, so they only vary between cells they already rate
+// as close. Normal reasons exactly like the original bot. Easy plays like a beginner:
+// it looks only near the last move and often takes a worse cell beside the clues, but
+// it never clicks at random and always claims a proven mine it notices. Its values
+// were tuned over 1000 seeded games against Normal: it hits a mine on about 41% of its
+// picks, against 47% before tuning and 53% for Normal, and wins about 5% of games.
 export const BOT_PROFILES: Readonly<Record<SoloDifficulty, BotProfile>> = {
   easy: {
     deduction: "direct",
-    temperature: 0.04,
-    topK: 3,
+    choicePool: 5,
+    choiceTemperature: 0.13,
+    attentionRadius: 3,
     localityWeight: 0.1,
     bombCandidates: 5
   },
   normal: {
     deduction: "single",
-    temperature: 0.03,
-    topK: 3,
+    choicePool: 3,
+    choiceTemperature: 0.03,
+    attentionRadius: Number.POSITIVE_INFINITY,
     localityWeight: 0.08,
     bombCandidates: 3
   },
   hard: {
     deduction: "exact",
-    temperature: 0,
-    topK: 1,
+    choicePool: 1,
+    choiceTemperature: 0,
+    attentionRadius: Number.POSITIVE_INFINITY,
     localityWeight: 0.06,
     bombCandidates: 1
   }
