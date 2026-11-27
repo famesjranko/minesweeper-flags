@@ -454,6 +454,24 @@ test("a player's presence dot sits beside the name", async () => {
   }
 });
 
+test("the winner's crown sits at the right edge of the card", async () => {
+  for (const width of [320, 360, 390, 1366]) {
+    // Given a finished match at this width
+    await layoutAt(width, 800, { finished: true });
+
+    // When the winner's card renders
+    const gap = await page.evaluate(() => {
+      const card = document.querySelector(".is-card-winner");
+      const crown = card.querySelector(".winner-crown").getBoundingClientRect();
+      const name = card.querySelector(".sidebar-player-name").getBoundingClientRect();
+      return name.right - crown.right;
+    });
+
+    // Then the crown ends at the right edge of the name row
+    assert.ok(gap >= 0 && gap <= 6, `${width}px: ${gap}px from the edge`);
+  }
+});
+
 test("the last row of a 30x30 board scrolls clear of a pinned Fire bomb", async () => {
   // Given an aimed bomb on the biggest board on a sideways phone
   const { touch, phone } = await touchMatch(

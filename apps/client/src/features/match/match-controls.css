@@ -78,7 +78,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The crown marks the card, not the name, so it sits at the card's far edge. */
 .player-crown-slot {
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
