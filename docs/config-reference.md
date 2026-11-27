@@ -70,6 +70,8 @@ Run these from the repo root:
 - `make deploy-plan TARGET=frontend|server|all` shows the merged commit and existing services selected for release.
 - `make deploy TARGET=frontend|server|all` deploys after CI and policy checks; `COMMIT` defaults to `origin/main`.
 
+The manual `deploy` GitHub Actions workflow runs the same `make deploy` on a runner; see [Releasing from GitHub Actions](render-demo.md#releasing-from-github-actions).
+
 See [the Render runbook](render-demo.md#local-release-controls) for setup and release limits.
 Deployment settings are read from ignored `.deploy/config.json`, or from
 `$DEPLOY_DIR/config.json` when `DEPLOY_DIR` is set. Start with
