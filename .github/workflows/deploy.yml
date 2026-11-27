@@ -1,0 +1,93 @@
+name: deploy
+
+# Releases stay deliberate: Render auto-deploys are off, and this runs only when started by hand.
+# It runs the same guarded script as `make deploy`, so CI, merge, policy and empty-lobby checks apply.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Services to deploy
+        type: choice
+        options: [all, frontend, server]
+        default: all
+      commit:
+        description: Merged commit or ref to deploy
+        type: string
+        default: origin/main
+      plan_only:
+        description: Show the plan and run the checks, but deploy nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  checks: read
+
+# Two releases must never interleave, and a running release must finish.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  RENDER_CLI_VERSION: 2.39.0
+  RENDER_CLI_SHA256: 2f2116a53355a4ec85bce76b789cf9d0cfa4d13a3397d521850d35f76174f77d
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The environment holds the Render key and settings, and only allows main.
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The script checks that the commit is an ancestor of origin/main.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Write private deployment settings
+        env:
+          RENDER_DEPLOY_CONFIG: ${{ secrets.RENDER_DEPLOY_CONFIG }}
+        run: |
+          umask 077
+          mkdir -p .deploy/bin .deploy/auth
+          printf '%s' "$RENDER_DEPLOY_CONFIG" > .deploy/config.json
+          # The logs of a public repository are public, and the script prints these IDs.
+          # jq runs on its own so a malformed secret stops here, before anything can echo it.
+          ids=$(jq -er '.workspaceId, .frontend.serviceId, .server.serviceId' .deploy/config.json)
+          for id in $ids; do
+            echo "::add-mask::$id"
+          done
+
+      - name: Install the Render CLI
+        id: cli
+        run: |
+          zip="$RUNNER_TEMP/render.zip"
+          curl -fsSL -o "$zip" \
+            "https://github.com/render-oss/cli/releases/download/v${RENDER_CLI_VERSION}/cli_${RENDER_CLI_VERSION}_linux_amd64.zip"
+          echo "${RENDER_CLI_SHA256}  $zip" | sha256sum --check --strict
+          unzip -p "$zip" "cli_v${RENDER_CLI_VERSION}" > .deploy/bin/render
+          chmod 700 .deploy/bin/render
+
+      - name: Select the Render workspace
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_CLI_CONFIG_DIR: .deploy/auth
+          RENDER_CLI_CONFIG_PATH: .deploy/auth/cli.yaml
+        run: .deploy/bin/render workspace set "$(jq -r .workspaceId .deploy/config.json)" --confirm --output json > /dev/null
+
+      - name: Deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ inputs.target }}
+          COMMIT: ${{ inputs.commit }}
+        run: make ${{ inputs.plan_only && 'deploy-plan' || 'deploy' }}
+
+      - name: Report live status
+        if: always() && steps.cli.outcome == 'success'
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: make deploy-status

@@ -18,12 +18,12 @@ The live demo is managed separately through Render service settings.
 | `minesweeper-flags-state` | Redis-compatible room, match, chat, and session state | Free Key Value, Frankfurt |
 
 Both services run the same commit after a verified release through
-`make deploy TARGET=all`. Run `make deploy-status` to see the commit each
-service runs now. Both services track `main`, with auto-deploys and
-previews disabled. The original Blueprint was disconnected on 21 October 2026;
-its resources and settings were retained. Public template changes cannot sync
-into these services. GitHub Actions runs checks and image builds; it does not
-deploy to Render.
+the manual **deploy** GitHub Actions workflow, or `make deploy TARGET=all`.
+Run `make deploy-status` to see the commit each service runs now. Both
+services track `main`, with auto-deploys and previews disabled. The original
+Blueprint was disconnected on 21 October 2026; its resources and settings were
+retained. Public template changes cannot sync into these services. Pushes and
+pull requests only run checks and image builds; a release starts only by hand.
 
 ## Demo limits
 
@@ -126,10 +126,37 @@ Render injects the Key Value connection URL through its service reference.
 External Key Value access is disabled. Keep connection strings, hooks, API keys,
 and player session tokens out of Git, issues, and screenshots.
 
+## Releasing from GitHub Actions
+
+The [`deploy`](../.github/workflows/deploy.yml) workflow runs `make deploy`, or
+`make deploy-plan` when `plan_only` is set, on a GitHub runner, so every guard
+below applies. It then runs `make deploy-status`. Start it from the Actions tab, or:
+
+```bash
+gh workflow run deploy.yml --ref main -f target=all -f plan_only=true   # checks only
+gh workflow run deploy.yml --ref main -f target=all
+gh run watch "$(gh run list --workflow deploy.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+```
+
+It runs only from `main`, one release at a time, and installs a checksum-pinned
+Render CLI (v2.39.0). A new dispatch waits for a running release; a third
+dispatch replaces the one still waiting. Local `make deploy` runs are not part
+of that queue. Its settings live in a GitHub environment named `production` that
+allows only the `main` branch:
+
+| Secret | Contents |
+| --- | --- |
+| `RENDER_API_KEY` | A Render API key scoped to the workspace, with only Services: Read and Deploys: Run. API keys do not expire like CLI logins. |
+| `RENDER_DEPLOY_CONFIG` | The contents of `.deploy/config.json`. |
+
+The workflow masks the workspace and service IDs, because the logs of a public
+repository are public. Forks have neither secret, so the workflow cannot deploy
+from a fork.
+
 ## Local release controls
 
 Use Node 22, Git, Make, authenticated `gh`, and the
-[Render CLI](https://render.com/docs/cli) (tested with v2.30.0).
+[Render CLI](https://render.com/docs/cli) (tested with v2.30.0 locally and v2.39.0 in the workflow).
 Install the CLI from Render's official instructions. The scripts find `render`
 on `PATH`, or an executable at `.deploy/bin/render`. `RENDER_CLI` can select
 another executable.
