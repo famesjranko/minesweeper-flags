@@ -146,8 +146,24 @@ allows only the `main` branch:
 
 | Secret | Contents |
 | --- | --- |
-| `RENDER_API_KEY` | A Render API key scoped to the workspace, with only Services: Read and Deploys: Run. API keys do not expire like CLI logins. |
+| `RENDER_API_KEY` | A Render API key scoped to the workspace. API keys do not expire like CLI logins. |
 | `RENDER_DEPLOY_CONFIG` | The contents of `.deploy/config.json`. |
+
+Give the key only these permissions. `render services` also lists Postgres,
+Key Value, and projects, so it needs read access to them even when the
+workspace has none.
+
+| Permission | Access |
+| --- | --- |
+| Services | Read |
+| Deploys | Run |
+| Key Value instances | Read |
+| Postgres instances | Read |
+| Projects and environments | Read |
+
+Leave connection details, environment variables, and every write permission
+off. The key can then view resources and start deploys, but it cannot change
+settings or read credentials.
 
 The workflow masks the workspace and service IDs, because the logs of a public
 repository are public. Forks have neither secret, so the workflow cannot deploy
