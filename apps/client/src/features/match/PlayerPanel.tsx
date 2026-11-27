@@ -99,12 +99,6 @@ export const PlayerPanel = ({
     >
       <p className="sidebar-player-name" title={slot.player.displayName}>
         <span className="player-name-text">{slot.player.displayName}</span>
-        <span className="player-crown-slot">
-          {isWinner ? <CrownIcon className="winner-crown" /> : null}
-        </span>
-      </p>
-      <header className="sidebar-player-header">
-        <span className={labels.offline ? "is-offline" : undefined}>{labels.header}</span>
         {!hidePresence ? (
           <span
             className={`arcade-player-presence${slot.player.connected ? " is-online" : ""}`}
@@ -112,6 +106,12 @@ export const PlayerPanel = ({
             aria-label={slot.player.connected ? "Connected" : "Disconnected"}
           />
         ) : null}
+        <span className="player-crown-slot">
+          {isWinner ? <CrownIcon className="winner-crown" /> : null}
+        </span>
+      </p>
+      <header className="sidebar-player-header">
+        <span className={labels.offline ? "is-offline" : undefined}>{labels.header}</span>
       </header>
       <div className="card-inline-actions">
         <div className={`sidebar-score-pill${isWinner ? " is-winner" : ""}`}>

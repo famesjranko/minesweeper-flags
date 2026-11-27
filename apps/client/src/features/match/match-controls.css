@@ -78,7 +78,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The crown marks the card, not the name, so it sits at the card's far edge. */
 .player-crown-slot {
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -120,10 +122,6 @@
 .sidebar-player-header .is-offline {
   color: #ffb4a2;
   font-weight: 700;
-}
-/* Offline is one word, so the dot drops to the next line before the word has to break. */
-.arcade-match .sidebar-player-header:has(.is-offline) {
-  flex-wrap: wrap;
 }
 .arcade-player-presence {
   flex-shrink: 0;

@@ -426,6 +426,52 @@ test("an offline player's card says Offline", async () => {
   }
 });
 
+test("a player's presence dot sits beside the name", async () => {
+  for (const width of [320, 360, 390, 1366]) {
+    for (const fixture of [{}, { offline: true }]) {
+      // Given a match at this width
+      await layoutAt(width, 800, fixture);
+
+      // When the cards render
+      const gaps = await page.evaluate(() =>
+        [...document.querySelectorAll(".sidebar-player-panel")].map((card) => {
+          const name = card.querySelector(".player-name-text").getBoundingClientRect();
+          const dot = card.querySelector(".arcade-player-presence").getBoundingClientRect();
+          return {
+            after: dot.left - name.right,
+            centre: Math.abs(dot.top + dot.height / 2 - (name.top + name.height / 2))
+          };
+        })
+      );
+
+      // Then each dot starts just after the name, on the same line
+      const label = `${width}px, ${JSON.stringify(fixture)}: ${JSON.stringify(gaps)}`;
+      for (const gap of gaps) {
+        assert.ok(gap.after >= 0 && gap.after <= 8, label);
+        assert.ok(gap.centre <= 2, label);
+      }
+    }
+  }
+});
+
+test("the winner's crown sits at the right edge of the card", async () => {
+  for (const width of [320, 360, 390, 1366]) {
+    // Given a finished match at this width
+    await layoutAt(width, 800, { finished: true });
+
+    // When the winner's card renders
+    const gap = await page.evaluate(() => {
+      const card = document.querySelector(".is-card-winner");
+      const crown = card.querySelector(".winner-crown").getBoundingClientRect();
+      const name = card.querySelector(".sidebar-player-name").getBoundingClientRect();
+      return name.right - crown.right;
+    });
+
+    // Then the crown ends at the right edge of the name row
+    assert.ok(gap >= 0 && gap <= 6, `${width}px: ${gap}px from the edge`);
+  }
+});
+
 test("the last row of a 30x30 board scrolls clear of a pinned Fire bomb", async () => {
   // Given an aimed bomb on the biggest board on a sideways phone
   const { touch, phone } = await touchMatch(
