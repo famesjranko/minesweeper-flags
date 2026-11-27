@@ -55,11 +55,14 @@ jobs:
           mkdir -p .deploy/bin .deploy/auth
           printf '%s' "$RENDER_DEPLOY_CONFIG" > .deploy/config.json
           # The logs of a public repository are public, and the script prints these IDs.
-          for id in $(jq -r '.workspaceId, .frontend.serviceId, .server.serviceId' .deploy/config.json); do
+          # jq runs on its own so a malformed secret stops here, before anything can echo it.
+          ids=$(jq -er '.workspaceId, .frontend.serviceId, .server.serviceId' .deploy/config.json)
+          for id in $ids; do
             echo "::add-mask::$id"
           done
 
       - name: Install the Render CLI
+        id: cli
         run: |
           zip="$RUNNER_TEMP/render.zip"
           curl -fsSL -o "$zip" \
@@ -84,7 +87,7 @@ jobs:
         run: make ${{ inputs.plan_only && 'deploy-plan' || 'deploy' }}
 
       - name: Report live status
-        if: always()
+        if: always() && steps.cli.outcome == 'success'
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: make deploy-status

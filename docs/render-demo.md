@@ -128,8 +128,9 @@ and player session tokens out of Git, issues, and screenshots.
 
 ## Releasing from GitHub Actions
 
-The [`deploy`](../.github/workflows/deploy.yml) workflow runs `make deploy` on a
-GitHub runner, so every guard below applies. Start it from the Actions tab, or:
+The [`deploy`](../.github/workflows/deploy.yml) workflow runs `make deploy`, or
+`make deploy-plan` when `plan_only` is set, on a GitHub runner, so every guard
+below applies. It then runs `make deploy-status`. Start it from the Actions tab, or:
 
 ```bash
 gh workflow run deploy.yml --ref main -f target=all -f plan_only=true   # checks only
@@ -138,12 +139,14 @@ gh run watch "$(gh run list --workflow deploy.yml --limit 1 --json databaseId --
 ```
 
 It runs only from `main`, one release at a time, and installs a checksum-pinned
-Render CLI. Its settings live in a GitHub environment named `production` that
+Render CLI (v2.39.0). A new dispatch waits for a running release; a third
+dispatch replaces the one still waiting. Local `make deploy` runs are not part
+of that queue. Its settings live in a GitHub environment named `production` that
 allows only the `main` branch:
 
 | Secret | Contents |
 | --- | --- |
-| `RENDER_API_KEY` | A Render API key. API keys do not expire like CLI logins. |
+| `RENDER_API_KEY` | A Render API key scoped to the workspace, with only Services: Read and Deploys: Run. API keys do not expire like CLI logins. |
 | `RENDER_DEPLOY_CONFIG` | The contents of `.deploy/config.json`. |
 
 The workflow masks the workspace and service IDs, because the logs of a public
@@ -153,7 +156,7 @@ from a fork.
 ## Local release controls
 
 Use Node 22, Git, Make, authenticated `gh`, and the
-[Render CLI](https://render.com/docs/cli) (tested with v2.30.0).
+[Render CLI](https://render.com/docs/cli) (tested with v2.30.0 locally and v2.39.0 in the workflow).
 Install the CLI from Render's official instructions. The scripts find `render`
 on `PATH`, or an executable at `.deploy/bin/render`. `RENDER_CLI` can select
 another executable.
