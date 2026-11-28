@@ -78,11 +78,15 @@ SIGNALING_ENV_PREFIX = DEPLOYMENT_MODE=local HOST=0.0.0.0 PORT=$(P2P_SIGNALING_P
 
 .PHONY: deploy-login deploy-plan deploy deploy-status deploy-template-check test-deploy
 
+##@ General
+
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "%-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "} /^##@ / {printf "\n%s\n", substr($$0, 5); next} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-30s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 install: ## Install workspace dependencies with npm ci
 	$(NPM) ci
+
+##@ Local development
 
 dev: ## Run the selected local deployment; DEPLOYMENT_STYLE=server|p2p
 	@if [ "$(DEPLOYMENT_STYLE)" = "p2p" ]; then \
@@ -107,26 +111,16 @@ signaling-dev: ## Run the signaling service in watch mode for local p2p
 client-dev: ## Run the Vite client dev server for the selected deployment style
 	@$(CLIENT_ENV_PREFIX) $(NPM) run dev -w $(CLIENT_WORKSPACE)
 
+server-start: build-server ## Build and run the compiled server; loads apps/server/.env if present
+	@$(SERVER_ENV_PREFIX) $(NPM) run start -w $(SERVER_WORKSPACE)
+
+signaling-start: build-signaling ## Build and run the compiled signaling service for local p2p
+	@$(SIGNALING_ENV_PREFIX) $(NPM) run start -w $(SIGNALING_WORKSPACE)
+
+##@ Build
+
 build: ## Build all workspaces
 	$(NPM) run build
-
-deploy-login: ## Log in to Render; keep credentials in ignored local storage
-	node scripts/deploy/render.mjs login
-
-deploy-plan: ## Show the configured workspace, services and merged COMMIT; set TARGET
-	node scripts/deploy/render.mjs plan
-
-deploy: ## Deploy merged COMMIT after CI; set TARGET=frontend|server|all
-	node scripts/deploy/render.mjs deploy
-
-deploy-status: ## Check configured releases and public health endpoints
-	node scripts/deploy/render.mjs status
-
-deploy-template-check: ## Validate public example structure without using live services
-	node scripts/deploy/template.mjs --example
-
-test-deploy: ## Test deployment guards and command behavior without hosted resources
-	$(NPM) run test:deploy
 
 build-server: ## Build the server workspace
 	$(NPM) run build -w $(SERVER_WORKSPACE)
@@ -145,6 +139,17 @@ build-shared: ## Build the shared package
 
 build-engine: ## Build the game engine package
 	$(NPM) run build -w $(ENGINE_WORKSPACE)
+
+##@ Verification
+
+check: ## Run the main local verification flow
+	$(MAKE) lint
+	$(MAKE) deploy-template-check
+	$(MAKE) typecheck
+	$(MAKE) test
+	$(MAKE) build
+	$(MAKE) compose-config
+	$(MAKE) compose-public-config
 
 lint: ## Check formatting, lint rules, and import order
 	$(NPM) run lint
@@ -178,20 +183,27 @@ test-layout: ## Check match layouts in Chrome; set CHROME_PATH if it is not inst
 test-engine: ## Run the game engine test suite
 	$(NPM) run test -w $(ENGINE_WORKSPACE)
 
-server-start: build-server ## Build and run the compiled server; loads apps/server/.env if present
-	@$(SERVER_ENV_PREFIX) $(NPM) run start -w $(SERVER_WORKSPACE)
+##@ Deploy (Render)
 
-signaling-start: build-signaling ## Build and run the compiled signaling service for local p2p
-	@$(SIGNALING_ENV_PREFIX) $(NPM) run start -w $(SIGNALING_WORKSPACE)
+deploy-login: ## Log in to Render; keep credentials in ignored local storage
+	node scripts/deploy/render.mjs login
 
-check: ## Run the main local verification flow
-	$(MAKE) lint
-	$(MAKE) deploy-template-check
-	$(MAKE) typecheck
-	$(MAKE) test
-	$(MAKE) build
-	$(MAKE) compose-config
-	$(MAKE) compose-public-config
+deploy-plan: ## Show the configured workspace, services and merged COMMIT; set TARGET
+	node scripts/deploy/render.mjs plan
+
+deploy: ## Deploy merged COMMIT after CI; set TARGET=frontend|server|all
+	node scripts/deploy/render.mjs deploy
+
+deploy-status: ## Check configured releases and public health endpoints
+	node scripts/deploy/render.mjs status
+
+deploy-template-check: ## Validate public example structure without using live services
+	node scripts/deploy/template.mjs --example
+
+test-deploy: ## Test deployment guards and command behavior without hosted resources
+	$(NPM) run test:deploy
+
+##@ Docker images and local Compose
 
 images: ## Build every Docker image (server, signaling, server-mode and p2p clients, public client); CI runs this
 	$(DOCKER_COMPOSE) build server signaling client
@@ -243,6 +255,8 @@ compose-logs: ## Tail local Docker Compose logs
 
 compose-ps: ## Show local Docker Compose service status
 	$(DOCKER_COMPOSE) ps
+
+##@ Docker Compose: parity/public overlay
 
 compose-public-config: ## Validate the parity/public Docker Compose overlay
 	@if [ "$(DEPLOYMENT_STYLE)" = "p2p" ]; then \
